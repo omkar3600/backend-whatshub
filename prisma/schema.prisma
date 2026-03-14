@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String?  @unique
+  passwordHash String
+  role         String   @default("user")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  username     String   @unique
+  shop         Shop?
+}
+
+model RegistrationInterest {
+  id        String   @id @default(uuid())
+  username  String
+  email     String
+  password  String // Hashed
+  shopName  String
+  phone     String
+  status    String   @default("pending") // pending, approved, rejected
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Shop {
+  id            String              @id @default(uuid())
+  ownerId       String              @unique
+  shopName      String
+  phone         String
+  status        String              @default("active")
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  automations   Automation[]
+  campaigns     Campaign[]
+  contacts      Contact[]
+  conversations Conversation[]
+  mediaFiles    MediaFile[]
+  messages      Message[]
+  owner         User                @relation(fields: [ownerId], references: [id])
+  subscription  Subscription?
+  templates     Template[]
+  whatsappCreds WhatsAppCredential?
+}
+
+model Subscription {
+  id         String   @id @default(uuid())
+  shopId     String   @unique
+  startDate  DateTime
+  expiryDate DateTime
+  status     String   @default("active")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  shop       Shop     @relation(fields: [shopId], references: [id])
+}
+
+model WhatsAppCredential {
+  id                String   @id @default(uuid())
+  shopId            String   @unique
+  businessAccountId String
+  phoneNumberId     String
+  accessToken       String
+  webhookVerifyToken String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  shop              Shop     @relation(fields: [shopId], references: [id])
+}
+
+model Contact {
+  id            String         @id @default(uuid())
+  shopId        String
+  name          String
+  phone         String
+  tags          Json?
+  city          String?
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  shop          Shop           @relation(fields: [shopId], references: [id])
+  conversations Conversation[]
+
+  @@unique([shopId, phone])
+}
+
+model Conversation {
+  id            String    @id @default(uuid())
+  shopId        String
+  contactId     String
+  lastMessageAt DateTime  @default(now())
+  unreadCount   Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  contact       Contact   @relation(fields: [contactId], references: [id])
+  shop          Shop      @relation(fields: [shopId], references: [id])
+  messages      Message[]
+
+  @@unique([shopId, contactId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  shopId         String
+  conversationId String
+  direction      String
+  type           String
+  content        String?
+  mediaUrl       String?
+  status         String       @default("sent")
+  timestamp      DateTime     @default(now())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  shop           Shop         @relation(fields: [shopId], references: [id])
+}
+
+model Template {
+  id           String     @id @default(uuid())
+  shopId       String
+  templateName String
+  category     String
+  language     String
+  components   Json
+  status       String     @default("pending")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  campaigns    Campaign[]
+  shop         Shop       @relation(fields: [shopId], references: [id])
+}
+
+model Campaign {
+  id          String   @id @default(uuid())
+  shopId      String
+  name        String
+  templateId  String
+  targetTags  Json?
+  status      String   @default("scheduled")
+  scheduledAt DateTime
+  stats       Json?
+  failureHistory Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  shop        Shop     @relation(fields: [shopId], references: [id])
+  template    Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+}
+
+model MediaFile {
+  id        String   @id @default(uuid())
+  shopId    String
+  fileUrl   String
+  fileType  String
+  fileSize  Int
+  createdAt DateTime @default(now())
+  shop      Shop     @relation(fields: [shopId], references: [id])
+}
+
+model Automation {
+  id             String   @id @default(uuid())
+  shopId         String
+  type           String
+  triggerKeyword String?
+  replyText      String
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  shop           Shop     @relation(fields: [shopId], references: [id])
+}
