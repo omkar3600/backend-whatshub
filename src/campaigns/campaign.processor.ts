@@ -37,6 +37,12 @@ export class CampaignProcessor extends WorkerHost {
             contacts = contacts.filter(c => limitToPhones.includes(c.phone));
         }
 
+        // Filter by targetPhones if specified in the campaign
+        const targetPhones = campaign.targetPhones as string[] | null;
+        if (targetPhones && targetPhones.length > 0) {
+            contacts = contacts.filter(c => targetPhones.includes(c.phone));
+        }
+
         // Filter by targetTags if specified
         const targetTags = campaign.targetTags as string[] | null;
         if (targetTags && targetTags.length > 0) {
@@ -50,6 +56,15 @@ export class CampaignProcessor extends WorkerHost {
         const failureHistory: { phone: string; name: string; reason: string; timestamp: Date }[] = [];
 
         for (const c of contacts) {
+            // Check if campaign was aborted midway
+            const currentCampaign = await this.prisma.campaign.findUnique({
+                where: { id: campaignId },
+                select: { status: true }
+            });
+            if (currentCampaign?.status === 'aborted') {
+                break;
+            }
+
             try {
                 const templateParamsObj = campaign.templateParams as any;
                 const templateContent =
@@ -110,10 +125,15 @@ export class CampaignProcessor extends WorkerHost {
             }
         }
 
+        const finalCampaign = await this.prisma.campaign.findUnique({
+            where: { id: campaignId },
+            select: { status: true }
+        });
+
         await this.prisma.campaign.update({
             where: { id: campaignId },
             data: {
-                status: 'completed',
+                status: finalCampaign?.status === 'aborted' ? 'aborted' : 'completed',
                 stats: { sent, delivered: sent, read: 0, clicked: 0, failed },
                 failureHistory: failureHistory
             }

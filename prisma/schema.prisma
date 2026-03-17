@@ -142,6 +142,7 @@ model Campaign {
   name           String
   templateId     String
   targetTags     Json?
+  targetPhones   Json?
   templateParams Json?
   headerMediaUrl String?
   status         String            @default("scheduled")

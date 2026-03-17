@@ -11,13 +11,14 @@ export class CampaignsService {
     ) { }
 
     async createCampaign(shopId: string, data: any) {
-        const { name, templateId, targetTags, scheduledAt, templateParams, headerMediaUrl } = data;
+        const { name, templateId, targetTags, targetPhones, scheduledAt, templateParams, headerMediaUrl } = data;
         const campaign = await this.prisma.campaign.create({
             data: {
                 shopId,
                 name,
                 templateId,
                 targetTags: targetTags || [],
+                targetPhones: targetPhones || [],
                 templateParams: templateParams || {},
                 headerMediaUrl: headerMediaUrl || null,
                 scheduledAt: new Date(scheduledAt || Date.now()),
@@ -37,6 +38,65 @@ export class CampaignsService {
             include: { template: true },
             orderBy: { createdAt: 'desc' },
         });
+    }
+
+    async deleteCampaign(shopId: string, campaignId: string) {
+        // Only allow deleting scheduled campaigns
+        const campaign = await this.prisma.campaign.findFirst({
+            where: { id: campaignId, shopId }
+        });
+
+        if (!campaign) throw new NotFoundException('Campaign not found');
+        if (campaign.status === 'processing') {
+            throw new Error('Cannot delete a processing campaign. Abort it first.');
+        }
+
+        // Ideally we should also remove the job from BullMQ if it's scheduled
+        // For simplicity, we just delete it from DB and the processor will ignore it if it doesn't find it
+        return this.prisma.campaign.delete({
+            where: { id: campaignId }
+        });
+    }
+
+    async abortCampaign(shopId: string, campaignId: string) {
+        const campaign = await this.prisma.campaign.findFirst({
+            where: { id: campaignId, shopId }
+        });
+
+        if (!campaign) throw new NotFoundException('Campaign not found');
+        if (campaign.status !== 'processing') {
+            throw new Error('Can only abort processing campaigns');
+        }
+
+        return this.prisma.campaign.update({
+            where: { id: campaignId },
+            data: { status: 'aborted' }
+        });
+    }
+
+    async launchRetarget(shopId: string, campaignId: string, body: { name: string; templateId: string; phones: string[] }) {
+        const { name, templateId, phones } = body;
+
+        // Verify original campaign belongs to shop
+        const original = await this.prisma.campaign.findFirst({
+            where: { id: campaignId, shopId }
+        });
+        if (!original) throw new NotFoundException('Original campaign not found');
+
+        const campaign = await this.prisma.campaign.create({
+            data: {
+                shopId,
+                name,
+                templateId,
+                targetPhones: phones,
+                scheduledAt: new Date(),
+                status: 'processing', // Start immediately
+            },
+        });
+
+        await this.campaignsQueue.add('processCampaign', { campaignId: campaign.id });
+
+        return campaign;
     }
 
     async getCampaignAnalytics(shopId: string, campaignId: string) {
@@ -125,14 +185,13 @@ export class CampaignsService {
                 templateId: original.templateId,
                 status: 'processing',
                 scheduledAt: new Date(),
-                targetTags: original.targetTags as any
+                targetTags: original.targetTags as any,
+                targetPhones: (failedList.map(f => f.phone)) as any
             }
         });
 
-        const failedPhones = failedList.map(f => f.phone);
         await this.campaignsQueue.add('processCampaign', {
-            campaignId: retryCampaign.id,
-            limitToPhones: failedPhones
+            campaignId: retryCampaign.id
         });
 
         return retryCampaign;

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Param, Delete } from '@nestjs/common';
 import { CampaignsService } from './campaigns.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -34,5 +34,20 @@ export class CampaignsController {
     @Post(':id/resend-failed')
     async resendFailed(@GetUser() user: any, @Param('id') id: string) {
         return this.campaignsService.resendFailed(user.shopId, id);
+    }
+
+    @Post(':id/abort')
+    async abortCampaign(@GetUser() user: any, @Param('id') id: string) {
+        return this.campaignsService.abortCampaign(user.shopId, id);
+    }
+
+    @Post(':id/retarget')
+    async launchRetarget(@GetUser() user: any, @Param('id') id: string, @Body() body: any) {
+        return this.campaignsService.launchRetarget(user.shopId, id, body);
+    }
+
+    @Delete(':id')
+    async deleteCampaign(@GetUser() user: any, @Param('id') id: string) {
+        return this.campaignsService.deleteCampaign(user.shopId, id);
     }
 }
