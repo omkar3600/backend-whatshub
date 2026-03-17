@@ -11,13 +11,15 @@ export class CampaignsService {
     ) { }
 
     async createCampaign(shopId: string, data: any) {
-        const { name, templateId, targetTags, scheduledAt } = data;
+        const { name, templateId, targetTags, scheduledAt, templateParams, headerMediaUrl } = data;
         const campaign = await this.prisma.campaign.create({
             data: {
                 shopId,
                 name,
                 templateId,
                 targetTags: targetTags || [],
+                templateParams: templateParams || {},
+                headerMediaUrl: headerMediaUrl || null,
                 scheduledAt: new Date(scheduledAt || Date.now()),
                 status: 'scheduled',
             },

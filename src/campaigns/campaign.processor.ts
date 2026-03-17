@@ -39,11 +39,17 @@ export class CampaignProcessor extends WorkerHost {
 
         for (const c of contacts) {
             try {
+                const templateParamsObj = campaign.templateParams as any;
+                const templateContent = templateParamsObj && Array.isArray(templateParamsObj) && templateParamsObj.length > 0 
+                    ? { name: campaign.template.templateName, components: templateParamsObj }
+                    : campaign.template.templateName;
+
                 await this.whatsappService.sendOutboundMessage(
                     campaign.shopId,
                     c.phone,
                     'template',
-                    campaign.template.templateName
+                    templateContent,
+                    campaign.headerMediaUrl as string | undefined
                 );
                 sent++;
             } catch (e) {

@@ -184,7 +184,7 @@ export class WhatsappService {
         }
     }
 
-    async sendOutboundMessage(shopId: string, toPhone: string, type: string, content: string, mediaUrl?: string) {
+    async sendOutboundMessage(shopId: string, toPhone: string, type: string, content: any, mediaUrl?: string) {
         const creds = await this.prisma.whatsAppCredential.findUnique({ where: { shopId } });
         if (!creds) throw new Error('WhatsApp credentials not found for this shop');
 
@@ -201,9 +201,12 @@ export class WhatsappService {
             payload[type] = { link: mediaUrl };
         } else if (type === 'template') {
             payload.template = {
-                name: content,
+                name: typeof content === 'string' ? content : content.name,
                 language: { code: 'en_US' }
             };
+            if (typeof content !== 'string' && content.components) {
+                payload.template.components = content.components;
+            }
         }
 
         const url = `https://graph.facebook.com/v18.0/${creds.phoneNumberId}/messages`;

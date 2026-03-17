@@ -26,7 +26,7 @@ import { AppService } from './app.service';
     // Rate limiting: 60 requests per 60 seconds per IP
     ThrottlerModule.forRoot([{
       ttl: 60000,
-      limit: 60,
+      limit: 120, // Increased from 60 to 120 to prevent 429s on initial load
     }]),
     PrismaModule,
     BullModule.forRoot({
