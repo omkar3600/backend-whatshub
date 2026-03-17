@@ -163,8 +163,11 @@ export class WhatsappService {
                     try {
                         await this.sendOutboundMessage(shopId, contactData.wa_id, 'text', auto.replyText);
                         this.logger.log(`[Automation] Reply sent successfully to ${contactData.wa_id}`);
-                    } catch (sendErr) {
-                        const detail = sendErr.response?.data ? JSON.stringify(sendErr.response.data) : sendErr.message;
+                    } catch (sendErr: unknown) {
+                        const axiosErr = sendErr as any;
+                        const detail = axiosErr?.response?.data
+                            ? JSON.stringify(axiosErr.response.data)
+                            : sendErr instanceof Error ? sendErr.message : String(sendErr);
                         this.logger.error(`[Automation] FAILED to send reply: ${detail}`);
                     }
                     break; // Only fire the first matching automation
@@ -221,8 +224,10 @@ export class WhatsappService {
                 })
             );
             return response.data;
-        } catch (error) {
-            this.logger.error('Error sending WhatsApp message', error.response?.data || error.message);
+        } catch (error: unknown) {
+            const axiosErr = error as any;
+            const detail = axiosErr?.response?.data || (error instanceof Error ? error.message : String(error));
+            this.logger.error('Error sending WhatsApp message', detail);
             throw error;
         }
     }

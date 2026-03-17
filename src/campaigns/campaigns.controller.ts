@@ -21,6 +21,16 @@ export class CampaignsController {
         return this.campaignsService.getCampaigns(user.shopId);
     }
 
+    @Get(':id/analytics')
+    async getCampaignAnalytics(@GetUser() user: any, @Param('id') id: string) {
+        return this.campaignsService.getCampaignAnalytics(user.shopId, id);
+    }
+
+    @Post(':id/contacts/add-tags')
+    async addTagsToContacts(@GetUser() user: any, @Param('id') id: string, @Body() body: any) {
+        return this.campaignsService.addTagsToContacts(user.shopId, id, body);
+    }
+
     @Post(':id/resend-failed')
     async resendFailed(@GetUser() user: any, @Param('id') id: string) {
         return this.campaignsService.resendFailed(user.shopId, id);

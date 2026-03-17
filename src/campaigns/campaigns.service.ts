@@ -39,8 +39,74 @@ export class CampaignsService {
         });
     }
 
+    async getCampaignAnalytics(shopId: string, campaignId: string) {
+        const campaign = await this.prisma.campaign.findFirst({
+            where: { id: campaignId, shopId },
+            include: {
+                template: true,
+                contacts: {
+                    orderBy: { sentAt: 'desc' },
+                },
+            },
+        });
+
+        if (!campaign) throw new NotFoundException('Campaign not found');
+
+        const allContacts = campaign.contacts;
+        const byStatus = {
+            sent: allContacts.filter(c => c.status === 'sent'),
+            delivered: allContacts.filter(c => c.status === 'delivered'),
+            read: allContacts.filter(c => c.status === 'read'),
+            clicked: allContacts.filter(c => c.status === 'clicked'),
+            failed: allContacts.filter(c => c.status === 'failed'),
+        };
+
+        const stats = {
+            total: allContacts.length,
+            sent: byStatus.sent.length,
+            delivered: byStatus.delivered.length,
+            read: byStatus.read.length,
+            clicked: byStatus.clicked.length,
+            failed: byStatus.failed.length,
+        };
+
+        return {
+            campaign,
+            stats,
+            contacts: byStatus,
+        };
+    }
+
+    async addTagsToContacts(shopId: string, campaignId: string, body: { phones: string[]; tags: string[] }) {
+        const { phones, tags } = body;
+
+        // Verify campaign belongs to shop
+        const campaign = await this.prisma.campaign.findFirst({ where: { id: campaignId, shopId } });
+        if (!campaign) throw new NotFoundException('Campaign not found');
+
+        // For each phone, find contact and merge tags
+        const results: any[] = [];
+        for (const phone of phones) {
+            const contact = await this.prisma.contact.findUnique({
+                where: { shopId_phone: { shopId, phone } },
+            });
+            if (!contact) continue;
+
+            const existingTags = (contact.tags as string[]) || [];
+            const mergedTags = Array.from(new Set([...existingTags, ...tags]));
+
+            const updated = await this.prisma.contact.update({
+                where: { id: contact.id },
+                data: { tags: mergedTags },
+            });
+            results.push(updated);
+        }
+
+        return { updated: results.length, message: `Tags added to ${results.length} contacts` };
+    }
+
     async resendFailed(shopId: string, campaignId: string) {
-        const original = await this.prisma.campaign.findUnique({
+        const original = await this.prisma.campaign.findFirst({
             where: { id: campaignId, shopId },
             include: { template: true }
         });
@@ -52,9 +118,6 @@ export class CampaignsService {
         const failedList = original.failureHistory as any[];
         if (failedList.length === 0) return { message: 'No failed contacts to resend' };
 
-        // For simplicity, we create a new "Processing" state or just re-run for these specific ones
-        // Here we just trigger a one-off process by adding to queue with custom data
-        // For robustness, let's create a "Retry" campaign entry
         const retryCampaign = await this.prisma.campaign.create({
             data: {
                 shopId,
@@ -62,8 +125,7 @@ export class CampaignsService {
                 templateId: original.templateId,
                 status: 'processing',
                 scheduledAt: new Date(),
-                targetTags: original.targetTags as any // Keep original tags reference if needed
-                // We'll pass the specific list in the job data
+                targetTags: original.targetTags as any
             }
         });
 
