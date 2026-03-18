@@ -39,10 +39,42 @@ export class ChatbotService {
         }
 
         try {
+            // Dynamically query Google's API to ensure we only select a model this specific API key actually has access to
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${config.apiKey}`);
+            const data = await response.json() as any;
+            
+            if (!data.models) {
+                this.logger.error(`[Chatbot] Failed to fetch models: ${JSON.stringify(data)}`);
+                return { error: data.error?.message || 'Invalid API Key or unauthorized' };
+            }
+
+            // Filter out models that don't support standard text generation
+            const textModels = data.models.filter((m: any) => 
+                m.supportedGenerationMethods?.includes('generateContent') && 
+                !m.name.includes('vision') && 
+                !m.name.includes('embedding') &&
+                !m.name.includes('test')
+            );
+            
+            const modelNames = textModels.map((m: any) => m.name.replace('models/', ''));
+
+            // Preference order for standard robust generation
+            let selectedModel = '';
+            if (modelNames.includes('gemini-1.5-flash')) selectedModel = 'gemini-1.5-flash';
+            else if (modelNames.includes('gemini-1.5-pro')) selectedModel = 'gemini-1.5-pro';
+            else if (modelNames.includes('gemini-2.0-flash')) selectedModel = 'gemini-2.0-flash';
+            else if (modelNames.includes('gemini-pro')) selectedModel = 'gemini-pro';
+            else if (modelNames.length > 0) selectedModel = modelNames[0];
+
+            if (!selectedModel) {
+                return { error: 'Your API key does not have access to any text generation models on the v1beta endpoint.' };
+            }
+
+            this.logger.log(`[Chatbot] Using dynamically verified model: ${selectedModel}`);
+
             const genAI = new GoogleGenerativeAI(config.apiKey);
-            // hardcode to gemini-pro to ensure older API keys don't hit a 404
             const model = genAI.getGenerativeModel({
-                model: 'gemini-pro',
+                model: selectedModel,
                 generationConfig: {
                     temperature: config.temperature ?? 0.7,
                 }
