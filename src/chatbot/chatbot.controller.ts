@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Patch, Body, Param, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Put, Patch, Post, Body, Param, UseGuards, Req } from '@nestjs/common';
 import { ChatbotService } from './chatbot.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -49,13 +49,14 @@ export class ChatbotController {
         return { success: true, conversationId, aiPaused: paused };
     }
 
-    @Get('test')
-    async testConnection(@Req() req: any) {
+    @Post('test')
+    async testConnection(@Req() req: any, @Body('message') message?: string) {
         const shopId = req.user.shopId;
         const config = await this.chatbotService.getConfig(shopId);
         if (!config?.apiKey) return { success: false, message: 'No API key configured.' };
 
-        const reply = await this.chatbotService.generateResponse(shopId, 'Test User', 'Hello! Please introduce yourself in one sentence.');
+        const userMessage = message?.trim() || 'Hello! Please introduce yourself in one sentence.';
+        const reply = await this.chatbotService.generateResponse(shopId, 'Test User', userMessage);
         if (reply.text) return { success: true, reply: reply.text };
         return { success: false, message: `AI Error: ${reply.error}` };
     }
