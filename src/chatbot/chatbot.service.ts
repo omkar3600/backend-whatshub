@@ -41,7 +41,7 @@ export class ChatbotService {
         try {
             const genAI = new GoogleGenerativeAI(config.apiKey);
             const model = genAI.getGenerativeModel({
-                model: config.model || 'gemini-1.5-flash-latest',
+                model: config.model || 'gemini-1.5-flash',
                 generationConfig: {
                     temperature: config.temperature ?? 0.7,
                 },
