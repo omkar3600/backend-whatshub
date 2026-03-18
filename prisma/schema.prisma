@@ -49,6 +49,7 @@ model Shop {
   subscription  Subscription?
   templates     Template[]
   whatsappCreds WhatsAppCredential?
+  chatbotConfig ChatbotConfig?
 }
 
 model Subscription {
@@ -97,6 +98,7 @@ model Conversation {
   contactId     String
   lastMessageAt DateTime  @default(now())
   unreadCount   Int       @default(0)
+  aiPaused      Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   contact       Contact   @relation(fields: [contactId], references: [id])
@@ -192,4 +194,18 @@ model Automation {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   shop           Shop     @relation(fields: [shopId], references: [id])
+}
+
+model ChatbotConfig {
+  id           String   @id @default(uuid())
+  shopId       String   @unique
+  isActive     Boolean  @default(false)
+  apiKey       String?
+  model        String   @default("gemini-1.5-flash")
+  temperature  Float    @default(0.7)
+  systemPrompt String?  @db.Text
+  businessInfo String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  shop         Shop     @relation(fields: [shopId], references: [id])
 }

@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { ChatGateway } from '../chat/chat.gateway';
+import { ChatbotService } from '../chatbot/chatbot.service';
 
 @Injectable()
 export class WhatsappService {
@@ -12,6 +13,7 @@ export class WhatsappService {
         private prisma: PrismaService,
         private httpService: HttpService,
         private chatGateway: ChatGateway,
+        private chatbotService: ChatbotService,
     ) { }
 
     async verifyWebhook(mode: string, token: string, challenge: string, shopId?: string) {
@@ -147,6 +149,7 @@ export class WhatsappService {
         });
 
         // --- Smart Automations ---
+        let automationFired = false;
         if (messageData.type === 'text') {
             const incomingText = messageData.text.body.trim().toLowerCase();
             const automations = await this.prisma.automation.findMany({
@@ -163,6 +166,7 @@ export class WhatsappService {
                     try {
                         await this.sendOutboundMessage(shopId, contactData.wa_id, 'text', auto.replyText);
                         this.logger.log(`[Automation] Reply sent successfully to ${contactData.wa_id}`);
+                        automationFired = true;
                     } catch (sendErr: unknown) {
                         const axiosErr = sendErr as any;
                         const detail = axiosErr?.response?.data
@@ -172,6 +176,28 @@ export class WhatsappService {
                     }
                     break; // Only fire the first matching automation
                 }
+            }
+        }
+
+        // --- AI Chatbot (only if no automation fired and AI not paused for this contact) ---
+        if (!automationFired && messageData.type === 'text') {
+            // Check if this conversation has AI paused
+            const conv = await this.prisma.conversation.findUnique({
+                where: { id: conversation.id },
+                select: { aiPaused: true },
+            });
+            if (!conv?.aiPaused) {
+                const aiReply = await this.chatbotService.generateResponse(
+                    shopId,
+                    contact.name,
+                    messageData.text.body,
+                );
+                if (aiReply) {
+                    this.logger.log(`[Chatbot] Sending AI reply to ${contactData.wa_id}`);
+                    await this.sendOutboundMessage(shopId, contactData.wa_id, 'text', aiReply);
+                }
+            } else {
+                this.logger.log(`[Chatbot] AI paused for conversation ${conversation.id} — skipping.`);
             }
         }
     }

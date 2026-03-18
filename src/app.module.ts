@@ -17,6 +17,7 @@ import { AutomationsModule } from './automations/automations.module';
 import { TemplatesModule } from './templates/templates.module';
 import { MediaModule } from './media/media.module';
 import { UsersModule } from './users/users.module';
+import { ChatbotModule } from './chatbot/chatbot.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -51,6 +52,7 @@ import { AppService } from './app.service';
     TemplatesModule,
     MediaModule,
     UsersModule,
+    ChatbotModule,
   ],
   controllers: [AppController],
   providers: [
