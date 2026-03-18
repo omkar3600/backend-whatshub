@@ -40,15 +40,19 @@ export class ChatbotService {
 
         try {
             const genAI = new GoogleGenerativeAI(config.apiKey);
+            // hardcode to gemini-pro to ensure older API keys don't hit a 404
             const model = genAI.getGenerativeModel({
-                model: config.model || 'gemini-1.5-flash',
+                model: 'gemini-pro',
                 generationConfig: {
                     temperature: config.temperature ?? 0.7,
-                },
-                systemInstruction: this.buildSystemPrompt(config.systemPrompt, config.businessInfo, contactName),
+                }
             });
 
-            const result = await model.generateContent(userMessage);
+            // Since gemini-pro does not support systemInstruction, we prepend the context to the user's message
+            const systemContext = this.buildSystemPrompt(config.systemPrompt, config.businessInfo, contactName);
+            const fullPrompt = `${systemContext}\n\nCustomer says: ${userMessage}`;
+            
+            const result = await model.generateContent(fullPrompt);
             return { text: result.response.text() };
         } catch (err: any) {
             this.logger.error(`[Chatbot] AI generation failed for shop ${shopId}: ${err.message}`);
