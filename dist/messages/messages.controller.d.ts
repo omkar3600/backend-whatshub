@@ -8,12 +8,12 @@ export declare class MessagesController {
         updatedAt: Date;
         status: string;
         shopId: string;
+        conversationId: string;
         direction: string;
         type: string;
         content: string | null;
         mediaUrl: string | null;
         timestamp: Date;
-        conversationId: string;
     }[]>;
     sendMessage(user: any, conversationId: string, body: any): Promise<{
         id: string;
@@ -21,11 +21,11 @@ export declare class MessagesController {
         updatedAt: Date;
         status: string;
         shopId: string;
+        conversationId: string;
         direction: string;
         type: string;
         content: string | null;
         mediaUrl: string | null;
         timestamp: Date;
-        conversationId: string;
     }>;
 }

@@ -33,7 +33,7 @@ let ChatbotService = ChatbotService_1 = class ChatbotService {
             create: { shopId, ...data },
         });
     }
-    async generateResponse(shopId, contactName, userMessage) {
+    async generateResponse(shopId, contactName, userMessage, conversationId) {
         const config = await this.getConfig(shopId);
         if (!config || !config.isActive || !config.apiKey) {
             return { error: 'Chatbot is not configured or is inactive.' };
@@ -41,11 +41,30 @@ let ChatbotService = ChatbotService_1 = class ChatbotService {
         try {
             const groq = new groq_sdk_1.default({ apiKey: config.apiKey });
             const systemContext = this.buildSystemPrompt(config.systemPrompt, config.businessInfo, contactName);
+            const messages = [
+                { role: 'system', content: systemContext }
+            ];
+            if (conversationId) {
+                const history = await this.prisma.message.findMany({
+                    where: { conversationId },
+                    orderBy: { timestamp: 'desc' },
+                    take: 10,
+                });
+                const sortedHistory = history.reverse();
+                for (const msg of sortedHistory) {
+                    if (msg.content) {
+                        messages.push({
+                            role: msg.direction === 'inbound' ? 'user' : 'assistant',
+                            content: msg.content
+                        });
+                    }
+                }
+            }
+            else {
+                messages.push({ role: 'user', content: userMessage });
+            }
             const completion = await groq.chat.completions.create({
-                messages: [
-                    { role: 'system', content: systemContext },
-                    { role: 'user', content: userMessage }
-                ],
+                messages,
                 model: 'llama-3.3-70b-versatile',
                 temperature: config.temperature ?? 0.7,
             });
@@ -58,16 +77,23 @@ let ChatbotService = ChatbotService_1 = class ChatbotService {
     }
     buildSystemPrompt(systemPrompt, businessInfo, contactName) {
         const parts = [];
-        if (systemPrompt) {
-            parts.push(systemPrompt);
+        parts.push(`[SYSTEM BEHAVIOR AND PERSONA]`);
+        if (systemPrompt && systemPrompt.trim()) {
+            parts.push(systemPrompt.trim());
         }
         else {
             parts.push('You are a helpful business assistant. Answer customer queries politely and professionally.');
         }
-        parts.push(`\nThe customer you are talking to is named: ${contactName}.`);
-        if (businessInfo) {
-            parts.push(`\n--- BUSINESS INFORMATION ---\n${businessInfo}\n--- END OF BUSINESS INFORMATION ---`);
-            parts.push('\nUse ONLY the Business Information above to answer customer queries. If you do not know the answer from the provided information, politely say you will check and get back to them.');
+        parts.push(`\n[CURRENT CONVERSATION CONTEXT]`);
+        parts.push(`The customer you are speaking to right now is named: ${contactName}.`);
+        if (businessInfo && businessInfo.trim()) {
+            parts.push(`\n[BUSINESS KNOWLEDGE BASE]`);
+            parts.push(businessInfo.trim());
+            parts.push(`\n[CRITICAL INSTRUCTIONS]`);
+            parts.push(`1. You must answer the customer's questions strictly using the facts inside the [BUSINESS KNOWLEDGE BASE] provided above.`);
+            parts.push(`2. If the customer asks a question or makes a request that is NOT covered by the [BUSINESS KNOWLEDGE BASE], you must politely state that you do not have that information and a human agent will assist them shortly.`);
+            parts.push(`3. Do NOT invent, assume, or hallucinate any prices, rules, features, or policies.`);
+            parts.push(`4. Always maintain the personality defined in the [SYSTEM BEHAVIOR AND PERSONA] section.`);
         }
         return parts.join('\n');
     }

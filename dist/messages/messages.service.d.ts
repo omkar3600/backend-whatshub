@@ -10,12 +10,12 @@ export declare class MessagesService {
         updatedAt: Date;
         status: string;
         shopId: string;
+        conversationId: string;
         direction: string;
         type: string;
         content: string | null;
         mediaUrl: string | null;
         timestamp: Date;
-        conversationId: string;
     }[]>;
     sendMessage(shopId: string, conversationId: string, data: any): Promise<{
         id: string;
@@ -23,11 +23,11 @@ export declare class MessagesService {
         updatedAt: Date;
         status: string;
         shopId: string;
+        conversationId: string;
         direction: string;
         type: string;
         content: string | null;
         mediaUrl: string | null;
         timestamp: Date;
-        conversationId: string;
     }>;
 }

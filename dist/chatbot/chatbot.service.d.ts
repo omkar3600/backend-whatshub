@@ -34,7 +34,7 @@ export declare class ChatbotService {
         systemPrompt: string | null;
         businessInfo: string | null;
     }>;
-    generateResponse(shopId: string, contactName: string, userMessage: string): Promise<{
+    generateResponse(shopId: string, contactName: string, userMessage: string, conversationId?: string): Promise<{
         text?: string;
         error?: string;
     }>;
