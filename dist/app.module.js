@@ -26,6 +26,7 @@ const automations_module_1 = require("./automations/automations.module");
 const templates_module_1 = require("./templates/templates.module");
 const media_module_1 = require("./media/media.module");
 const users_module_1 = require("./users/users.module");
+const chatbot_module_1 = require("./chatbot/chatbot.module");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 let AppModule = class AppModule {
@@ -62,6 +63,7 @@ exports.AppModule = AppModule = __decorate([
             templates_module_1.TemplatesModule,
             media_module_1.MediaModule,
             users_module_1.UsersModule,
+            chatbot_module_1.ChatbotModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [

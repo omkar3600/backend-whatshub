@@ -62,17 +62,24 @@ export class ChatbotService {
     private buildSystemPrompt(systemPrompt: string | null, businessInfo: string | null, contactName: string): string {
         const parts: string[] = [];
 
-        if (systemPrompt) {
-            parts.push(systemPrompt);
+        parts.push(`[SYSTEM BEHAVIOR AND PERSONA]`);
+        if (systemPrompt && systemPrompt.trim()) {
+            parts.push(systemPrompt.trim());
         } else {
             parts.push('You are a helpful business assistant. Answer customer queries politely and professionally.');
         }
 
-        parts.push(`\nThe customer you are talking to is named: ${contactName}.`);
+        parts.push(`\n[CURRENT CONVERSATION CONTEXT]`);
+        parts.push(`The customer you are speaking to right now is named: ${contactName}.`);
 
-        if (businessInfo) {
-            parts.push(`\n--- BUSINESS INFORMATION ---\n${businessInfo}\n--- END OF BUSINESS INFORMATION ---`);
-            parts.push('\nUse ONLY the Business Information above to answer customer queries. If you do not know the answer from the provided information, politely say you will check and get back to them.');
+        if (businessInfo && businessInfo.trim()) {
+            parts.push(`\n[BUSINESS KNOWLEDGE BASE]`);
+            parts.push(businessInfo.trim());
+            parts.push(`\n[CRITICAL INSTRUCTIONS]`);
+            parts.push(`1. You must answer the customer's questions strictly using the facts inside the [BUSINESS KNOWLEDGE BASE] provided above.`);
+            parts.push(`2. If the customer asks a question or makes a request that is NOT covered by the [BUSINESS KNOWLEDGE BASE], you must politely state that you do not have that information and a human agent will assist them shortly.`);
+            parts.push(`3. Do NOT invent, assume, or hallucinate any prices, rules, features, or policies.`);
+            parts.push(`4. Always maintain the personality defined in the [SYSTEM BEHAVIOR AND PERSONA] section.`);
         }
 
         return parts.join('\n');

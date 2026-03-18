@@ -166,6 +166,30 @@ export class WhatsappService {
                     try {
                         await this.sendOutboundMessage(shopId, contactData.wa_id, 'text', auto.replyText);
                         this.logger.log(`[Automation] Reply sent successfully to ${contactData.wa_id}`);
+                        
+                        // --- Save and Notify ---
+                        const savedAutoMsg = await this.prisma.message.create({
+                            data: {
+                                shopId,
+                                conversationId: conversation.id,
+                                direction: 'outbound',
+                                type: 'text',
+                                content: auto.replyText,
+                                status: 'sent',
+                            },
+                        });
+                        this.chatGateway.notifyNewMessage(shopId, {
+                            ...savedAutoMsg,
+                            contact: { name: contact.name, phone: contact.phone }
+                        });
+
+                        // Update conversation lastMessageAt
+                        await this.prisma.conversation.update({
+                            where: { id: conversation.id },
+                            data: { lastMessageAt: new Date() },
+                        });
+                        // -----------------------
+
                         automationFired = true;
                     } catch (sendErr: unknown) {
                         const axiosErr = sendErr as any;
@@ -195,6 +219,30 @@ export class WhatsappService {
                 if (aiReply.text) {
                     this.logger.log(`[Chatbot] Sending AI reply to ${contactData.wa_id}`);
                     await this.sendOutboundMessage(shopId, contactData.wa_id, 'text', aiReply.text);
+                    
+                    // --- Save and Notify ---
+                    const savedAiMsg = await this.prisma.message.create({
+                        data: {
+                            shopId,
+                            conversationId: conversation.id,
+                            direction: 'outbound',
+                            type: 'text',
+                            content: aiReply.text,
+                            status: 'sent',
+                        },
+                    });
+                    this.chatGateway.notifyNewMessage(shopId, {
+                        ...savedAiMsg,
+                        contact: { name: contact.name, phone: contact.phone }
+                    });
+
+                    // Update conversation lastMessageAt
+                    await this.prisma.conversation.update({
+                        where: { id: conversation.id },
+                        data: { lastMessageAt: new Date() },
+                    });
+                    // -----------------------
+
                 } else if (aiReply.error) {
                     this.logger.error(`[Chatbot] Failed to generate AI reply for ${contactData.wa_id}: ${aiReply.error}`);
                 }

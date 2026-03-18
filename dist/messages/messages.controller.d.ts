@@ -2,6 +2,30 @@ import { MessagesService } from './messages.service';
 export declare class MessagesController {
     private readonly messagesService;
     constructor(messagesService: MessagesService);
-    getMessages(user: any, conversationId: string): Promise<any>;
-    sendMessage(user: any, conversationId: string, body: any): Promise<any>;
+    getMessages(user: any, conversationId: string): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        status: string;
+        shopId: string;
+        direction: string;
+        type: string;
+        content: string | null;
+        mediaUrl: string | null;
+        timestamp: Date;
+        conversationId: string;
+    }[]>;
+    sendMessage(user: any, conversationId: string, body: any): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        status: string;
+        shopId: string;
+        direction: string;
+        type: string;
+        content: string | null;
+        mediaUrl: string | null;
+        timestamp: Date;
+        conversationId: string;
+    }>;
 }

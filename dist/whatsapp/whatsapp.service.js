@@ -16,15 +16,18 @@ const prisma_service_1 = require("../prisma/prisma.service");
 const axios_1 = require("@nestjs/axios");
 const rxjs_1 = require("rxjs");
 const chat_gateway_1 = require("../chat/chat.gateway");
+const chatbot_service_1 = require("../chatbot/chatbot.service");
 let WhatsappService = WhatsappService_1 = class WhatsappService {
     prisma;
     httpService;
     chatGateway;
+    chatbotService;
     logger = new common_1.Logger(WhatsappService_1.name);
-    constructor(prisma, httpService, chatGateway) {
+    constructor(prisma, httpService, chatGateway, chatbotService) {
         this.prisma = prisma;
         this.httpService = httpService;
         this.chatGateway = chatGateway;
+        this.chatbotService = chatbotService;
     }
     async verifyWebhook(mode, token, challenge, shopId) {
         if (mode !== 'subscribe')
@@ -136,6 +139,7 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
                 phone: contact.phone,
             },
         });
+        let automationFired = false;
         if (messageData.type === 'text') {
             const incomingText = messageData.text.body.trim().toLowerCase();
             const automations = await this.prisma.automation.findMany({
@@ -151,13 +155,36 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
                     try {
                         await this.sendOutboundMessage(shopId, contactData.wa_id, 'text', auto.replyText);
                         this.logger.log(`[Automation] Reply sent successfully to ${contactData.wa_id}`);
+                        automationFired = true;
                     }
                     catch (sendErr) {
-                        const detail = sendErr.response?.data ? JSON.stringify(sendErr.response.data) : sendErr.message;
+                        const axiosErr = sendErr;
+                        const detail = axiosErr?.response?.data
+                            ? JSON.stringify(axiosErr.response.data)
+                            : sendErr instanceof Error ? sendErr.message : String(sendErr);
                         this.logger.error(`[Automation] FAILED to send reply: ${detail}`);
                     }
                     break;
                 }
+            }
+        }
+        if (!automationFired && messageData.type === 'text') {
+            const conv = await this.prisma.conversation.findUnique({
+                where: { id: conversation.id },
+                select: { aiPaused: true },
+            });
+            if (!conv?.aiPaused) {
+                const aiReply = await this.chatbotService.generateResponse(shopId, contact.name, messageData.text.body);
+                if (aiReply.text) {
+                    this.logger.log(`[Chatbot] Sending AI reply to ${contactData.wa_id}`);
+                    await this.sendOutboundMessage(shopId, contactData.wa_id, 'text', aiReply.text);
+                }
+                else if (aiReply.error) {
+                    this.logger.error(`[Chatbot] Failed to generate AI reply for ${contactData.wa_id}: ${aiReply.error}`);
+                }
+            }
+            else {
+                this.logger.log(`[Chatbot] AI paused for conversation ${conversation.id} — skipping.`);
             }
         }
     }
@@ -190,9 +217,12 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
         }
         else if (type === 'template') {
             payload.template = {
-                name: content,
+                name: typeof content === 'string' ? content : content.name,
                 language: { code: 'en_US' }
             };
+            if (typeof content !== 'string' && content.components) {
+                payload.template.components = content.components;
+            }
         }
         const url = `https://graph.facebook.com/v18.0/${creds.phoneNumberId}/messages`;
         try {
@@ -205,7 +235,9 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
             return response.data;
         }
         catch (error) {
-            this.logger.error('Error sending WhatsApp message', error.response?.data || error.message);
+            const axiosErr = error;
+            const detail = axiosErr?.response?.data || (error instanceof Error ? error.message : String(error));
+            this.logger.error('Error sending WhatsApp message', detail);
             throw error;
         }
     }
@@ -215,6 +247,7 @@ exports.WhatsappService = WhatsappService = WhatsappService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         axios_1.HttpService,
-        chat_gateway_1.ChatGateway])
+        chat_gateway_1.ChatGateway,
+        chatbot_service_1.ChatbotService])
 ], WhatsappService);
 //# sourceMappingURL=whatsapp.service.js.map

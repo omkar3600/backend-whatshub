@@ -30,8 +30,23 @@ let CampaignsController = class CampaignsController {
     async getCampaigns(user) {
         return this.campaignsService.getCampaigns(user.shopId);
     }
+    async getCampaignAnalytics(user, id) {
+        return this.campaignsService.getCampaignAnalytics(user.shopId, id);
+    }
+    async addTagsToContacts(user, id, body) {
+        return this.campaignsService.addTagsToContacts(user.shopId, id, body);
+    }
     async resendFailed(user, id) {
         return this.campaignsService.resendFailed(user.shopId, id);
+    }
+    async abortCampaign(user, id) {
+        return this.campaignsService.abortCampaign(user.shopId, id);
+    }
+    async launchRetarget(user, id, body) {
+        return this.campaignsService.launchRetarget(user.shopId, id, body);
+    }
+    async deleteCampaign(user, id) {
+        return this.campaignsService.deleteCampaign(user.shopId, id);
     }
 };
 exports.CampaignsController = CampaignsController;
@@ -51,6 +66,23 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], CampaignsController.prototype, "getCampaigns", null);
 __decorate([
+    (0, common_1.Get)(':id/analytics'),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], CampaignsController.prototype, "getCampaignAnalytics", null);
+__decorate([
+    (0, common_1.Post)(':id/contacts/add-tags'),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", Promise)
+], CampaignsController.prototype, "addTagsToContacts", null);
+__decorate([
     (0, common_1.Post)(':id/resend-failed'),
     __param(0, (0, get_user_decorator_1.GetUser)()),
     __param(1, (0, common_1.Param)('id')),
@@ -58,6 +90,31 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], CampaignsController.prototype, "resendFailed", null);
+__decorate([
+    (0, common_1.Post)(':id/abort'),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], CampaignsController.prototype, "abortCampaign", null);
+__decorate([
+    (0, common_1.Post)(':id/retarget'),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", Promise)
+], CampaignsController.prototype, "launchRetarget", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], CampaignsController.prototype, "deleteCampaign", null);
 exports.CampaignsController = CampaignsController = __decorate([
     (0, common_1.Controller)('campaigns'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),

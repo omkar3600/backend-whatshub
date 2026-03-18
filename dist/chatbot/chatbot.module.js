@@ -6,21 +6,20 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.WhatsappModule = void 0;
+exports.ChatbotModule = void 0;
 const common_1 = require("@nestjs/common");
-const whatsapp_service_1 = require("./whatsapp.service");
-const webhooks_controller_1 = require("./webhooks/webhooks.controller");
-const axios_1 = require("@nestjs/axios");
-const chatbot_module_1 = require("../chatbot/chatbot.module");
-let WhatsappModule = class WhatsappModule {
+const chatbot_service_1 = require("./chatbot.service");
+const chatbot_controller_1 = require("./chatbot.controller");
+const prisma_module_1 = require("../prisma/prisma.module");
+let ChatbotModule = class ChatbotModule {
 };
-exports.WhatsappModule = WhatsappModule;
-exports.WhatsappModule = WhatsappModule = __decorate([
+exports.ChatbotModule = ChatbotModule;
+exports.ChatbotModule = ChatbotModule = __decorate([
     (0, common_1.Module)({
-        imports: [axios_1.HttpModule, chatbot_module_1.ChatbotModule],
-        providers: [whatsapp_service_1.WhatsappService],
-        controllers: [webhooks_controller_1.WebhooksController],
-        exports: [whatsapp_service_1.WhatsappService],
+        imports: [prisma_module_1.PrismaModule],
+        controllers: [chatbot_controller_1.ChatbotController],
+        providers: [chatbot_service_1.ChatbotService],
+        exports: [chatbot_service_1.ChatbotService],
     })
-], WhatsappModule);
-//# sourceMappingURL=whatsapp.module.js.map
+], ChatbotModule);
+//# sourceMappingURL=chatbot.module.js.map

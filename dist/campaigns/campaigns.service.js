@@ -25,13 +25,16 @@ let CampaignsService = class CampaignsService {
         this.campaignsQueue = campaignsQueue;
     }
     async createCampaign(shopId, data) {
-        const { name, templateId, targetTags, scheduledAt } = data;
+        const { name, templateId, targetTags, targetPhones, scheduledAt, templateParams, headerMediaUrl } = data;
         const campaign = await this.prisma.campaign.create({
             data: {
                 shopId,
                 name,
                 templateId,
                 targetTags: targetTags || [],
+                targetPhones: targetPhones || [],
+                templateParams: templateParams || {},
+                headerMediaUrl: headerMediaUrl || null,
                 scheduledAt: new Date(scheduledAt || Date.now()),
                 status: 'scheduled',
             },
@@ -47,8 +50,111 @@ let CampaignsService = class CampaignsService {
             orderBy: { createdAt: 'desc' },
         });
     }
+    async deleteCampaign(shopId, campaignId) {
+        const campaign = await this.prisma.campaign.findFirst({
+            where: { id: campaignId, shopId }
+        });
+        if (!campaign)
+            throw new common_1.NotFoundException('Campaign not found');
+        if (campaign.status === 'processing') {
+            throw new Error('Cannot delete a processing campaign. Abort it first.');
+        }
+        return this.prisma.campaign.delete({
+            where: { id: campaignId }
+        });
+    }
+    async abortCampaign(shopId, campaignId) {
+        const campaign = await this.prisma.campaign.findFirst({
+            where: { id: campaignId, shopId }
+        });
+        if (!campaign)
+            throw new common_1.NotFoundException('Campaign not found');
+        if (campaign.status !== 'processing') {
+            throw new Error('Can only abort processing campaigns');
+        }
+        return this.prisma.campaign.update({
+            where: { id: campaignId },
+            data: { status: 'aborted' }
+        });
+    }
+    async launchRetarget(shopId, campaignId, body) {
+        const { name, templateId, phones } = body;
+        const original = await this.prisma.campaign.findFirst({
+            where: { id: campaignId, shopId }
+        });
+        if (!original)
+            throw new common_1.NotFoundException('Original campaign not found');
+        const campaign = await this.prisma.campaign.create({
+            data: {
+                shopId,
+                name,
+                templateId,
+                targetPhones: phones,
+                scheduledAt: new Date(),
+                status: 'processing',
+            },
+        });
+        await this.campaignsQueue.add('processCampaign', { campaignId: campaign.id });
+        return campaign;
+    }
+    async getCampaignAnalytics(shopId, campaignId) {
+        const campaign = await this.prisma.campaign.findFirst({
+            where: { id: campaignId, shopId },
+            include: {
+                template: true,
+                contacts: {
+                    orderBy: { sentAt: 'desc' },
+                },
+            },
+        });
+        if (!campaign)
+            throw new common_1.NotFoundException('Campaign not found');
+        const allContacts = campaign.contacts;
+        const byStatus = {
+            sent: allContacts.filter(c => c.status === 'sent'),
+            delivered: allContacts.filter(c => c.status === 'delivered'),
+            read: allContacts.filter(c => c.status === 'read'),
+            clicked: allContacts.filter(c => c.status === 'clicked'),
+            failed: allContacts.filter(c => c.status === 'failed'),
+        };
+        const stats = {
+            total: allContacts.length,
+            sent: byStatus.sent.length,
+            delivered: byStatus.delivered.length,
+            read: byStatus.read.length,
+            clicked: byStatus.clicked.length,
+            failed: byStatus.failed.length,
+        };
+        return {
+            campaign,
+            stats,
+            contacts: byStatus,
+        };
+    }
+    async addTagsToContacts(shopId, campaignId, body) {
+        const { phones, tags } = body;
+        const campaign = await this.prisma.campaign.findFirst({ where: { id: campaignId, shopId } });
+        if (!campaign)
+            throw new common_1.NotFoundException('Campaign not found');
+        const results = [];
+        for (const phone of phones) {
+            const contact = await this.prisma.contact.findUnique({
+                where: { shopId_phone: { shopId, phone } },
+            });
+            if (!contact)
+                continue;
+            const existingTags = contact.tags || [];
+            const mergedTags = Array.from(new Set([...existingTags, ...tags]));
+            const updated = await this.prisma.contact.update({
+                where: { id: contact.id },
+                data: { tags: mergedTags },
+            });
+            results.push(updated);
+        }
+        return { updated: results.length, message: `Tags added to ${results.length} contacts` };
+    }
     async resendFailed(shopId, campaignId) {
-        const original = await this.prisma.campaign.findUnique({
+        const original = await this.prisma.campaign.findFirst({
             where: { id: campaignId, shopId },
             include: { template: true }
         });
@@ -65,13 +171,12 @@ let CampaignsService = class CampaignsService {
                 templateId: original.templateId,
                 status: 'processing',
                 scheduledAt: new Date(),
-                targetTags: original.targetTags
+                targetTags: original.targetTags,
+                targetPhones: (failedList.map(f => f.phone))
             }
         });
-        const failedPhones = failedList.map(f => f.phone);
         await this.campaignsQueue.add('processCampaign', {
-            campaignId: retryCampaign.id,
-            limitToPhones: failedPhones
+            campaignId: retryCampaign.id
         });
         return retryCampaign;
     }
