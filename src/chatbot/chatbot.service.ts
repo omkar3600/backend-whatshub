@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 
 @Injectable()
 export class ChatbotService {
@@ -39,55 +39,22 @@ export class ChatbotService {
         }
 
         try {
-            // Dynamically query Google's API to ensure we only select a model this specific API key actually has access to
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${config.apiKey}`);
-            const data = await response.json() as any;
+            const groq = new Groq({ apiKey: config.apiKey });
             
-            if (!data.models) {
-                this.logger.error(`[Chatbot] Failed to fetch models: ${JSON.stringify(data)}`);
-                return { error: data.error?.message || 'Invalid API Key or unauthorized' };
-            }
-
-            // Filter out models that don't support standard text generation
-            const textModels = data.models.filter((m: any) => 
-                m.supportedGenerationMethods?.includes('generateContent') && 
-                !m.name.includes('vision') && 
-                !m.name.includes('embedding') &&
-                !m.name.includes('test')
-            );
-            
-            const modelNames = textModels.map((m: any) => m.name.replace('models/', ''));
-
-            // Preference order for standard robust generation
-            let selectedModel = '';
-            if (modelNames.includes('gemini-1.5-flash')) selectedModel = 'gemini-1.5-flash';
-            else if (modelNames.includes('gemini-1.5-pro')) selectedModel = 'gemini-1.5-pro';
-            else if (modelNames.includes('gemini-2.0-flash')) selectedModel = 'gemini-2.0-flash';
-            else if (modelNames.includes('gemini-pro')) selectedModel = 'gemini-pro';
-            else if (modelNames.length > 0) selectedModel = modelNames[0];
-
-            if (!selectedModel) {
-                return { error: 'Your API key does not have access to any text generation models on the v1beta endpoint.' };
-            }
-
-            this.logger.log(`[Chatbot] Using dynamically verified model: ${selectedModel}`);
-
-            const genAI = new GoogleGenerativeAI(config.apiKey);
-            const model = genAI.getGenerativeModel({
-                model: selectedModel,
-                generationConfig: {
-                    temperature: config.temperature ?? 0.7,
-                }
-            });
-
-            // Since gemini-pro does not support systemInstruction, we prepend the context to the user's message
             const systemContext = this.buildSystemPrompt(config.systemPrompt, config.businessInfo, contactName);
-            const fullPrompt = `${systemContext}\n\nCustomer says: ${userMessage}`;
+
+            const completion = await groq.chat.completions.create({
+                messages: [
+                    { role: 'system', content: systemContext },
+                    { role: 'user', content: userMessage }
+                ],
+                model: 'llama-3.3-70b-versatile',
+                temperature: config.temperature ?? 0.7,
+            });
             
-            const result = await model.generateContent(fullPrompt);
-            return { text: result.response.text() };
+            return { text: completion.choices[0]?.message?.content || '' };
         } catch (err: any) {
-            this.logger.error(`[Chatbot] AI generation failed for shop ${shopId}: ${err.message}`);
+            this.logger.error(`[Chatbot] Groq AI generation failed for shop ${shopId}: ${err.message}`);
             return { error: err.message || 'Unknown API Error' };
         }
     }

@@ -32,6 +32,9 @@ export class ChatbotController {
         const shopId = req.user.shopId;
         // If API key is masked (starts with ****), don't overwrite the saved one
         const data = { ...body };
+        if (data.apiKey) {
+            data.apiKey = data.apiKey.trim();
+        }
         if (data.apiKey?.startsWith('****')) {
             delete data.apiKey;
         }
