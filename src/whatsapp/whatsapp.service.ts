@@ -192,9 +192,11 @@ export class WhatsappService {
                     contact.name,
                     messageData.text.body,
                 );
-                if (aiReply) {
+                if (aiReply.text) {
                     this.logger.log(`[Chatbot] Sending AI reply to ${contactData.wa_id}`);
-                    await this.sendOutboundMessage(shopId, contactData.wa_id, 'text', aiReply);
+                    await this.sendOutboundMessage(shopId, contactData.wa_id, 'text', aiReply.text);
+                } else if (aiReply.error) {
+                    this.logger.error(`[Chatbot] Failed to generate AI reply for ${contactData.wa_id}: ${aiReply.error}`);
                 }
             } else {
                 this.logger.log(`[Chatbot] AI paused for conversation ${conversation.id} — skipping.`);

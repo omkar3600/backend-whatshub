@@ -29,13 +29,13 @@ export class ChatbotService {
 
     /**
      * Generate an AI reply for an incoming message.
-     * Returns null if chatbot is disabled, not configured, or errors out.
+     * Returns the text reply or an error message.
      */
-    async generateResponse(shopId: string, contactName: string, userMessage: string): Promise<string | null> {
+    async generateResponse(shopId: string, contactName: string, userMessage: string): Promise<{ text?: string, error?: string }> {
         const config = await this.getConfig(shopId);
 
         if (!config || !config.isActive || !config.apiKey) {
-            return null;
+            return { error: 'Chatbot is not configured or is inactive.' };
         }
 
         try {
@@ -49,10 +49,10 @@ export class ChatbotService {
             });
 
             const result = await model.generateContent(userMessage);
-            return result.response.text();
+            return { text: result.response.text() };
         } catch (err: any) {
             this.logger.error(`[Chatbot] AI generation failed for shop ${shopId}: ${err.message}`);
-            return null;
+            return { error: err.message || 'Unknown API Error' };
         }
     }
 

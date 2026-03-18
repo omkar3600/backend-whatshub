@@ -56,7 +56,7 @@ export class ChatbotController {
         if (!config?.apiKey) return { success: false, message: 'No API key configured.' };
 
         const reply = await this.chatbotService.generateResponse(shopId, 'Test User', 'Hello! Please introduce yourself in one sentence.');
-        if (reply) return { success: true, reply };
-        return { success: false, message: 'AI failed to respond. Check your API key.' };
+        if (reply.text) return { success: true, reply: reply.text };
+        return { success: false, message: `AI Error: ${reply.error}` };
     }
 }
