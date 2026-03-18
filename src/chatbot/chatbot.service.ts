@@ -27,11 +27,10 @@ export class ChatbotService {
         });
     }
 
-    /**
      * Generate an AI reply for an incoming message.
      * Returns the text reply or an error message.
      */
-    async generateResponse(shopId: string, contactName: string, userMessage: string): Promise<{ text?: string, error?: string }> {
+    async generateResponse(shopId: string, contactName: string, userMessage: string, conversationId?: string): Promise<{ text?: string, error?: string }> {
         const config = await this.getConfig(shopId);
 
         if (!config || !config.isActive || !config.apiKey) {
@@ -43,11 +42,37 @@ export class ChatbotService {
             
             const systemContext = this.buildSystemPrompt(config.systemPrompt, config.businessInfo, contactName);
 
+            const messages: any[] = [
+                { role: 'system', content: systemContext }
+            ];
+
+            // --- Chat Context / History ---
+            if (conversationId) {
+                const history = await this.prisma.message.findMany({
+                    where: { conversationId },
+                    orderBy: { timestamp: 'desc' },
+                    take: 10,
+                });
+
+                // Reverse to get chronological order [oldest ... newest]
+                const sortedHistory = history.reverse();
+
+                for (const msg of sortedHistory) {
+                    if (msg.content) {
+                        messages.push({
+                            role: msg.direction === 'inbound' ? 'user' : 'assistant',
+                            content: msg.content
+                        });
+                    }
+                }
+            } else {
+                // Fallback if no conversation ID is provided
+                messages.push({ role: 'user', content: userMessage });
+            }
+            // ------------------------------
+
             const completion = await groq.chat.completions.create({
-                messages: [
-                    { role: 'system', content: systemContext },
-                    { role: 'user', content: userMessage }
-                ],
+                messages,
                 model: 'llama-3.3-70b-versatile',
                 temperature: config.temperature ?? 0.7,
             });

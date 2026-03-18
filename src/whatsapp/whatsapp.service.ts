@@ -215,6 +215,7 @@ export class WhatsappService {
                     shopId,
                     contact.name,
                     messageData.text.body,
+                    conversation.id,
                 );
                 if (aiReply.text) {
                     this.logger.log(`[Chatbot] Sending AI reply to ${contactData.wa_id}`);
