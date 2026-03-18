@@ -27,6 +27,7 @@ export class ChatbotService {
         });
     }
 
+    /**
      * Generate an AI reply for an incoming message.
      * Returns the text reply or an error message.
      */
