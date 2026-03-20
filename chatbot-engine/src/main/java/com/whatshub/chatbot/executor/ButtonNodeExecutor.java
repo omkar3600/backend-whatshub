@@ -1,17 +1,19 @@
 package com.whatshub.chatbot.executor;
 
-import com.whatshub.chatbot.model.Node;
+import com.whatshub.chatbot.model.RFNode;
 import com.whatshub.chatbot.model.UserSession;
+import com.whatshub.chatbot.service.WhatsAppService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-@Component
+@Component("BUTTON_EXECUTOR")
+@RequiredArgsConstructor
 public class ButtonNodeExecutor implements NodeExecutor {
+    private final WhatsAppService whatsappService;
+
     @Override
-    public NodeResult execute(String userId, Node node, UserSession session) {
-        // Send button message to WhatsApp
-        System.out.println("Sending buttons to " + userId + ": " + node.getContent());
-        
-        // We must stop and wait for the user to click a button
-        return NodeResult.waitForInput();
+    public NodeResult execute(RFNode node, UserSession session) {
+        whatsappService.sendButtons(session.getUserId(), node.getData().getContent());
+        return NodeResult.waitInput();
     }
 }

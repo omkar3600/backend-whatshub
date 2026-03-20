@@ -1,23 +1,25 @@
 package com.whatshub.chatbot.executor;
 
-import com.whatshub.chatbot.model.Node;
+import com.whatshub.chatbot.model.RFNode;
 import com.whatshub.chatbot.model.UserSession;
-import lombok.Value;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 
 public interface NodeExecutor {
-    NodeResult execute(String userId, Node node, UserSession session);
-}
+    NodeResult execute(RFNode node, UserSession session);
 
-@Value
-class NodeResult {
-    String nextNodeId;
-    boolean waitingForInput;
+    @Data
+    @AllArgsConstructor
+    class NodeResult {
+        private String nextNodeId;
+        private boolean waitForInput;
 
-    public static NodeResult continueTo(String nextNodeId) {
-        return new NodeResult(nextNodeId, false);
-    }
+        public static NodeResult next(String nextNodeId) {
+            return new NodeResult(nextNodeId, false);
+        }
 
-    public static NodeResult waitForInput() {
-        return new NodeResult(null, true);
+        public static NodeResult waitInput() {
+            return new NodeResult(null, true);
+        }
     }
 }

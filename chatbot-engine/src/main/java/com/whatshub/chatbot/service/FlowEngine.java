@@ -2,53 +2,74 @@ package com.whatshub.chatbot.service;
 
 import com.whatshub.chatbot.executor.NodeExecutor;
 import com.whatshub.chatbot.model.*;
-import com.whatshub.chatbot.repository.FlowRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class FlowEngine {
     private final Map<String, NodeExecutor> executors;
     private final SessionService sessionService;
-    private final FlowRepository flowRepository;
 
-    public void proceed(String userId, String input) {
-        UserSession session = sessionService.getOrCreateSession(userId);
-        Flow flow = flowRepository.findById(session.getFlowId()).orElseThrow();
-        FlowDefinition def = flow.getDefinition();
-
-        String nextNodeId;
-        if (session.getCurrentNodeId() == null) {
-            nextNodeId = def.getStartNodeId();
-        } else {
-            nextNodeId = resolveTransition(def.getNodes().get(session.getCurrentNodeId()), input);
+    public void execute(String userId, String input, Flow flow) {
+        UserSession session = sessionService.getOrCreateSession(userId, flow.getId());
+        FlowDefinition definition = flow.getDefinition();
+        
+        String currentNodeId = session.getCurrentNode();
+        if (currentNodeId == null) {
+            // Find start node (usually the one with NO incoming edges or specifically marked)
+            currentNodeId = definition.getNodes().stream()
+                .filter(n -> "START".equals(n.getData().getType()))
+                .findFirst()
+                .map(RFNode::getId)
+                .orElse(definition.getNodes().get(0).getId());
         }
 
-        executeFrom(userId, def, nextNodeId, session);
+        processNode(currentNodeId, session, definition);
     }
 
-    private void executeFrom(String userId, FlowDefinition def, String nodeId, UserSession session) {
-        String current = nodeId;
-        while (current != null) {
-            Node node = def.getNodes().get(current);
-            NodeExecutor executor = executors.get(node.getType().name() + "NodeExecutor");
+    private void processNode(String nodeId, UserSession session, FlowDefinition definition) {
+        RFNode node = findNode(nodeId, definition);
+        if (node == null) return;
+
+        session.setCurrentNode(nodeId);
+        sessionService.saveSession(session);
+
+        // Map frontend types to executor beans
+        String executorType = node.getData().getType() + "_EXECUTOR";
+        NodeExecutor executor = executors.get(executorType);
+        
+        if (executor != null) {
+            NodeExecutor.NodeResult result = executor.execute(node, session);
             
-            var result = executor.execute(userId, node, session);
-            
-            session.setCurrentNodeId(current);
-            sessionService.save(session);
-            
-            if (result.isWaitingForInput()) break;
-            current = result.getNextNodeId();
+            if (!result.isWaitForInput()) {
+                String nextId = result.getNextNodeId();
+                if (nextId == null) {
+                    nextId = findNextNodeId(nodeId, definition, null);
+                }
+                
+                if (nextId != null) {
+                    processNode(nextId, session, definition);
+                }
+            }
         }
     }
 
-    private String resolveTransition(Node node, String input) {
-        if (node.getNext() != null && node.getNext().containsKey(input)) {
-            return node.getNext().get(input);
-        }
-        return node.getDefaultNext();
+    private RFNode findNode(String id, FlowDefinition def) {
+        return def.getNodes().stream().filter(n -> n.getId().equals(id)).findFirst().orElse(null);
+    }
+
+    private String findNextNodeId(String sourceId, FlowDefinition def, String handle) {
+        return def.getEdges().stream()
+            .filter(e -> e.getSource().equals(sourceId))
+            .filter(e -> handle == null || handle.equals(e.getSourceHandle()))
+            .findFirst()
+            .map(RFEdge::getTarget)
+            .orElse(null);
     }
 }

@@ -1,17 +1,22 @@
 package com.whatshub.chatbot.executor;
 
-import com.whatshub.chatbot.model.Node;
+import com.whatshub.chatbot.model.RFNode;
 import com.whatshub.chatbot.model.UserSession;
+import com.whatshub.chatbot.service.WhatsAppService;
+import com.whatshub.chatbot.service.VariableResolver;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-@Component
+@Component("MESSAGE_EXECUTOR")
+@RequiredArgsConstructor
 public class MessageNodeExecutor implements NodeExecutor {
+    private final WhatsAppService whatsappService;
+    private final VariableResolver variableResolver;
+
     @Override
-    public NodeResult execute(String userId, Node node, UserSession session) {
-        // Here you would call WhatsAppService to send the message
-        System.out.println("Sending message to " + userId + ": " + node.getContent());
-        
-        // If it's just a message, we immediately move to the next node if it exists
-        return NodeResult.continueTo(node.getDefaultNext());
+    public NodeResult execute(RFNode node, UserSession session) {
+        String content = variableResolver.resolve(node.getData().getContent(), session.getVariables());
+        whatsappService.sendMessage(session.getUserId(), content);
+        return NodeResult.next(null); // FlowEngine will resolve next node from edges
     }
 }
