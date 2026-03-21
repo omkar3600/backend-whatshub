@@ -50,6 +50,7 @@ model Shop {
   templates     Template[]
   whatsappCreds WhatsAppCredential?
   chatbotConfig ChatbotConfig?
+  flows         Flow[]
 }
 
 model Subscription {
@@ -205,6 +206,21 @@ model ChatbotConfig {
   temperature  Float    @default(0.7)
   systemPrompt String?  @db.Text
   businessInfo String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  shop         Shop     @relation(fields: [shopId], references: [id])
+}
+
+model Flow {
+  id           String   @id @default(uuid())
+  shopId       String
+  name         String
+  description  String?
+  category     String   @default("Custom")
+  status       String   @default("Draft")
+  nodeCount    Int      @default(0)
+  nodes        Json?
+  edges        Json?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   shop         Shop     @relation(fields: [shopId], references: [id])

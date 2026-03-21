@@ -20,6 +20,7 @@ import { UsersModule } from './users/users.module';
 import { ChatbotModule } from './chatbot/chatbot.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { FlowsModule } from './flows/flows.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { AppService } from './app.service';
     MediaModule,
     UsersModule,
     ChatbotModule,
+    FlowsModule,
   ],
   controllers: [AppController],
   providers: [

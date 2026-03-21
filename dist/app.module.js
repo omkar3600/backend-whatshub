@@ -29,6 +29,7 @@ const users_module_1 = require("./users/users.module");
 const chatbot_module_1 = require("./chatbot/chatbot.module");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
+const flows_module_1 = require("./flows/flows.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -64,6 +65,7 @@ exports.AppModule = AppModule = __decorate([
             media_module_1.MediaModule,
             users_module_1.UsersModule,
             chatbot_module_1.ChatbotModule,
+            flows_module_1.FlowsModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [
