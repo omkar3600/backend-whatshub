@@ -113,6 +113,24 @@ export class FlowEngineService {
                 }
                 return { responses, currentNodeId: nodeId, wait: true };
 
+            case 'INTERACTIVE':
+                const iButtons = node.data.config?.buttons || [];
+                const resData: any = {
+                    buttons: iButtons,
+                    header: node.data.config?.header,
+                    footer: node.data.config?.footer,
+                    mediaType: node.data.config?.mediaType
+                };
+                if (node.data.config?.mediaType === 'image') resData.imageUrl = node.data.config.imageUrl;
+                if (node.data.config?.mediaType === 'video') resData.videoUrl = node.data.config.videoUrl;
+
+                responses.push({ 
+                    content: node.data.content || '', 
+                    type: 'interactive',
+                    data: resData
+                });
+                return { responses, currentNodeId: nodeId, wait: true };
+
             case 'QUESTION':
                 if (node.data.content) responses.push({ content: node.data.content, type: 'text' });
                 // Store that we are waiting for an answer to this variable
@@ -169,17 +187,32 @@ export class FlowEngineService {
     }
 
     private findNextNodeId(sourceId: string, definition: FlowDefinition, handle: string | null): string | null {
-        // Find edges from this source
         const edges = definition.edges.filter(e => e.source === sourceId);
-        
+        if (edges.length === 0) return null;
+
         if (handle) {
-            // Match specific handle (used for buttons or conditions)
-            const matchedEdge = edges.find(e => e.sourceHandle === handle || e.label?.toLowerCase() === handle.toLowerCase());
+            // 1. Precise sourceHandle match (used by Condition nodes or direct handles)
+            let matchedEdge = edges.find(e => e.sourceHandle === handle);
+            if (matchedEdge) return matchedEdge.target;
+
+            // 2. Button text mapping for INTERACTIVE nodes
+            const sourceNode = definition.nodes.find(n => n.id === sourceId);
+            if (sourceNode && sourceNode.data.type === 'INTERACTIVE') {
+                const buttons = sourceNode.data.config?.buttons || [];
+                const btnIndex = buttons.findIndex((b: any) => b.text?.toLowerCase() === handle.toLowerCase());
+                if (btnIndex !== -1) {
+                    const handleId = `btn-${btnIndex}`;
+                    matchedEdge = edges.find(e => e.sourceHandle === handleId);
+                    if (matchedEdge) return matchedEdge.target;
+                }
+            }
+
+            // 3. Fallback to label match (legacy/fallback)
+            matchedEdge = edges.find(e => e.label?.toLowerCase() === handle.toLowerCase());
             if (matchedEdge) return matchedEdge.target;
         }
 
-        // For QUESTION nodes, if no handle matches, we look for a default "next" edge
-        // In React Flow, if there's only one edge and no handle, it's the default path.
-        return edges[0]?.target || null;
+        // Default: take the first edge if no specific handle was matched/provided
+        return edges[0].target;
     }
 }
