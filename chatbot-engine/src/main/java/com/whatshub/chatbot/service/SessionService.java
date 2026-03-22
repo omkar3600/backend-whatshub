@@ -11,17 +11,18 @@ import java.util.UUID;
 public class SessionService {
     private final SessionRepository sessionRepository;
 
-    public UserSession getOrCreateSession(String userId) {
+    public UserSession getOrCreateSession(String userId, UUID flowId) {
         return sessionRepository.findById(userId)
                 .orElseGet(() -> {
                     UserSession session = new UserSession();
                     session.setUserId(userId);
+                    session.setFlowId(flowId.toString());
                     session.setLastInteractionAt(System.currentTimeMillis());
                     return session;
                 });
     }
 
-    public void save(UserSession session) {
+    public void saveSession(UserSession session) {
         session.setLastInteractionAt(System.currentTimeMillis());
         sessionRepository.save(session);
     }
