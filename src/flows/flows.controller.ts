@@ -26,6 +26,26 @@ export class FlowsController {
         return this.flowsService.getFlow(user.shopId, id);
     }
 
+    @Get(':id/analytics')
+    async getFlowAnalytics(@GetUser() user: any, @Param('id') id: string) {
+        return this.flowsService.getFlowAnalytics(user.shopId, id);
+    }
+
+    @Get(':id/versions')
+    async getFlowVersions(@GetUser() user: any, @Param('id') id: string) {
+        return this.flowsService.getFlowVersions(user.shopId, id);
+    }
+
+    @Get(':id/versions/:versionId')
+    async getFlowVersion(@GetUser() user: any, @Param('id') id: string, @Param('versionId') versionId: string) {
+        return this.flowsService.getFlowVersion(user.shopId, id, versionId);
+    }
+
+    @Post(':id/simulate')
+    async simulateFlow(@Param('id') id: string, @Body() body: any) {
+        return this.flowsService.simulateFlow(id, body);
+    }
+
     @Put(':id')
     async updateFlow(@GetUser() user: any, @Param('id') id: string, @Body() body: any) {
         return this.flowsService.updateFlow(user.shopId, id, body);

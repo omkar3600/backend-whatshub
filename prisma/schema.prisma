@@ -224,4 +224,28 @@ model Flow {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   shop         Shop     @relation(fields: [shopId], references: [id])
+  analytics    FlowAnalytics[]
+  versions     FlowVersion[]
+}
+
+model FlowAnalytics {
+  id        String   @id @default(uuid())
+  flowId    String
+  nodeId    String
+  hits      Int      @default(0)
+  updatedAt DateTime @updatedAt
+  flow      Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
+
+  @@unique([flowId, nodeId])
+}
+
+model FlowVersion {
+  id            String   @id @default(uuid())
+  flowId        String
+  versionNumber Int
+  name          String
+  nodes         Json?
+  edges         Json?
+  createdAt     DateTime @default(now())
+  flow          Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
 }
