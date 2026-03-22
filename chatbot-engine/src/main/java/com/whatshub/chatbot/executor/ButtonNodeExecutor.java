@@ -13,7 +13,19 @@ public class ButtonNodeExecutor implements NodeExecutor {
 
     @Override
     public NodeResult execute(RFNode node, UserSession session) {
-        whatsappService.sendButtons(session.getUserId(), node.getData().getContent());
+        String text = node.getData().getContent();
+        java.util.List<String> buttons = new java.util.ArrayList<>();
+        if (node.getData().getConfig() != null && node.getData().getConfig().containsKey("buttons")) {
+            Object btnObj = node.getData().getConfig().get("buttons");
+            if (btnObj instanceof java.util.List) {
+                for (Object b : (java.util.List) btnObj) {
+                    if (b instanceof java.util.Map) {
+                        buttons.add((String) ((java.util.Map) b).get("text"));
+                    }
+                }
+            }
+        }
+        whatsappService.sendButtons(session.getUserId(), text, buttons);
         return NodeResult.waitInput();
     }
 }

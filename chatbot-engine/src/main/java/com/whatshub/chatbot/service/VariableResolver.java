@@ -4,10 +4,13 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.springframework.stereotype.Component;
+
+@Component
 public class VariableResolver {
     private static final Pattern PATTERN = Pattern.compile("\\{\\{(.*?)\\}\\}");
 
-    public static String resolve(String template, Map<String, Object> variables) {
+    public String resolve(String template, Map<String, Object> variables) {
         if (template == null) return null;
         
         StringBuilder sb = new StringBuilder();

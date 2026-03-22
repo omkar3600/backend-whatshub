@@ -38,7 +38,7 @@ public class FlowSimulationController {
             flowEngine.engage("simulator-user", request.getInput(), flow);
 
             List<BotResponse> responses = simulationManager.getResults().stream()
-                .map(text -> new BotResponse(text, "TEXT"))
+                .map(content -> new BotResponse(content, "TEXT"))
                 .collect(Collectors.toList());
 
             return new SimulationResponse(responses, simulationManager.getActiveNodeId());
@@ -66,7 +66,7 @@ public class FlowSimulationController {
     @Data
     @AllArgsConstructor
     public static class BotResponse {
-        private String text;
+        private String content;
         private String type;
     }
 }
