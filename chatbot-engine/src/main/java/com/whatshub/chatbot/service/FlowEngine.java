@@ -2,12 +2,14 @@ package com.whatshub.chatbot.service;
 
 import com.whatshub.chatbot.executor.NodeExecutor;
 import com.whatshub.chatbot.model.*;
+import com.whatshub.chatbot.repository.FlowAnalyticsRepository;
 import com.whatshub.chatbot.repository.FlowRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -16,6 +18,8 @@ public class FlowEngine {
     private final Map<String, NodeExecutor> executors;
     private final SessionService sessionService;
     private final FlowRepository flowRepository;
+    private final FlowAnalyticsRepository analyticsRepository;
+    private final SimulationManager simulationManager;
 
     public void proceed(String userId, String input) {
         // For demonstration, we pick the first active flow or a "default" one
@@ -52,6 +56,18 @@ public class FlowEngine {
         RFNode node = findNode(nodeId, definition);
         if (node == null) return;
 
+        // Track Simulation State
+        if (simulationManager.isSimulating()) {
+            simulationManager.setActiveNodeId(nodeId);
+        }
+
+        // Track Analytics
+        try {
+            analyticsRepository.incrementHits(UUID.fromString(session.getFlowId()), nodeId);
+        } catch (Exception e) {
+            log.error("Failed to track flow analytics: {}", e.getMessage());
+        }
+
         session.setCurrentNode(nodeId);
         sessionService.saveSession(session);
 
@@ -65,7 +81,9 @@ public class FlowEngine {
             if (!result.isWaitForInput()) {
                 String nextId = result.getNextNodeId();
                 if (nextId == null) {
-                    nextId = findNextNodeId(nodeId, definition, null);
+                    // Check if executor set a branch handle to force a specific path
+                    String branchHandle = (String) session.getVariables().remove("_last_branch_handle");
+                    nextId = findNextNodeId(nodeId, definition, branchHandle);
                 }
                 
                 if (nextId != null) {
