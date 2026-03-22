@@ -1,10 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import axios from 'axios';
+import { FlowEngineService } from './flow-engine.service';
 
 @Injectable()
 export class FlowsService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private flowEngine: FlowEngineService
+    ) { }
 
     async createFlow(shopId: string, data: any) {
         return this.prisma.flow.create({
@@ -114,15 +117,14 @@ export class FlowsService {
 
     async simulateFlow(id: string, data: any) {
         try {
-            const response = await axios.post(`http://localhost:8080/api/chatbot/simulate/${id}`, {
-                input: data.input,
-                nodes: data.nodes,
-                edges: data.edges
-            });
-            return response.data;
+            const definition = {
+                nodes: data.nodes || [],
+                edges: data.edges || []
+            };
+            return await this.flowEngine.processSimulation(id, data.input, definition);
         } catch (error) {
-            console.error('Simulation proxy failed:', error.message);
-            throw new Error('Chatbot engine unavailable for simulation');
+            console.error('Simulation failed:', error.message);
+            throw new Error('Internal Flow Engine Error');
         }
     }
 }
