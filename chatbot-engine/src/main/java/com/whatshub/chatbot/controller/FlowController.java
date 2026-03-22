@@ -20,7 +20,7 @@ public class FlowController {
     }
 
     @PostMapping("/{id}/save")
-    public Flow save(@PathVariable Long id, @RequestBody FlowDefinition definition) {
+    public Flow save(@PathVariable UUID id, @RequestBody FlowDefinition definition) {
         return flowRepository.findById(id)
             .map(flow -> {
                 flow.setDefinition(definition);

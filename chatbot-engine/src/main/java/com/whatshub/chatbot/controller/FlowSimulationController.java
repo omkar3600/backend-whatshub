@@ -24,6 +24,12 @@ public class FlowSimulationController {
     public SimulationResponse simulate(@PathVariable String flowId, @RequestBody SimulationRequest request) {
         simulationManager.startSimulation();
         
+        // Reset session for simulator to ensure a fresh start
+        com.whatshub.chatbot.model.UserSession session = sessionService.getOrCreateSession("simulator-user", java.util.UUID.fromString(flowId));
+        session.setCurrentNode(null);
+        session.setVariables(new java.util.HashMap<>());
+        sessionService.saveSession(session);
+        
         try {
             Flow flow = new Flow();
             flow.setId(java.util.UUID.fromString(flowId));
