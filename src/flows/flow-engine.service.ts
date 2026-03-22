@@ -16,6 +16,7 @@ export interface RFEdge {
     source: string;
     target: string;
     sourceHandle?: string | null;
+    label?: string;
 }
 
 export interface FlowDefinition {
