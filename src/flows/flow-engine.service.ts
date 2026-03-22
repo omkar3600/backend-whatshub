@@ -24,8 +24,14 @@ export interface FlowDefinition {
     edges: RFEdge[];
 }
 
+export interface SimulationResponse {
+    content: string;
+    type?: string;
+    data?: any;
+}
+
 export interface SimulationResult {
-    messages: string[];
+    responses: SimulationResponse[];
     currentNodeId: string | null;
     wait: boolean;
 }
@@ -44,7 +50,7 @@ export class FlowEngineService {
             this.sessions.set(flowId, session);
         }
 
-        const messages: string[] = [];
+        const responses: SimulationResponse[] = [];
         let currentNodeId = session.currentNodeId;
 
         if (!currentNodeId) {
@@ -65,15 +71,15 @@ export class FlowEngineService {
         }
 
         if (!currentNodeId) {
-            return { messages: ['Flow ended.'], currentNodeId: null, wait: false };
+            return { responses: [{ content: 'Flow ended.', type: 'text' }], currentNodeId: null, wait: false };
         }
 
-        return this.executeNodeChain(currentNodeId, session, definition, messages);
+        return this.executeNodeChain(currentNodeId, session, definition, responses);
     }
 
-    private async executeNodeChain(nodeId: string, session: any, definition: FlowDefinition, messages: string[]): Promise<SimulationResult> {
+    private async executeNodeChain(nodeId: string, session: any, definition: FlowDefinition, responses: SimulationResponse[]): Promise<SimulationResult> {
         const node = definition.nodes.find(n => n.id === nodeId);
-        if (!node) return { messages, currentNodeId: null, wait: false };
+        if (!node) return { responses, currentNodeId: null, wait: false };
 
         session.currentNodeId = nodeId;
         const type = node.data.type;
@@ -82,48 +88,62 @@ export class FlowEngineService {
 
         switch (type) {
             case 'START':
-                return this.moveToNext(nodeId, session, definition, messages);
+                return this.moveToNext(nodeId, session, definition, responses);
 
             case 'TEXT':
             case 'IMAGE':
             case 'VIDEO':
             case 'AUDIO':
             case 'DOCUMENT':
-                if (node.data.content) messages.push(node.data.content);
-                if (node.data.text) messages.push(node.data.text);
-                return this.moveToNext(nodeId, session, definition, messages);
+                if (node.data.content) responses.push({ content: node.data.content, type: 'text' });
+                if (node.data.text) responses.push({ content: node.data.text, type: 'text' });
+                return this.moveToNext(nodeId, session, definition, responses);
+
+            case 'BUTTON':
+            case 'LIST':
+                const buttons = node.data.config?.buttons || node.data.buttons || [];
+                const items = node.data.config?.items || node.data.items || [];
+                responses.push({ 
+                    content: node.data.content || node.data.text || '', 
+                    type: type.toLowerCase(),
+                    data: { buttons, items }
+                });
+                if (node.data.variable) {
+                    session.variables._last_question_var = node.data.variable;
+                }
+                return { responses, currentNodeId: nodeId, wait: true };
 
             case 'QUESTION':
-                if (node.data.content) messages.push(node.data.content);
+                if (node.data.content) responses.push({ content: node.data.content, type: 'text' });
                 // Store that we are waiting for an answer to this variable
                 if (node.data.variable) {
                     session.variables._last_question_var = node.data.variable;
                 }
-                return { messages, currentNodeId: nodeId, wait: true };
+                return { responses, currentNodeId: nodeId, wait: true };
 
             case 'CONDITION':
                 const branch = this.evaluateCondition(node, session);
                 const nextId = this.findNextNodeId(nodeId, definition, branch);
-                if (nextId) return this.executeNodeChain(nextId, session, definition, messages);
-                return { messages, currentNodeId: nodeId, wait: false };
+                if (nextId) return this.executeNodeChain(nextId, session, definition, responses);
+                return { responses, currentNodeId: nodeId, wait: false };
 
             case 'DELAY':
                 const delayMs = (node.data.delay || 1) * 1000;
-                messages.push(`[System: Waiting ${node.data.delay || 1}s]`);
-                return this.moveToNext(nodeId, session, definition, messages);
+                responses.push({ content: `[System: Waiting ${node.data.delay || 1}s]`, type: 'text' });
+                return this.moveToNext(nodeId, session, definition, responses);
 
             default:
                 this.logger.warn(`Unsupported node type: ${type}`);
-                return this.moveToNext(nodeId, session, definition, messages);
+                return this.moveToNext(nodeId, session, definition, responses);
         }
     }
 
-    private async moveToNext(nodeId: string, session: any, definition: FlowDefinition, messages: string[]): Promise<SimulationResult> {
+    private async moveToNext(nodeId: string, session: any, definition: FlowDefinition, responses: SimulationResponse[]): Promise<SimulationResult> {
         const nextId = this.findNextNodeId(nodeId, definition, null);
         if (nextId) {
-            return this.executeNodeChain(nextId, session, definition, messages);
+            return this.executeNodeChain(nextId, session, definition, responses);
         }
-        return { messages, currentNodeId: nodeId, wait: false };
+        return { responses, currentNodeId: nodeId, wait: false };
     }
 
     private evaluateCondition(node: RFNode, session: any): string {
