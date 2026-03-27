@@ -28,4 +28,10 @@ export declare class MessagesController {
         mediaUrl: string | null;
         timestamp: Date;
     }>;
+    clearConversationMessages(user: any, conversationId: string): Promise<{
+        message: string;
+    }>;
+    deleteMessage(user: any, messageId: string): Promise<{
+        message: string;
+    }>;
 }

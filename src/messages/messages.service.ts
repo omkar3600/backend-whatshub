@@ -9,7 +9,6 @@ export class MessagesService {
         private whatsappService: WhatsappService
     ) { }
 
-    // Fetch messages for a specific conversation
     async getMessages(shopId: string, conversationId: string) {
         return this.prisma.message.findMany({
             where: { shopId, conversationId },
@@ -17,30 +16,18 @@ export class MessagesService {
         });
     }
 
-    // Handle a new sending request from API
     async sendMessage(shopId: string, conversationId: string, data: any) {
         const { type, content, mediaUrl } = data;
 
-        // Create the message in database first (simulate pending/sending)
         const message = await this.prisma.message.create({
-            data: {
-                shopId,
-                conversationId,
-                direction: 'outbound',
-                type,
-                content,
-                mediaUrl,
-                status: 'sent',
-            },
+            data: { shopId, conversationId, direction: 'outbound', type, content, mediaUrl, status: 'sent' },
         });
 
-        // Update conversation lastMessageAt
         await this.prisma.conversation.update({
             where: { id: conversationId },
             data: { lastMessageAt: new Date() },
         });
 
-        // Actually send it to WhatsApp API
         const conversation = await this.prisma.conversation.findUnique({
             where: { id: conversationId },
             include: { contact: true }
@@ -48,22 +35,27 @@ export class MessagesService {
 
         try {
             if (conversation?.contact?.phone) {
-                await this.whatsappService.sendOutboundMessage(
-                    shopId,
-                    conversation.contact.phone,
-                    type,
-                    content,
-                    mediaUrl
-                );
+                await this.whatsappService.sendOutboundMessage(shopId, conversation.contact.phone, type, content, mediaUrl);
             }
         } catch (e) {
-            // Mark as failed if it didn't go through
-            await this.prisma.message.update({
-                where: { id: message.id },
-                data: { status: 'failed' }
-            });
+            await this.prisma.message.update({ where: { id: message.id }, data: { status: 'failed' } });
         }
 
         return message;
     }
+
+    async deleteMessage(shopId: string, messageId: string) {
+        const msg = await this.prisma.message.findFirst({ where: { id: messageId, shopId } });
+        if (!msg) throw new NotFoundException('Message not found');
+        await this.prisma.message.delete({ where: { id: messageId } });
+        return { message: 'Message deleted' };
+    }
+
+    async clearConversationMessages(shopId: string, conversationId: string) {
+        const convo = await this.prisma.conversation.findFirst({ where: { id: conversationId, shopId } });
+        if (!convo) throw new NotFoundException('Conversation not found');
+        const result = await this.prisma.message.deleteMany({ where: { conversationId, shopId } });
+        return { message: `Cleared ${result.count} messages` };
+    }
 }
+

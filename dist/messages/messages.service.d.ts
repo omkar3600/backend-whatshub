@@ -30,4 +30,10 @@ export declare class MessagesService {
         mediaUrl: string | null;
         timestamp: Date;
     }>;
+    deleteMessage(shopId: string, messageId: string): Promise<{
+        message: string;
+    }>;
+    clearConversationMessages(shopId: string, conversationId: string): Promise<{
+        message: string;
+    }>;
 }

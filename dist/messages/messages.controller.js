@@ -30,6 +30,12 @@ let MessagesController = class MessagesController {
     async sendMessage(user, conversationId, body) {
         return this.messagesService.sendMessage(user.shopId, conversationId, body);
     }
+    async clearConversationMessages(user, conversationId) {
+        return this.messagesService.clearConversationMessages(user.shopId, conversationId);
+    }
+    async deleteMessage(user, messageId) {
+        return this.messagesService.deleteMessage(user.shopId, messageId);
+    }
 };
 exports.MessagesController = MessagesController;
 __decorate([
@@ -49,6 +55,22 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, Object]),
     __metadata("design:returntype", Promise)
 ], MessagesController.prototype, "sendMessage", null);
+__decorate([
+    (0, common_1.Delete)('conversation/:conversationId/all'),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Param)('conversationId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], MessagesController.prototype, "clearConversationMessages", null);
+__decorate([
+    (0, common_1.Delete)(':messageId'),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Param)('messageId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], MessagesController.prototype, "deleteMessage", null);
 exports.MessagesController = MessagesController = __decorate([
     (0, common_1.Controller)('messages'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),

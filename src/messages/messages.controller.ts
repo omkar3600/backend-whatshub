@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body, Delete, UseGuards } from '@nestjs/common';
 import { MessagesService } from './messages.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -19,5 +19,15 @@ export class MessagesController {
     @Post('conversation/:conversationId')
     async sendMessage(@GetUser() user: any, @Param('conversationId') conversationId: string, @Body() body: any) {
         return this.messagesService.sendMessage(user.shopId, conversationId, body);
+    }
+
+    @Delete('conversation/:conversationId/all')
+    async clearConversationMessages(@GetUser() user: any, @Param('conversationId') conversationId: string) {
+        return this.messagesService.clearConversationMessages(user.shopId, conversationId);
+    }
+
+    @Delete(':messageId')
+    async deleteMessage(@GetUser() user: any, @Param('messageId') messageId: string) {
+        return this.messagesService.deleteMessage(user.shopId, messageId);
     }
 }

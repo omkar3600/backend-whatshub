@@ -29,15 +29,7 @@ let MessagesService = class MessagesService {
     async sendMessage(shopId, conversationId, data) {
         const { type, content, mediaUrl } = data;
         const message = await this.prisma.message.create({
-            data: {
-                shopId,
-                conversationId,
-                direction: 'outbound',
-                type,
-                content,
-                mediaUrl,
-                status: 'sent',
-            },
+            data: { shopId, conversationId, direction: 'outbound', type, content, mediaUrl, status: 'sent' },
         });
         await this.prisma.conversation.update({
             where: { id: conversationId },
@@ -53,12 +45,23 @@ let MessagesService = class MessagesService {
             }
         }
         catch (e) {
-            await this.prisma.message.update({
-                where: { id: message.id },
-                data: { status: 'failed' }
-            });
+            await this.prisma.message.update({ where: { id: message.id }, data: { status: 'failed' } });
         }
         return message;
+    }
+    async deleteMessage(shopId, messageId) {
+        const msg = await this.prisma.message.findFirst({ where: { id: messageId, shopId } });
+        if (!msg)
+            throw new common_1.NotFoundException('Message not found');
+        await this.prisma.message.delete({ where: { id: messageId } });
+        return { message: 'Message deleted' };
+    }
+    async clearConversationMessages(shopId, conversationId) {
+        const convo = await this.prisma.conversation.findFirst({ where: { id: conversationId, shopId } });
+        if (!convo)
+            throw new common_1.NotFoundException('Conversation not found');
+        const result = await this.prisma.message.deleteMany({ where: { conversationId, shopId } });
+        return { message: `Cleared ${result.count} messages` };
     }
 };
 exports.MessagesService = MessagesService;
