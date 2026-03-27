@@ -8,9 +8,9 @@ export declare class TemplatesController {
         updatedAt: Date;
         status: string;
         shopId: string;
+        category: string;
         templateName: string;
         language: string;
-        category: string;
         components: import("@prisma/client/runtime/library").JsonValue;
     }>;
     getTemplates(user: any): Promise<{
@@ -19,9 +19,9 @@ export declare class TemplatesController {
         updatedAt: Date;
         status: string;
         shopId: string;
+        category: string;
         templateName: string;
         language: string;
-        category: string;
         components: import("@prisma/client/runtime/library").JsonValue;
     }[]>;
     deleteTemplate(user: any, id: string): Promise<{

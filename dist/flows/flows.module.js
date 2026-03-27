@@ -10,13 +10,15 @@ exports.FlowsModule = void 0;
 const common_1 = require("@nestjs/common");
 const flows_controller_1 = require("./flows.controller");
 const flows_service_1 = require("./flows.service");
+const flow_engine_service_1 = require("./flow-engine.service");
 let FlowsModule = class FlowsModule {
 };
 exports.FlowsModule = FlowsModule;
 exports.FlowsModule = FlowsModule = __decorate([
     (0, common_1.Module)({
         controllers: [flows_controller_1.FlowsController],
-        providers: [flows_service_1.FlowsService]
+        providers: [flows_service_1.FlowsService, flow_engine_service_1.FlowEngineService],
+        exports: [flow_engine_service_1.FlowEngineService]
     })
 ], FlowsModule);
 //# sourceMappingURL=flows.module.js.map

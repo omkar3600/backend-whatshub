@@ -11,9 +11,9 @@ export declare class TemplatesService {
         updatedAt: Date;
         status: string;
         shopId: string;
+        category: string;
         templateName: string;
         language: string;
-        category: string;
         components: import("@prisma/client/runtime/library").JsonValue;
     }>;
     syncTemplates(shopId: string): Promise<{
@@ -27,9 +27,9 @@ export declare class TemplatesService {
         updatedAt: Date;
         status: string;
         shopId: string;
+        category: string;
         templateName: string;
         language: string;
-        category: string;
         components: import("@prisma/client/runtime/library").JsonValue;
     }[]>;
     deleteTemplate(shopId: string, id: string): Promise<{

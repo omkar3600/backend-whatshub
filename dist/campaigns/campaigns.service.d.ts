@@ -27,9 +27,9 @@ export declare class CampaignsService {
             updatedAt: Date;
             status: string;
             shopId: string;
+            category: string;
             templateName: string;
             language: string;
-            category: string;
             components: import("@prisma/client/runtime/library").JsonValue;
         };
     } & {
@@ -108,9 +108,9 @@ export declare class CampaignsService {
                 updatedAt: Date;
                 status: string;
                 shopId: string;
+                category: string;
                 templateName: string;
                 language: string;
-                category: string;
                 components: import("@prisma/client/runtime/library").JsonValue;
             };
             contacts: {

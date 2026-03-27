@@ -5,6 +5,7 @@ import { FlowEngineService } from './flow-engine.service';
 
 @Module({
   controllers: [FlowsController],
-  providers: [FlowsService, FlowEngineService]
+  providers: [FlowsService, FlowEngineService],
+  exports: [FlowEngineService]
 })
 export class FlowsModule {}

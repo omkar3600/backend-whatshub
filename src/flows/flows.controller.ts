@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
 import { FlowsService } from './flows.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -54,5 +54,10 @@ export class FlowsController {
     @Delete(':id')
     async deleteFlow(@GetUser() user: any, @Param('id') id: string) {
         return this.flowsService.deleteFlow(user.shopId, id);
+    }
+
+    @Patch(':id/settings')
+    async updateSettings(@GetUser() user: any, @Param('id') id: string, @Body() body: any) {
+        return this.flowsService.updateSettings(user.shopId, id, body);
     }
 }

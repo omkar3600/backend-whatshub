@@ -17,17 +17,20 @@ const axios_1 = require("@nestjs/axios");
 const rxjs_1 = require("rxjs");
 const chat_gateway_1 = require("../chat/chat.gateway");
 const chatbot_service_1 = require("../chatbot/chatbot.service");
+const flow_engine_service_1 = require("../flows/flow-engine.service");
 let WhatsappService = WhatsappService_1 = class WhatsappService {
     prisma;
     httpService;
     chatGateway;
     chatbotService;
+    flowEngineService;
     logger = new common_1.Logger(WhatsappService_1.name);
-    constructor(prisma, httpService, chatGateway, chatbotService) {
+    constructor(prisma, httpService, chatGateway, chatbotService, flowEngineService) {
         this.prisma = prisma;
         this.httpService = httpService;
         this.chatGateway = chatGateway;
         this.chatbotService = chatbotService;
+        this.flowEngineService = flowEngineService;
     }
     async verifyWebhook(mode, token, challenge, shopId) {
         if (mode !== 'subscribe')
@@ -186,7 +189,14 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
                 }
             }
         }
+        let flowFired = false;
         if (!automationFired && messageData.type === 'text') {
+            flowFired = await this.flowEngineService.processIncomingMessage(shopId, contact.phone, messageData.text.body);
+            if (flowFired) {
+                this.logger.log(`[Flow] Flow triggered/continued for ${contact.phone}`);
+            }
+        }
+        if (!automationFired && !flowFired && messageData.type === 'text') {
             const conv = await this.prisma.conversation.findUnique({
                 where: { id: conversation.id },
                 select: { aiPaused: true },
@@ -284,6 +294,7 @@ exports.WhatsappService = WhatsappService = WhatsappService_1 = __decorate([
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         axios_1.HttpService,
         chat_gateway_1.ChatGateway,
-        chatbot_service_1.ChatbotService])
+        chatbot_service_1.ChatbotService,
+        flow_engine_service_1.FlowEngineService])
 ], WhatsappService);
 //# sourceMappingURL=whatsapp.service.js.map

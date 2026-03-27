@@ -33,11 +33,26 @@ let FlowsController = class FlowsController {
     async getFlow(user, id) {
         return this.flowsService.getFlow(user.shopId, id);
     }
+    async getFlowAnalytics(user, id) {
+        return this.flowsService.getFlowAnalytics(user.shopId, id);
+    }
+    async getFlowVersions(user, id) {
+        return this.flowsService.getFlowVersions(user.shopId, id);
+    }
+    async getFlowVersion(user, id, versionId) {
+        return this.flowsService.getFlowVersion(user.shopId, id, versionId);
+    }
+    async simulateFlow(id, body) {
+        return this.flowsService.simulateFlow(id, body);
+    }
     async updateFlow(user, id, body) {
         return this.flowsService.updateFlow(user.shopId, id, body);
     }
     async deleteFlow(user, id) {
         return this.flowsService.deleteFlow(user.shopId, id);
+    }
+    async updateSettings(user, id, body) {
+        return this.flowsService.updateSettings(user.shopId, id, body);
     }
 };
 exports.FlowsController = FlowsController;
@@ -65,6 +80,39 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], FlowsController.prototype, "getFlow", null);
 __decorate([
+    (0, common_1.Get)(':id/analytics'),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], FlowsController.prototype, "getFlowAnalytics", null);
+__decorate([
+    (0, common_1.Get)(':id/versions'),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], FlowsController.prototype, "getFlowVersions", null);
+__decorate([
+    (0, common_1.Get)(':id/versions/:versionId'),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Param)('versionId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:returntype", Promise)
+], FlowsController.prototype, "getFlowVersion", null);
+__decorate([
+    (0, common_1.Post)(':id/simulate'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], FlowsController.prototype, "simulateFlow", null);
+__decorate([
     (0, common_1.Put)(':id'),
     __param(0, (0, get_user_decorator_1.GetUser)()),
     __param(1, (0, common_1.Param)('id')),
@@ -81,6 +129,15 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], FlowsController.prototype, "deleteFlow", null);
+__decorate([
+    (0, common_1.Patch)(':id/settings'),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:returntype", Promise)
+], FlowsController.prototype, "updateSettings", null);
 exports.FlowsController = FlowsController = __decorate([
     (0, common_1.Controller)('flows'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),

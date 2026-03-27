@@ -89,6 +89,7 @@ model Contact {
   shop             Shop               @relation(fields: [shopId], references: [id])
   conversations    Conversation[]
   campaignContacts CampaignContact[]
+  flowSession      FlowSession?
 
   @@unique([shopId, phone])
 }
@@ -219,13 +220,28 @@ model Flow {
   category     String   @default("Custom")
   status       String   @default("Draft")
   nodeCount    Int      @default(0)
-  nodes        Json?
-  edges        Json?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  shop         Shop     @relation(fields: [shopId], references: [id])
-  analytics    FlowAnalytics[]
-  versions     FlowVersion[]
+  nodes          Json?
+  edges          Json?
+  triggerKeyword String?
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  shop           Shop     @relation(fields: [shopId], references: [id])
+  analytics      FlowAnalytics[]
+  versions       FlowVersion[]
+  sessions       FlowSession[]
+}
+
+model FlowSession {
+  id            String   @id @default(uuid())
+  contactId     String   @unique
+  flowId        String
+  currentNodeId String?
+  variables     Json     @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  contact       Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  flow          Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
 }
 
 model FlowAnalytics {

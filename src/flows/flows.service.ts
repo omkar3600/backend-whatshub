@@ -19,7 +19,9 @@ export class FlowsService {
                 status: data.status || 'Draft',
                 nodeCount: data.nodeCount || 1,
                 nodes: data.nodes || [],
-                edges: data.edges || []
+                edges: data.edges || [],
+                triggerKeyword: data.triggerKeyword,
+                isDefault: data.isDefault || false
             },
         });
     }
@@ -64,7 +66,9 @@ export class FlowsService {
                 status: data.status,
                 nodeCount: data.nodeCount,
                 nodes: data.nodes,
-                edges: data.edges
+                edges: data.edges,
+                triggerKeyword: data.triggerKeyword,
+                isDefault: data.isDefault
             },
         });
     }
@@ -99,6 +103,26 @@ export class FlowsService {
         
         await this.prisma.flow.delete({ where: { id } });
         return { message: 'Flow deleted' };
+    }
+
+    async updateSettings(shopId: string, id: string, data: any) {
+        if (data.isDefault) {
+            // Unset other default flows for this shop
+            await this.prisma.flow.updateMany({
+                where: { shopId, isDefault: true },
+                data: { isDefault: false }
+            });
+        }
+
+        return this.prisma.flow.update({
+            where: { id, shopId },
+            data: {
+                triggerKeyword: data.triggerKeyword,
+                isDefault: data.isDefault,
+                status: data.status,
+                name: data.name
+            }
+        });
     }
 
     async getFlowAnalytics(shopId: string, flowId: string) {

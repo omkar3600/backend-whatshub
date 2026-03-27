@@ -4,6 +4,7 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { ChatGateway } from '../chat/chat.gateway';
 import { ChatbotService } from '../chatbot/chatbot.service';
+import { FlowEngineService } from '../flows/flow-engine.service';
 
 @Injectable()
 export class WhatsappService {
@@ -14,6 +15,7 @@ export class WhatsappService {
         private httpService: HttpService,
         private chatGateway: ChatGateway,
         private chatbotService: ChatbotService,
+        private flowEngineService: FlowEngineService,
     ) { }
 
     async verifyWebhook(mode: string, token: string, challenge: string, shopId?: string) {
@@ -203,8 +205,17 @@ export class WhatsappService {
             }
         }
 
-        // --- AI Chatbot (only if no automation fired and AI not paused for this contact) ---
+        // --- Flows ---
+        let flowFired = false;
         if (!automationFired && messageData.type === 'text') {
+            flowFired = await this.flowEngineService.processIncomingMessage(shopId, contact.phone, messageData.text.body);
+            if (flowFired) {
+                this.logger.log(`[Flow] Flow triggered/continued for ${contact.phone}`);
+            }
+        }
+
+        // --- AI Chatbot (only if no automation fired and no flow fired and AI not paused) ---
+        if (!automationFired && !flowFired && messageData.type === 'text') {
             // Check if this conversation has AI paused
             const conv = await this.prisma.conversation.findUnique({
                 where: { id: conversation.id },

@@ -2,13 +2,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
 import { ChatGateway } from '../chat/chat.gateway';
 import { ChatbotService } from '../chatbot/chatbot.service';
+import { FlowEngineService } from '../flows/flow-engine.service';
 export declare class WhatsappService {
     private prisma;
     private httpService;
     private chatGateway;
     private chatbotService;
+    private flowEngineService;
     private readonly logger;
-    constructor(prisma: PrismaService, httpService: HttpService, chatGateway: ChatGateway, chatbotService: ChatbotService);
+    constructor(prisma: PrismaService, httpService: HttpService, chatGateway: ChatGateway, chatbotService: ChatbotService, flowEngineService: FlowEngineService);
     verifyWebhook(mode: string, token: string, challenge: string, shopId?: string): Promise<string | null>;
     processWebhookEvent(body: any): Promise<void>;
     private handleTemplateStatusUpdate;
