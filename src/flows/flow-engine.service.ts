@@ -239,20 +239,14 @@ export class FlowEngineService {
                 const c = await this.prisma.contact.findFirst({ where: { id: session.contactId } });
                 
                 if (f && c) {
-                    if (type === 'INTERACTIVE') {
+                    if (type === 'INTERACTIVE' || type === 'BUTTON' || type === 'LIST') {
                         // Complex interactive payload
                         const config = node.data.config || {};
                         const payload = {
                             text: prompt,
-                            buttons: config.buttons || [],
-                            header: config.header,
-                            footer: config.footer,
-                            mediaType: config.mediaType,
-                            imageUrl: config.imageUrl,
-                            videoUrl: config.videoUrl
+                            config: config
                         };
-                        // Use basic text for now, can be expanded in WhatsappService
-                        await this.whatsappService.sendOutboundMessage(f.shopId, c.phone, 'text', prompt);
+                        await this.whatsappService.sendOutboundMessage(f.shopId, c.phone, 'interactive', payload);
                     } else {
                         await this.whatsappService.sendOutboundMessage(f.shopId, c.phone, 'text', prompt);
                     }

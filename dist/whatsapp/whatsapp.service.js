@@ -264,6 +264,37 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
         else if (['image', 'document', 'video', 'audio'].includes(type) && mediaUrl) {
             payload[type] = { link: mediaUrl };
         }
+        else if (type === 'interactive') {
+            const config = content.config || {};
+            payload.type = 'interactive';
+            payload.interactive = {
+                type: 'button',
+                body: { text: content.text || content.body || '' },
+                action: {
+                    buttons: (config.buttons || []).map((btn, idx) => ({
+                        type: 'reply',
+                        reply: {
+                            id: btn.id || `btn-${idx}`,
+                            title: btn.text || btn.title || 'Click'
+                        }
+                    }))
+                }
+            };
+            if (config.header) {
+                payload.interactive.header = { type: 'text', text: config.header };
+            }
+            if (config.footer) {
+                payload.interactive.footer = { text: config.footer };
+            }
+            if (config.mediaType && (config.imageUrl || config.videoUrl)) {
+                payload.interactive.header = {
+                    type: config.mediaType.toLowerCase() === 'image' ? 'image' : 'video',
+                    [config.mediaType.toLowerCase() === 'image' ? 'image' : 'video']: {
+                        link: config.imageUrl || config.videoUrl
+                    }
+                };
+            }
+        }
         else if (type === 'template') {
             payload.template = {
                 name: typeof content === 'string' ? content : content.name,

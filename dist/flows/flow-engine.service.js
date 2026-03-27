@@ -173,18 +173,13 @@ let FlowEngineService = FlowEngineService_1 = class FlowEngineService {
                 const f = await this.prisma.flow.findFirst({ where: { id: session.flowId }, select: { shopId: true } });
                 const c = await this.prisma.contact.findFirst({ where: { id: session.contactId } });
                 if (f && c) {
-                    if (type === 'INTERACTIVE') {
+                    if (type === 'INTERACTIVE' || type === 'BUTTON' || type === 'LIST') {
                         const config = node.data.config || {};
                         const payload = {
                             text: prompt,
-                            buttons: config.buttons || [],
-                            header: config.header,
-                            footer: config.footer,
-                            mediaType: config.mediaType,
-                            imageUrl: config.imageUrl,
-                            videoUrl: config.videoUrl
+                            config: config
                         };
-                        await this.whatsappService.sendOutboundMessage(f.shopId, c.phone, 'text', prompt);
+                        await this.whatsappService.sendOutboundMessage(f.shopId, c.phone, 'interactive', payload);
                     }
                     else {
                         await this.whatsappService.sendOutboundMessage(f.shopId, c.phone, 'text', prompt);

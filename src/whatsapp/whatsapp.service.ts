@@ -291,6 +291,37 @@ export class WhatsappService {
             payload.text = { preview_url: false, body: content };
         } else if (['image', 'document', 'video', 'audio'].includes(type) && mediaUrl) {
             payload[type] = { link: mediaUrl };
+        } else if (type === 'interactive') {
+            const config = content.config || {};
+            payload.type = 'interactive';
+            payload.interactive = {
+                type: 'button', // Defaulting to button for now
+                body: { text: content.text || content.body || '' },
+                action: {
+                    buttons: (config.buttons || []).map((btn: any, idx: number) => ({
+                        type: 'reply',
+                        reply: {
+                            id: btn.id || `btn-${idx}`,
+                            title: btn.text || btn.title || 'Click'
+                        }
+                    }))
+                }
+            };
+            if (config.header) {
+                payload.interactive.header = { type: 'text', text: config.header };
+            }
+            if (config.footer) {
+                payload.interactive.footer = { text: config.footer };
+            }
+            // Support media header if present
+            if (config.mediaType && (config.imageUrl || config.videoUrl)) {
+                payload.interactive.header = {
+                    type: config.mediaType.toLowerCase() === 'image' ? 'image' : 'video',
+                    [config.mediaType.toLowerCase() === 'image' ? 'image' : 'video']: {
+                        link: config.imageUrl || config.videoUrl
+                    }
+                };
+            }
         } else if (type === 'template') {
             payload.template = {
                 name: typeof content === 'string' ? content : content.name,
