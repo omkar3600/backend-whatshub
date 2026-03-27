@@ -78,6 +78,11 @@ public class FlowEngine {
         UserSession session = sessionService.getOrCreateSession(userId, flow.getId());
         FlowDefinition definition = flow.getDefinition();
         
+        // Save the raw input for any node that might need it (e.g. KEYWORD_ROUTER)
+        if (input != null && !input.isBlank()) {
+            session.getVariables().put("_last_user_message", input);
+        }
+
         String currentNodeId = session.getCurrentNodeId();
         if (currentNodeId == null) {
             // Find start node in React Flow graph
@@ -88,6 +93,18 @@ public class FlowEngine {
                 .orElse(definition.getNodes().get(0).getId());
         } else {
             // If we're waiting for input, the input belongs to the CURRENT node
+            RFNode previousNode = findNode(currentNodeId, definition);
+            if (previousNode != null && "QUESTION".equals(previousNode.getData().getType())) {
+                Object configObj = previousNode.getData().getConfig();
+                if (configObj instanceof Map map) {
+                    Object saveAs = map.get("saveAs");
+                    if (saveAs != null && !saveAs.toString().isBlank()) {
+                        session.getVariables().put(saveAs.toString(), input);
+                        log.info("Saved user answer to variable: {}", saveAs);
+                    }
+                }
+            }
+
             // and we need to resolve the transition to the NEXT node.
             currentNodeId = findNextNodeId(currentNodeId, definition, input);
         }
