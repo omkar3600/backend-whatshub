@@ -21,5 +21,11 @@ public interface NodeExecutor {
         public static NodeResult waitInput() {
             return new NodeResult(null, true);
         }
+
+        /** Terminates traversal of the current flow (used after a cross-flow jump). */
+        public static NodeResult end() {
+            return new NodeResult(null, false);
+        }
     }
 }
+

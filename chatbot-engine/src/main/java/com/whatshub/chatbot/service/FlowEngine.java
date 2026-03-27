@@ -8,7 +8,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -21,10 +24,52 @@ public class FlowEngine {
     private final FlowAnalyticsRepository analyticsRepository;
     private final SimulationManager simulationManager;
 
+    /**
+     * Main entry point called by the WhatsApp message handler.
+     * 
+     * Resolution order:
+     * 1. If the user already has an active session for a flow, continue that flow with the input.
+     * 2. If the input matches a trigger keyword of any active flow, start that flow.
+     * 3. If a default flow exists, start it.
+     * 4. Do nothing.
+     */
     public void proceed(String userId, String input) {
-        // For demonstration, we pick the first active flow or a "default" one
-        flowRepository.findAll().stream()
+        List<Flow> activeFlows = flowRepository.findAll().stream()
             .filter(Flow::isActive)
+            .toList();
+
+        // 1. Check for existing session
+        Optional<UserSession> existingSession = sessionService.findSession(userId);
+        if (existingSession.isPresent()) {
+            UserSession session = existingSession.get();
+            // Make sure the flow still exists and is active
+            boolean flowStillActive = activeFlows.stream()
+                .anyMatch(f -> f.getId().toString().equals(session.getFlowId()));
+            if (flowStillActive) {
+                activeFlows.stream()
+                    .filter(f -> f.getId().toString().equals(session.getFlowId()))
+                    .findFirst()
+                    .ifPresent(flow -> engage(userId, input, flow));
+                return;
+            }
+        }
+
+        // 2. Match trigger keyword — supports comma-separated keywords per flow, case-insensitive
+        Optional<Flow> keywordMatch = activeFlows.stream()
+            .filter(f -> f.getTriggerKeyword() != null && !f.getTriggerKeyword().isBlank())
+            .filter(f -> Arrays.stream(f.getTriggerKeyword().split(","))
+                .map(String::trim)
+                .anyMatch(kw -> kw.equalsIgnoreCase(input.trim())))
+            .findFirst();
+
+        if (keywordMatch.isPresent()) {
+            engage(userId, input, keywordMatch.get());
+            return;
+        }
+
+        // 3. Fallback to default flow
+        activeFlows.stream()
+            .filter(Flow::isDefaultFlow)
             .findFirst()
             .ifPresent(flow -> engage(userId, input, flow));
     }
@@ -33,7 +78,7 @@ public class FlowEngine {
         UserSession session = sessionService.getOrCreateSession(userId, flow.getId());
         FlowDefinition definition = flow.getDefinition();
         
-        String currentNodeId = session.getCurrentNode();
+        String currentNodeId = session.getCurrentNodeId();
         if (currentNodeId == null) {
             // Find start node in React Flow graph
             currentNodeId = definition.getNodes().stream()
@@ -52,6 +97,40 @@ public class FlowEngine {
         }
     }
 
+    /**
+     * Jump to a different flow entirely — called by JumpNodeExecutor.
+     * Resets the session to point to the new flow and starts it from the START node.
+     */
+    public void jumpToFlow(String userId, String targetFlowId) {
+        Optional<Flow> targetFlowOpt = flowRepository.findAll().stream()
+            .filter(f -> f.getId().toString().equals(targetFlowId) && f.isActive())
+            .findFirst();
+
+        if (targetFlowOpt.isEmpty()) {
+            log.warn("JumpToFlow: target flow '{}' not found or inactive.", targetFlowId);
+            return;
+        }
+
+        Flow targetFlow = targetFlowOpt.get();
+        FlowDefinition definition = targetFlow.getDefinition();
+
+        // Reset session to target flow
+        UserSession session = sessionService.getOrCreateSession(userId, targetFlow.getId());
+        session.setFlowId(targetFlow.getId().toString());
+        session.setCurrentNodeId(null); // Will be resolved to START node
+        sessionService.saveSession(session);
+
+        log.info("User '{}' jumping to flow '{}'", userId, targetFlow.getName());
+
+        String startNodeId = definition.getNodes().stream()
+            .filter(n -> "START".equals(n.getData().getType()))
+            .findFirst()
+            .map(RFNode::getId)
+            .orElse(definition.getNodes().get(0).getId());
+
+        processNode(startNodeId, session, definition);
+    }
+
     private void processNode(String nodeId, UserSession session, FlowDefinition definition) {
         RFNode node = findNode(nodeId, definition);
         if (node == null) return;
@@ -68,7 +147,7 @@ public class FlowEngine {
             log.error("Failed to track flow analytics: {}", e.getMessage());
         }
 
-        session.setCurrentNode(nodeId);
+        session.setCurrentNodeId(nodeId);
         sessionService.saveSession(session);
 
         String type = node.getData().getType();
@@ -102,8 +181,6 @@ public class FlowEngine {
     }
 
     private String findNextNodeId(String sourceId, FlowDefinition def, String input) {
-        // In AiSensy, for BUTTON nodes, we match input to the label. 
-        // For linear nodes, we just take the first edge.
         return def.getEdges().stream()
             .filter(e -> e.getSource().equals(sourceId))
             .filter(e -> input == null || matchEdge(e, input, def))
@@ -113,7 +190,6 @@ public class FlowEngine {
     }
 
     private boolean matchEdge(RFEdge edge, String input, FlowDefinition def) {
-        // If it's a specific handle connection (like a "yes" button)
         if (edge.getSourceHandle() != null) {
             return input.equalsIgnoreCase(edge.getSourceHandle());
         }

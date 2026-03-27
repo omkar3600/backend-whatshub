@@ -4,12 +4,17 @@ import com.whatshub.chatbot.model.UserSession;
 import com.whatshub.chatbot.repository.SessionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class SessionService {
     private final SessionRepository sessionRepository;
+
+    public Optional<UserSession> findSession(String userId) {
+        return sessionRepository.findById(userId);
+    }
 
     public UserSession getOrCreateSession(String userId, UUID flowId) {
         return sessionRepository.findById(userId)
