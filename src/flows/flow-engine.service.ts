@@ -89,11 +89,15 @@ export class FlowEngineService {
             where: { shopId, status: 'Active' }
         });
 
-        // 3a. Global Keyword Trigger (Set on the Flow model)
+        // 3a. Global Keyword Trigger
         const keywordMatch = activeFlows.find(f => {
             if (!f.triggerKeyword) return false;
             const keywords = f.triggerKeyword.split(',').map(k => k.trim().toLowerCase());
-            return keywords.some(k => k === lowerInput || (lowerInput.includes(k) && k.length > 3));
+            return keywords.some(k => {
+                if (k.length <= 3) return lowerInput === k; // Strict for short words
+                const regex = new RegExp(`(^|\\s)${k}(\\s|$)`, 'i'); // Word boundaries
+                return regex.test(lowerInput);
+            });
         });
 
         if (keywordMatch) {
@@ -102,8 +106,13 @@ export class FlowEngineService {
             return true;
         }
 
-        // 3b. Dynamic KEYWORD_ROUTER Trigger (Scan internal nodes of all active flows)
-        const routerMatch = activeFlows.find(f => this.matchesInternalRouter(f, incomingText));
+        // 3b. Dynamic KEYWORD_ROUTER Trigger
+        // Only scan flows that have a router node defined
+        const routerMatch = activeFlows.find(f => {
+            const hasRouter = (f.nodes as any[])?.some(n => n.data.type === 'KEYWORD_ROUTER');
+            if (!hasRouter) return false;
+            return this.matchesInternalRouter(f, incomingText);
+        });
         if (routerMatch) {
             this.logger.log(`Internal Router match triggered flow ${routerMatch.name} for ${phone}`);
             await this.startFlow(contact.id, routerMatch, incomingText);
@@ -129,6 +138,10 @@ export class FlowEngineService {
         const rootNodeId = this.findRootNodeId(definition);
         if (!rootNodeId) return;
 
+        // Fetch contact phone once for the whole chain
+        const contact = await this.prisma.contact.findUnique({ where: { id: contactId }, select: { phone: true } });
+        if (!contact) return;
+
         // Upsert session
         const session = await this.prisma.flowSession.upsert({
             where: { contactId },
@@ -145,7 +158,7 @@ export class FlowEngineService {
             }
         });
 
-        await this.executeNodeChainNative(rootNodeId, session, definition);
+        await this.executeNodeChainNative(rootNodeId, session, definition, flow.shopId, contact.phone, 0);
     }
 
     private async continueFlow(session: any, flow: any, input: string) {
@@ -162,11 +175,16 @@ export class FlowEngineService {
             return;
         }
 
+        // Fetch contact phone once
+        const contact = await this.prisma.contact.findUnique({ where: { id: session.contactId }, select: { phone: true } });
+        if (!contact) return;
+
         const variables = (session.variables as any) || {};
         variables._last_user_message = input;
 
-        // If it was a question, save the answer
-        if (currentNode.data.type === 'QUESTION' || currentNode.data.type === 'BUTTON' || currentNode.data.type === 'LIST' || currentNode.data.type === 'INTERACTIVE') {
+        // If it was a question/interactive, save the answer
+        const type = currentNode.data.type;
+        if (type === 'QUESTION' || type === 'BUTTON' || type === 'LIST' || type === 'INTERACTIVE') {
             const saveAs = currentNode.data.config?.saveAs || currentNode.data.variable || 'user_response';
             if (saveAs) {
                 variables[saveAs] = input;
@@ -179,19 +197,24 @@ export class FlowEngineService {
         if (nextNodeId) {
             session.currentNodeId = nextNodeId;
             session.variables = variables;
-            await this.executeNodeChainNative(nextNodeId, session, definition);
+            await this.executeNodeChainNative(nextNodeId, session, definition, flow.shopId, contact.phone, 0);
         } else {
             // End of flow
-            await this.prisma.flowSession.delete({ where: { id: session.id } });
+            await this.prisma.flowSession.delete({ where: { id: session.id } }).catch(() => { });
         }
     }
 
-    private async executeNodeChainNative(nodeId: string, session: any, definition: FlowDefinition) {
+    private async executeNodeChainNative(nodeId: string, session: any, definition: FlowDefinition, shopId: string, toPhone: string, depth: number) {
+        if (depth > 20) {
+            this.logger.error(`Flow recursion limit reached for session ${session.id}. Possible infinite loop.`);
+            return;
+        }
+
         const node = definition.nodes.find(n => n.id === nodeId);
         if (!node) return;
 
-        // Track Analytics
-        await this.prisma.flowAnalytics.upsert({
+        // Track Analytics (Non-blocking)
+        this.prisma.flowAnalytics.upsert({
             where: { flowId_nodeId: { flowId: session.flowId, nodeId } },
             update: { hits: { increment: 1 } },
             create: { flowId: session.flowId, nodeId, hits: 1 }
@@ -204,11 +227,11 @@ export class FlowEngineService {
         });
 
         const type = node.data.type;
-        this.logger.log(`Native Executing: ${type} (${nodeId})`);
+        this.logger.log(`Native Executing [${depth}]: ${type} (${nodeId})`);
 
         switch (type) {
             case 'START':
-                return this.moveToNextNative(nodeId, session, definition);
+                return this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
 
             case 'TEXT':
             case 'IMAGE':
@@ -217,17 +240,13 @@ export class FlowEngineService {
             case 'DOCUMENT':
                 const content = this.resolveContent(node.data.content || node.data.text || '', session.variables);
                 const mediaUrl = node.data.config?.mediaUrl || node.data.imageUrl || node.data.videoUrl;
-                
-                // Fetch credentials for sending
-                const flow = await this.prisma.flow.findFirst({ where: { id: session.flowId }, select: { shopId: true } });
-                const contact = await this.prisma.contact.findFirst({ where: { id: session.contactId } });
-                
-                if (flow && contact && (content || mediaUrl)) {
-                    await this.whatsappService.sendOutboundMessage(flow.shopId, contact.phone, type.toLowerCase(), content, mediaUrl);
-                    // Also save to database
-                    await this.saveOutboundMessage(flow.shopId, contact.id, type.toLowerCase(), content || 'Media', session.flowId);
+
+                if (content || mediaUrl) {
+                    await this.whatsappService.sendOutboundMessage(shopId, toPhone, type.toLowerCase(), content, mediaUrl);
+                    // Also save to database (Non-blocking)
+                    this.saveOutboundMessage(shopId, session.contactId, type.toLowerCase(), content || 'Media', session.flowId);
                 }
-                return this.moveToNextNative(nodeId, session, definition);
+                return this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
 
             case 'BUTTON':
             case 'LIST':
@@ -235,36 +254,27 @@ export class FlowEngineService {
             case 'QUESTION':
                 // Send the prompt message
                 const prompt = this.resolveContent(node.data.content || node.data.text || '', session.variables);
-                const f = await this.prisma.flow.findFirst({ where: { id: session.flowId }, select: { shopId: true } });
-                const c = await this.prisma.contact.findFirst({ where: { id: session.contactId } });
-                
-                if (f && c) {
-                    if (type === 'INTERACTIVE' || type === 'BUTTON' || type === 'LIST') {
-                        // Complex interactive payload
-                        const config = node.data.config || {};
-                        const payload = {
-                            text: prompt,
-                            config: config
-                        };
-                        await this.whatsappService.sendOutboundMessage(f.shopId, c.phone, 'interactive', payload);
-                    } else {
-                        await this.whatsappService.sendOutboundMessage(f.shopId, c.phone, 'text', prompt);
-                    }
+
+                if (type === 'INTERACTIVE' || type === 'BUTTON' || type === 'LIST') {
+                    const config = node.data.config || {};
+                    const payload = { text: prompt, config: config };
+                    await this.whatsappService.sendOutboundMessage(shopId, toPhone, 'interactive', payload);
+                } else {
+                    await this.whatsappService.sendOutboundMessage(shopId, toPhone, 'text', prompt);
                 }
-                
                 // Halt and wait for input
                 return;
 
             case 'CONDITION':
                 const branch = this.evaluateCondition(node, session);
                 const nextId = this.findNextNodeId(nodeId, definition, branch);
-                if (nextId) return this.executeNodeChainNative(nextId, session, definition);
+                if (nextId) return this.executeNodeChainNative(nextId, session, definition, shopId, toPhone, depth + 1);
                 break;
 
             case 'KEYWORD_ROUTER':
                 const routerBranch = this.evaluateRouter(node, session.variables._last_user_message);
                 const routerNextId = this.findNextNodeId(nodeId, definition, routerBranch);
-                if (routerNextId) return this.executeNodeChainNative(routerNextId, session, definition);
+                if (routerNextId) return this.executeNodeChainNative(routerNextId, session, definition, shopId, toPhone, depth + 1);
                 break;
 
             case 'JUMP':
@@ -272,6 +282,7 @@ export class FlowEngineService {
                 if (targetFlowId) {
                     const targetFlow = await this.prisma.flow.findUnique({ where: { id: targetFlowId } });
                     if (targetFlow && targetFlow.status === 'Active') {
+                        // Reset depth to 0 for a new flow
                         return this.startFlow(session.contactId, targetFlow, session.variables._last_user_message);
                     }
                 }
@@ -279,26 +290,26 @@ export class FlowEngineService {
 
             case 'DELAY':
                 const delaySeconds = node.data.config?.delay || node.data.delay || 1;
-                // Simple setTimeout for small delays. For production, a worker queue is better.
+                this.logger.log(`Halted for ${delaySeconds}s delay...`);
                 setTimeout(() => {
-                    this.moveToNextNative(nodeId, session, definition);
+                    this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
                 }, delaySeconds * 1000);
                 return;
 
             default:
-                return this.moveToNextNative(nodeId, session, definition);
+                return this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
         }
 
         // If no more nodes, delete session
-        await this.prisma.flowSession.delete({ where: { id: session.id } }).catch(() => {});
+        await this.prisma.flowSession.delete({ where: { id: session.id } }).catch(() => { });
     }
 
-    private async moveToNextNative(nodeId: string, session: any, definition: FlowDefinition) {
+    private async moveToNextNative(nodeId: string, session: any, definition: FlowDefinition, shopId: string, toPhone: string, depth: number) {
         const nextId = this.findNextNodeId(nodeId, definition, null);
         if (nextId) {
-            return this.executeNodeChainNative(nextId, session, definition);
+            return this.executeNodeChainNative(nextId, session, definition, shopId, toPhone, depth);
         } else {
-            await this.prisma.flowSession.delete({ where: { id: session.id } }).catch(() => {});
+            await this.prisma.flowSession.delete({ where: { id: session.id } }).catch(() => { });
         }
     }
 

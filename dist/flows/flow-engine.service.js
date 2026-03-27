@@ -56,14 +56,24 @@ let FlowEngineService = FlowEngineService_1 = class FlowEngineService {
             if (!f.triggerKeyword)
                 return false;
             const keywords = f.triggerKeyword.split(',').map(k => k.trim().toLowerCase());
-            return keywords.some(k => k === lowerInput || (lowerInput.includes(k) && k.length > 3));
+            return keywords.some(k => {
+                if (k.length <= 3)
+                    return lowerInput === k;
+                const regex = new RegExp(`(^|\\s)${k}(\\s|$)`, 'i');
+                return regex.test(lowerInput);
+            });
         });
         if (keywordMatch) {
             this.logger.log(`Keyword match triggered flow ${keywordMatch.name} for ${phone}`);
             await this.startFlow(contact.id, keywordMatch, incomingText);
             return true;
         }
-        const routerMatch = activeFlows.find(f => this.matchesInternalRouter(f, incomingText));
+        const routerMatch = activeFlows.find(f => {
+            const hasRouter = f.nodes?.some(n => n.data.type === 'KEYWORD_ROUTER');
+            if (!hasRouter)
+                return false;
+            return this.matchesInternalRouter(f, incomingText);
+        });
         if (routerMatch) {
             this.logger.log(`Internal Router match triggered flow ${routerMatch.name} for ${phone}`);
             await this.startFlow(contact.id, routerMatch, incomingText);
@@ -85,6 +95,9 @@ let FlowEngineService = FlowEngineService_1 = class FlowEngineService {
         const rootNodeId = this.findRootNodeId(definition);
         if (!rootNodeId)
             return;
+        const contact = await this.prisma.contact.findUnique({ where: { id: contactId }, select: { phone: true } });
+        if (!contact)
+            return;
         const session = await this.prisma.flowSession.upsert({
             where: { contactId },
             update: {
@@ -99,7 +112,7 @@ let FlowEngineService = FlowEngineService_1 = class FlowEngineService {
                 variables: { _last_user_message: input }
             }
         });
-        await this.executeNodeChainNative(rootNodeId, session, definition);
+        await this.executeNodeChainNative(rootNodeId, session, definition, flow.shopId, contact.phone, 0);
     }
     async continueFlow(session, flow, input) {
         const definition = {
@@ -114,9 +127,13 @@ let FlowEngineService = FlowEngineService_1 = class FlowEngineService {
             await this.prisma.flowSession.delete({ where: { id: session.id } });
             return;
         }
+        const contact = await this.prisma.contact.findUnique({ where: { id: session.contactId }, select: { phone: true } });
+        if (!contact)
+            return;
         const variables = session.variables || {};
         variables._last_user_message = input;
-        if (currentNode.data.type === 'QUESTION' || currentNode.data.type === 'BUTTON' || currentNode.data.type === 'LIST' || currentNode.data.type === 'INTERACTIVE') {
+        const type = currentNode.data.type;
+        if (type === 'QUESTION' || type === 'BUTTON' || type === 'LIST' || type === 'INTERACTIVE') {
             const saveAs = currentNode.data.config?.saveAs || currentNode.data.variable || 'user_response';
             if (saveAs) {
                 variables[saveAs] = input;
@@ -127,17 +144,21 @@ let FlowEngineService = FlowEngineService_1 = class FlowEngineService {
         if (nextNodeId) {
             session.currentNodeId = nextNodeId;
             session.variables = variables;
-            await this.executeNodeChainNative(nextNodeId, session, definition);
+            await this.executeNodeChainNative(nextNodeId, session, definition, flow.shopId, contact.phone, 0);
         }
         else {
-            await this.prisma.flowSession.delete({ where: { id: session.id } });
+            await this.prisma.flowSession.delete({ where: { id: session.id } }).catch(() => { });
         }
     }
-    async executeNodeChainNative(nodeId, session, definition) {
+    async executeNodeChainNative(nodeId, session, definition, shopId, toPhone, depth) {
+        if (depth > 20) {
+            this.logger.error(`Flow recursion limit reached for session ${session.id}. Possible infinite loop.`);
+            return;
+        }
         const node = definition.nodes.find(n => n.id === nodeId);
         if (!node)
             return;
-        await this.prisma.flowAnalytics.upsert({
+        this.prisma.flowAnalytics.upsert({
             where: { flowId_nodeId: { flowId: session.flowId, nodeId } },
             update: { hits: { increment: 1 } },
             create: { flowId: session.flowId, nodeId, hits: 1 }
@@ -147,10 +168,10 @@ let FlowEngineService = FlowEngineService_1 = class FlowEngineService {
             data: { currentNodeId: nodeId, variables: session.variables }
         });
         const type = node.data.type;
-        this.logger.log(`Native Executing: ${type} (${nodeId})`);
+        this.logger.log(`Native Executing [${depth}]: ${type} (${nodeId})`);
         switch (type) {
             case 'START':
-                return this.moveToNextNative(nodeId, session, definition);
+                return this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
             case 'TEXT':
             case 'IMAGE':
             case 'VIDEO':
@@ -158,45 +179,36 @@ let FlowEngineService = FlowEngineService_1 = class FlowEngineService {
             case 'DOCUMENT':
                 const content = this.resolveContent(node.data.content || node.data.text || '', session.variables);
                 const mediaUrl = node.data.config?.mediaUrl || node.data.imageUrl || node.data.videoUrl;
-                const flow = await this.prisma.flow.findFirst({ where: { id: session.flowId }, select: { shopId: true } });
-                const contact = await this.prisma.contact.findFirst({ where: { id: session.contactId } });
-                if (flow && contact && (content || mediaUrl)) {
-                    await this.whatsappService.sendOutboundMessage(flow.shopId, contact.phone, type.toLowerCase(), content, mediaUrl);
-                    await this.saveOutboundMessage(flow.shopId, contact.id, type.toLowerCase(), content || 'Media', session.flowId);
+                if (content || mediaUrl) {
+                    await this.whatsappService.sendOutboundMessage(shopId, toPhone, type.toLowerCase(), content, mediaUrl);
+                    this.saveOutboundMessage(shopId, session.contactId, type.toLowerCase(), content || 'Media', session.flowId);
                 }
-                return this.moveToNextNative(nodeId, session, definition);
+                return this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
             case 'BUTTON':
             case 'LIST':
             case 'INTERACTIVE':
             case 'QUESTION':
                 const prompt = this.resolveContent(node.data.content || node.data.text || '', session.variables);
-                const f = await this.prisma.flow.findFirst({ where: { id: session.flowId }, select: { shopId: true } });
-                const c = await this.prisma.contact.findFirst({ where: { id: session.contactId } });
-                if (f && c) {
-                    if (type === 'INTERACTIVE' || type === 'BUTTON' || type === 'LIST') {
-                        const config = node.data.config || {};
-                        const payload = {
-                            text: prompt,
-                            config: config
-                        };
-                        await this.whatsappService.sendOutboundMessage(f.shopId, c.phone, 'interactive', payload);
-                    }
-                    else {
-                        await this.whatsappService.sendOutboundMessage(f.shopId, c.phone, 'text', prompt);
-                    }
+                if (type === 'INTERACTIVE' || type === 'BUTTON' || type === 'LIST') {
+                    const config = node.data.config || {};
+                    const payload = { text: prompt, config: config };
+                    await this.whatsappService.sendOutboundMessage(shopId, toPhone, 'interactive', payload);
+                }
+                else {
+                    await this.whatsappService.sendOutboundMessage(shopId, toPhone, 'text', prompt);
                 }
                 return;
             case 'CONDITION':
                 const branch = this.evaluateCondition(node, session);
                 const nextId = this.findNextNodeId(nodeId, definition, branch);
                 if (nextId)
-                    return this.executeNodeChainNative(nextId, session, definition);
+                    return this.executeNodeChainNative(nextId, session, definition, shopId, toPhone, depth + 1);
                 break;
             case 'KEYWORD_ROUTER':
                 const routerBranch = this.evaluateRouter(node, session.variables._last_user_message);
                 const routerNextId = this.findNextNodeId(nodeId, definition, routerBranch);
                 if (routerNextId)
-                    return this.executeNodeChainNative(routerNextId, session, definition);
+                    return this.executeNodeChainNative(routerNextId, session, definition, shopId, toPhone, depth + 1);
                 break;
             case 'JUMP':
                 const targetFlowId = node.data.config?.targetFlowId || node.data.targetFlowId;
@@ -209,19 +221,20 @@ let FlowEngineService = FlowEngineService_1 = class FlowEngineService {
                 break;
             case 'DELAY':
                 const delaySeconds = node.data.config?.delay || node.data.delay || 1;
+                this.logger.log(`Halted for ${delaySeconds}s delay...`);
                 setTimeout(() => {
-                    this.moveToNextNative(nodeId, session, definition);
+                    this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
                 }, delaySeconds * 1000);
                 return;
             default:
-                return this.moveToNextNative(nodeId, session, definition);
+                return this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
         }
         await this.prisma.flowSession.delete({ where: { id: session.id } }).catch(() => { });
     }
-    async moveToNextNative(nodeId, session, definition) {
+    async moveToNextNative(nodeId, session, definition, shopId, toPhone, depth) {
         const nextId = this.findNextNodeId(nodeId, definition, null);
         if (nextId) {
-            return this.executeNodeChainNative(nextId, session, definition);
+            return this.executeNodeChainNative(nextId, session, definition, shopId, toPhone, depth);
         }
         else {
             await this.prisma.flowSession.delete({ where: { id: session.id } }).catch(() => { });
