@@ -101,6 +101,9 @@ export class FlowsService {
         const existing = await this.prisma.flow.findFirst({ where: { id, shopId } });
         if (!existing) throw new NotFoundException('Flow not found');
         
+        // Delete all active sessions for this flow
+        await this.prisma.flowSession.deleteMany({ where: { flowId: id } });
+        
         await this.prisma.flow.delete({ where: { id } });
         return { message: 'Flow deleted' };
     }

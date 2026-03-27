@@ -74,9 +74,9 @@ export declare class FlowsService {
         id: string;
         createdAt: Date;
         name: string;
-        flowId: string;
         nodes: import("@prisma/client/runtime/library").JsonValue | null;
         edges: import("@prisma/client/runtime/library").JsonValue | null;
+        flowId: string;
         versionNumber: number;
     }>;
     deleteFlow(shopId: string, id: string): Promise<{

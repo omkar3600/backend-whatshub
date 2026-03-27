@@ -33,22 +33,6 @@ let FlowEngineService = FlowEngineService_1 = class FlowEngineService {
         });
         if (!contact)
             return false;
-        const existingSession = await this.prisma.flowSession.findUnique({
-            where: { contactId: contact.id }
-        });
-        if (existingSession) {
-            const flow = await this.prisma.flow.findFirst({
-                where: { id: existingSession.flowId, shopId, status: 'Active' }
-            });
-            if (flow) {
-                this.logger.log(`Continuing flow ${flow.name} for ${phone}`);
-                await this.continueFlow(existingSession, flow, incomingText);
-                return true;
-            }
-            else {
-                await this.prisma.flowSession.delete({ where: { id: existingSession.id } });
-            }
-        }
         const activeFlows = await this.prisma.flow.findMany({
             where: { shopId, status: 'Active' }
         });
@@ -64,9 +48,25 @@ let FlowEngineService = FlowEngineService_1 = class FlowEngineService {
             });
         });
         if (keywordMatch) {
-            this.logger.log(`Keyword match triggered flow ${keywordMatch.name} for ${phone}`);
+            this.logger.log(`Keyword match [PRIORITY] triggered flow ${keywordMatch.name} for ${phone}`);
             await this.startFlow(contact.id, keywordMatch, incomingText);
             return true;
+        }
+        const existingSession = await this.prisma.flowSession.findUnique({
+            where: { contactId: contact.id }
+        });
+        if (existingSession) {
+            const isStale = (new Date().getTime() - new Date(existingSession.updatedAt).getTime()) > 24 * 60 * 60 * 1000;
+            const flow = activeFlows.find(f => f.id === existingSession.flowId);
+            if (flow && !isStale) {
+                this.logger.log(`Continuing flow ${flow.name} for ${phone}`);
+                await this.continueFlow(existingSession, flow, incomingText);
+                return true;
+            }
+            else {
+                this.logger.log(`Cleaning up ${isStale ? 'stale' : 'orphaned'} session for ${phone}`);
+                await this.prisma.flowSession.delete({ where: { id: existingSession.id } }).catch(() => { });
+            }
         }
         const routerMatch = activeFlows.find(f => {
             const hasRouter = f.nodes?.some(n => n.data.type === 'KEYWORD_ROUTER');

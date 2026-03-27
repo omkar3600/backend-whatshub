@@ -64,32 +64,13 @@ export class FlowEngineService {
         });
         if (!contact) return false;
 
-        // 2. Check for active session
-        const existingSession = await this.prisma.flowSession.findUnique({
-            where: { contactId: contact.id }
-        });
-
-        if (existingSession) {
-            // Check if the flow still exists and is active
-            const flow = await this.prisma.flow.findFirst({
-                where: { id: existingSession.flowId, shopId, status: 'Active' }
-            });
-            if (flow) {
-                this.logger.log(`Continuing flow ${flow.name} for ${phone}`);
-                await this.continueFlow(existingSession, flow, incomingText);
-                return true;
-            } else {
-                // Flow was deleted or deactivated, clean up session
-                await this.prisma.flowSession.delete({ where: { id: existingSession.id } });
-            }
-        }
-
-        // 3. Match trigger keyword of ANY active flow
+        // 2. Get all active flows once
         const activeFlows = await this.prisma.flow.findMany({
             where: { shopId, status: 'Active' }
         });
 
-        // 3a. Global Keyword Trigger
+        // 3. Match Global Keyword Trigger (Highest Priority)
+        // This allows users to "switch" or "restart" flows even if in a session.
         const keywordMatch = activeFlows.find(f => {
             if (!f.triggerKeyword) return false;
             const keywords = f.triggerKeyword.split(',').map(k => k.trim().toLowerCase());
@@ -101,13 +82,35 @@ export class FlowEngineService {
         });
 
         if (keywordMatch) {
-            this.logger.log(`Keyword match triggered flow ${keywordMatch.name} for ${phone}`);
+            this.logger.log(`Keyword match [PRIORITY] triggered flow ${keywordMatch.name} for ${phone}`);
             await this.startFlow(contact.id, keywordMatch, incomingText);
             return true;
         }
 
-        // 3b. Dynamic KEYWORD_ROUTER Trigger
-        // Only scan flows that have a router node defined
+        // 4. Check for active session
+        const existingSession = await this.prisma.flowSession.findUnique({
+            where: { contactId: contact.id }
+        });
+
+        if (existingSession) {
+            // Check if the session is stale (older than 24 hours)
+            const isStale = (new Date().getTime() - new Date(existingSession.updatedAt).getTime()) > 24 * 60 * 60 * 1000;
+            
+            // Check if the flow still exists and is active
+            const flow = activeFlows.find(f => f.id === existingSession.flowId);
+            
+            if (flow && !isStale) {
+                this.logger.log(`Continuing flow ${flow.name} for ${phone}`);
+                await this.continueFlow(existingSession, flow, incomingText);
+                return true;
+            } else {
+                // Flow was deleted/deactivated or session expired, clean up
+                this.logger.log(`Cleaning up ${isStale ? 'stale' : 'orphaned'} session for ${phone}`);
+                await this.prisma.flowSession.delete({ where: { id: existingSession.id } }).catch(() => {});
+            }
+        }
+
+        // 5. Dynamic KEYWORD_ROUTER Trigger (Scan internal nodes of all active flows)
         const routerMatch = activeFlows.find(f => {
             const hasRouter = (f.nodes as any[])?.some(n => n.data.type === 'KEYWORD_ROUTER');
             if (!hasRouter) return false;
@@ -119,7 +122,7 @@ export class FlowEngineService {
             return true;
         }
 
-        // 4. Default flow
+        // 6. Default flow
         const defaultFlow = activeFlows.find(f => f.isDefault);
         if (defaultFlow) {
             this.logger.log(`Falling back to default flow ${defaultFlow.name} for ${phone}`);

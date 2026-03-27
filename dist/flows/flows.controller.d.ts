@@ -58,9 +58,9 @@ export declare class FlowsController {
         id: string;
         createdAt: Date;
         name: string;
-        flowId: string;
         nodes: import("@prisma/client/runtime/library").JsonValue | null;
         edges: import("@prisma/client/runtime/library").JsonValue | null;
+        flowId: string;
         versionNumber: number;
     }>;
     simulateFlow(id: string, body: any): Promise<import("./flow-engine.service").SimulationResult>;

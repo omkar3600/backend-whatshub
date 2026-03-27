@@ -106,6 +106,7 @@ let FlowsService = class FlowsService {
         const existing = await this.prisma.flow.findFirst({ where: { id, shopId } });
         if (!existing)
             throw new common_1.NotFoundException('Flow not found');
+        await this.prisma.flowSession.deleteMany({ where: { flowId: id } });
         await this.prisma.flow.delete({ where: { id } });
         return { message: 'Flow deleted' };
     }
