@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FlowsModule = void 0;
 const common_1 = require("@nestjs/common");
+const whatsapp_module_1 = require("../whatsapp/whatsapp.module");
 const flows_controller_1 = require("./flows.controller");
 const flows_service_1 = require("./flows.service");
 const flow_engine_service_1 = require("./flow-engine.service");
@@ -16,6 +17,7 @@ let FlowsModule = class FlowsModule {
 exports.FlowsModule = FlowsModule;
 exports.FlowsModule = FlowsModule = __decorate([
     (0, common_1.Module)({
+        imports: [(0, common_1.forwardRef)(() => whatsapp_module_1.WhatsappModule)],
         controllers: [flows_controller_1.FlowsController],
         providers: [flows_service_1.FlowsService, flow_engine_service_1.FlowEngineService],
         exports: [flow_engine_service_1.FlowEngineService]

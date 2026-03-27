@@ -19,7 +19,7 @@ let WhatsappModule = class WhatsappModule {
 exports.WhatsappModule = WhatsappModule;
 exports.WhatsappModule = WhatsappModule = __decorate([
     (0, common_1.Module)({
-        imports: [axios_1.HttpModule, chatbot_module_1.ChatbotModule, flows_module_1.FlowsModule, chat_module_1.ChatModule],
+        imports: [axios_1.HttpModule, chatbot_module_1.ChatbotModule, (0, common_1.forwardRef)(() => flows_module_1.FlowsModule), chat_module_1.ChatModule],
         providers: [whatsapp_service_1.WhatsappService],
         controllers: [webhooks_controller_1.WebhooksController],
         exports: [whatsapp_service_1.WhatsappService],

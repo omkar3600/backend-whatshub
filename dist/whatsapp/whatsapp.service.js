@@ -8,6 +8,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 var WhatsappService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WhatsappService = void 0;
@@ -291,6 +294,7 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
 exports.WhatsappService = WhatsappService;
 exports.WhatsappService = WhatsappService = WhatsappService_1 = __decorate([
     (0, common_1.Injectable)(),
+    __param(4, (0, common_1.Inject)((0, common_1.forwardRef)(() => flow_engine_service_1.FlowEngineService))),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         axios_1.HttpService,
         chat_gateway_1.ChatGateway,

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
@@ -15,6 +15,7 @@ export class WhatsappService {
         private httpService: HttpService,
         private chatGateway: ChatGateway,
         private chatbotService: ChatbotService,
+        @Inject(forwardRef(() => FlowEngineService))
         private flowEngineService: FlowEngineService,
     ) { }
 
