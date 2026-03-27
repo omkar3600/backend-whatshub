@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.stream.Collectors;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -67,7 +68,17 @@ public class FlowEngine {
             return;
         }
 
-        // 3. Fallback to default flow
+        // 3. Match KEYWORD_ROUTER rules inside flows dynamically
+        Optional<Flow> routerMatch = activeFlows.stream()
+            .filter(f -> matchesKeywordRouterNode(f, input))
+            .findFirst();
+
+        if (routerMatch.isPresent()) {
+            engage(userId, input, routerMatch.get());
+            return;
+        }
+
+        // 4. Fallback to default flow
         activeFlows.stream()
             .filter(Flow::isDefaultFlow)
             .findFirst()
@@ -86,11 +97,7 @@ public class FlowEngine {
         String currentNodeId = session.getCurrentNodeId();
         if (currentNodeId == null) {
             // Find start node in React Flow graph
-            currentNodeId = definition.getNodes().stream()
-                .filter(n -> "START".equals(n.getData().getType()))
-                .findFirst()
-                .map(RFNode::getId)
-                .orElse(definition.getNodes().get(0).getId());
+            currentNodeId = findRootNodeId(definition);
         } else {
             // If we're waiting for input, the input belongs to the CURRENT node
             RFNode previousNode = findNode(currentNodeId, definition);
@@ -139,11 +146,7 @@ public class FlowEngine {
 
         log.info("User '{}' jumping to flow '{}'", userId, targetFlow.getName());
 
-        String startNodeId = definition.getNodes().stream()
-            .filter(n -> "START".equals(n.getData().getType()))
-            .findFirst()
-            .map(RFNode::getId)
-            .orElse(definition.getNodes().get(0).getId());
+        String startNodeId = findRootNodeId(definition);
 
         processNode(startNodeId, session, definition);
     }
@@ -211,5 +214,63 @@ public class FlowEngine {
             return input.equalsIgnoreCase(edge.getSourceHandle());
         }
         return true; 
+    }
+
+    private String findRootNodeId(FlowDefinition definition) {
+        return definition.getNodes().stream()
+            .filter(n -> "START".equals(n.getData().getType()))
+            .findFirst()
+            .map(RFNode::getId)
+            .orElseGet(() -> {
+                java.util.Set<String> targetIds = definition.getEdges().stream()
+                    .map(RFEdge::getTarget)
+                    .collect(Collectors.toSet());
+                return definition.getNodes().stream()
+                    .filter(n -> !targetIds.contains(n.getId()))
+                    .findFirst()
+                    .map(RFNode::getId)
+                    .orElse(definition.getNodes().get(0).getId());
+            });
+    }
+
+    private boolean matchesKeywordRouterNode(Flow flow, String input) {
+        if (input == null || input.isBlank()) return false;
+        String lowerInput = input.trim().toLowerCase();
+
+        for (RFNode node : flow.getDefinition().getNodes()) {
+            if ("KEYWORD_ROUTER".equals(node.getData().getType())) {
+                Object configObj = node.getData().getConfig();
+                if (configObj instanceof Map map) {
+                    Object rulesObj = map.get("rules");
+                    if (rulesObj instanceof List rules) {
+                        for (Object r : rules) {
+                            if (r instanceof Map ruleMap) {
+                                String type = (String) ruleMap.get("type");
+                                String keywordsStr = (String) ruleMap.get("keywords");
+
+                                if (keywordsStr != null && !keywordsStr.isBlank()) {
+                                    String[] keywords = keywordsStr.split(",");
+                                    for (String kw : keywords) {
+                                        String cleanKw = kw.trim().toLowerCase();
+                                        if ("exact".equals(type) && lowerInput.equals(cleanKw)) {
+                                            return true;
+                                        } else if ("contains".equals(type) && lowerInput.contains(cleanKw)) {
+                                            return true;
+                                        } else if ("regex".equals(type)) {
+                                            try {
+                                                if (java.util.regex.Pattern.compile(cleanKw, java.util.regex.Pattern.CASE_INSENSITIVE).matcher(lowerInput).find()) {
+                                                    return true;
+                                                }
+                                            } catch (Exception ignore) {}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 }
