@@ -1,82 +1,69 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { PrismaService } from '../prisma/prisma.service';
-import * as fs from 'fs';
-import * as path from 'path';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class MediaService {
     private readonly logger = new Logger(MediaService.name);
-    private s3: S3Client | null = null;
-    private useB2: boolean;
+    private supabaseUrl: string;
+    private supabaseKey: string;
+    private bucketName: string;
 
-    constructor(private prisma: PrismaService) {
-        const b2KeyId = process.env.B2_KEY_ID;
-        const b2AppKey = process.env.B2_APP_KEY;
-        // Only use B2 if real credentials are configured
-        this.useB2 = !!(b2KeyId && b2AppKey && b2KeyId !== 'your_b2_key_id' && b2AppKey !== 'your_b2_app_key');
+    constructor(
+        private prisma: PrismaService,
+        private httpService: HttpService,
+    ) {
+        // Extract Supabase project ref from the DATABASE_URL
+        // DATABASE_URL looks like: postgresql://postgres.PROJECTREF:password@....
+        const dbUrl = process.env.DATABASE_URL || '';
+        const match = dbUrl.match(/postgres\.([a-z]+):/);
+        const projectRef = process.env.SUPABASE_PROJECT_REF || (match ? match[1] : '');
 
-        if (this.useB2) {
-            this.s3 = new S3Client({
-                endpoint: process.env.B2_ENDPOINT || 'https://s3.us-west-004.backblazeb2.com',
-                region: process.env.B2_REGION || 'us-west-004',
-                credentials: {
-                    accessKeyId: b2KeyId!,
-                    secretAccessKey: b2AppKey!,
-                },
-            });
-            this.logger.log('MediaService: Using Backblaze B2 storage');
+        this.supabaseUrl = process.env.SUPABASE_URL || `https://${projectRef}.supabase.co`;
+        this.supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '';
+        this.bucketName = process.env.SUPABASE_STORAGE_BUCKET || 'media';
+
+        if (this.supabaseKey) {
+            this.logger.log(`MediaService: Using Supabase Storage (bucket: ${this.bucketName})`);
         } else {
-            this.logger.log('MediaService: B2 not configured — using local disk storage');
-            // Ensure uploads directory exists
-            const uploadsDir = path.join(process.cwd(), 'uploads');
-            if (!fs.existsSync(uploadsDir)) {
-                fs.mkdirSync(uploadsDir, { recursive: true });
-            }
+            this.logger.warn('MediaService: SUPABASE_SERVICE_KEY not set — uploads will fail!');
         }
     }
 
     async uploadFile(shopId: string, file: Express.Multer.File): Promise<{ id: string; fileUrl: string; fileType: string; fileSize: number }> {
         const safeName = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        const filePath = `shops/${shopId}/${safeName}`;
 
-        if (this.useB2 && this.s3) {
-            // ── Backblaze B2 ─────────────────────────────────────────
-            const bucketName = process.env.B2_BUCKET_NAME || 'whatshub-media';
-            const key = `shops/${shopId}/${safeName}`;
-            try {
-                await this.s3.send(
-                    new PutObjectCommand({
-                        Bucket: bucketName,
-                        Key: key,
-                        Body: file.buffer,
-                        ContentType: file.mimetype,
-                    })
-                );
-                const fileUrl = `${process.env.B2_PUBLIC_URL || 'https://f004.backblazeb2.com/file/whatshub-media'}/${key}`;
-                const media = await this.prisma.mediaFile.create({
-                    data: { shopId, fileUrl, fileType: file.mimetype, fileSize: file.size },
-                });
-                return media;
-            } catch (error: any) {
-                this.logger.error('B2 Upload Error:', error.message);
-                throw new InternalServerErrorException('Media file upload failed.');
-            }
-        } else {
-            // ── Local disk fallback ───────────────────────────────────
-            const uploadsDir = path.join(process.cwd(), 'uploads');
-            const filePath = path.join(uploadsDir, safeName);
-            try {
-                fs.writeFileSync(filePath, file.buffer);
-                const baseUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3001}`;
-                const fileUrl = `${baseUrl}/uploads/${safeName}`;
-                const media = await this.prisma.mediaFile.create({
-                    data: { shopId, fileUrl, fileType: file.mimetype, fileSize: file.size },
-                });
-                return media;
-            } catch (error: any) {
-                this.logger.error('Local upload error:', error.message);
-                throw new InternalServerErrorException('Media file upload failed.');
-            }
+        try {
+            // Upload via Supabase Storage REST API
+            const uploadUrl = `${this.supabaseUrl}/storage/v1/object/${this.bucketName}/${filePath}`;
+
+            await firstValueFrom(
+                this.httpService.post(uploadUrl, file.buffer, {
+                    headers: {
+                        Authorization: `Bearer ${this.supabaseKey}`,
+                        'Content-Type': file.mimetype,
+                        'x-upsert': 'true',
+                    },
+                    maxBodyLength: 50 * 1024 * 1024,
+                    maxContentLength: 50 * 1024 * 1024,
+                })
+            );
+
+            // Public URL for the file
+            const fileUrl = `${this.supabaseUrl}/storage/v1/object/public/${this.bucketName}/${filePath}`;
+
+            const media = await this.prisma.mediaFile.create({
+                data: { shopId, fileUrl, fileType: file.mimetype, fileSize: file.size },
+            });
+
+            this.logger.log(`Uploaded: ${fileUrl}`);
+            return media;
+        } catch (error: any) {
+            const detail = error?.response?.data || error?.message || String(error);
+            this.logger.error('Supabase Storage upload error:', JSON.stringify(detail));
+            throw new InternalServerErrorException('Media file upload failed.');
         }
     }
 

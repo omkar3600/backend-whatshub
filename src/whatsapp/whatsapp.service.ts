@@ -153,15 +153,32 @@ export class WhatsappService {
                                 responseType: 'arraybuffer',
                             })
                         );
-                        // Save to local uploads folder
-                        const fs = await import('fs');
-                        const path = await import('path');
-                        const uploadsDir = path.join(process.cwd(), 'uploads');
-                        if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+                        // Upload to Supabase Storage
+                        const dbUrlMatch = (process.env.DATABASE_URL || '').match(/postgres\.([a-z]+):/);
+                        const projectRef = process.env.SUPABASE_PROJECT_REF || (dbUrlMatch ? dbUrlMatch[1] : '');
+                        const supabaseUrl = process.env.SUPABASE_URL || `https://${projectRef}.supabase.co`;
+                        const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '';
+                        const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'media';
                         const ext = mediaObj.mime_type ? '.' + mediaObj.mime_type.split('/')[1].split(';')[0] : '';
-                        const fileName = `incoming-${mediaObj.id}${ext}`;
-                        fs.writeFileSync(path.join(uploadsDir, fileName), Buffer.from(fileResp.data));
-                        mediaUrl = `${process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3001}`}/uploads/${fileName}`;
+                        const fileName = `incoming/${shopId}/${mediaObj.id}${ext}`;
+                        const mimeType = mediaObj.mime_type || 'application/octet-stream';
+
+                        await firstValueFrom(
+                            this.httpService.post(
+                                `${supabaseUrl}/storage/v1/object/${bucket}/${fileName}`,
+                                Buffer.from(fileResp.data),
+                                {
+                                    headers: {
+                                        Authorization: `Bearer ${supabaseKey}`,
+                                        'Content-Type': mimeType,
+                                        'x-upsert': 'true',
+                                    },
+                                    maxBodyLength: 50 * 1024 * 1024,
+                                    maxContentLength: 50 * 1024 * 1024,
+                                }
+                            )
+                        );
+                        mediaUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${fileName}`;
                     }
                 } catch (mediaErr: any) {
                     this.logger.error(`[Media] Failed to download media ${mediaObj?.id}: ${mediaErr?.message}`);
