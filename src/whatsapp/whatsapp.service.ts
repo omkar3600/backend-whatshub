@@ -124,9 +124,64 @@ export class WhatsappService {
             },
         });
 
-        // 3. Save Message
-        const content = messageData.type === 'text' ? messageData.text.body : '';
-        // Handle specific media types later...
+        // 3. Extract content and media URL based on message type
+        let content = '';
+        let mediaUrl: string | undefined;
+        const msgType = messageData.type;
+
+        if (msgType === 'text') {
+            content = messageData.text?.body || '';
+        } else if (['image', 'video', 'audio', 'document', 'sticker'].includes(msgType)) {
+            const mediaObj = messageData[msgType];
+            content = mediaObj?.caption || mediaObj?.filename || '';
+            // Fetch the real download URL from Meta API
+            if (mediaObj?.id) {
+                try {
+                    const creds = await this.prisma.whatsAppCredential.findUnique({ where: { shopId } });
+                    if (creds) {
+                        const metaResp = await firstValueFrom(
+                            this.httpService.get(
+                                `https://graph.facebook.com/v18.0/${mediaObj.id}`,
+                                { headers: { Authorization: `Bearer ${creds.accessToken}` } }
+                            )
+                        );
+                        const mediaDlUrl: string = metaResp.data.url;
+                        // Download the actual file bytes from the temporary signed URL
+                        const fileResp = await firstValueFrom(
+                            this.httpService.get(mediaDlUrl, {
+                                headers: { Authorization: `Bearer ${creds.accessToken}` },
+                                responseType: 'arraybuffer',
+                            })
+                        );
+                        // Save to local uploads folder
+                        const fs = await import('fs');
+                        const path = await import('path');
+                        const uploadsDir = path.join(process.cwd(), 'uploads');
+                        if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+                        const ext = mediaObj.mime_type ? '.' + mediaObj.mime_type.split('/')[1].split(';')[0] : '';
+                        const fileName = `incoming-${mediaObj.id}${ext}`;
+                        fs.writeFileSync(path.join(uploadsDir, fileName), Buffer.from(fileResp.data));
+                        mediaUrl = `${process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3001}`}/uploads/${fileName}`;
+                    }
+                } catch (mediaErr: any) {
+                    this.logger.error(`[Media] Failed to download media ${mediaObj?.id}: ${mediaErr?.message}`);
+                    // Fall back to using the Meta media ID as reference
+                    mediaUrl = undefined;
+                }
+            }
+        } else if (msgType === 'location') {
+            const loc = messageData.location;
+            content = `📍 Location: ${loc?.name || ''} ${loc?.address || ''} (${loc?.latitude}, ${loc?.longitude})`;
+        } else if (msgType === 'button') {
+            content = messageData.button?.text || '';
+        } else if (msgType === 'interactive') {
+            const ia = messageData.interactive;
+            if (ia?.button_reply) content = ia.button_reply.title;
+            else if (ia?.list_reply) content = ia.list_reply.title;
+            else content = JSON.stringify(ia);
+        } else {
+            content = JSON.stringify(messageData);
+        }
 
         const savedMsg = await this.prisma.message.create({
             data: {
@@ -134,9 +189,10 @@ export class WhatsappService {
                 shopId,
                 conversationId: conversation.id,
                 direction: 'inbound',
-                type: messageData.type,
+                type: msgType,
                 content,
-                status: 'delivered', // Incoming is naturally delivered
+                mediaUrl,
+                status: 'delivered',
                 timestamp: new Date(parseInt(messageData.timestamp) * 1000),
             },
         });
