@@ -38,11 +38,13 @@ export class MediaService {
         try {
             // Upload via Supabase Storage REST API
             const uploadUrl = `${this.supabaseUrl}/storage/v1/object/${this.bucketName}/${filePath}`;
+            this.logger.log(`Uploading to: ${uploadUrl}`);
 
             await firstValueFrom(
                 this.httpService.post(uploadUrl, file.buffer, {
                     headers: {
                         Authorization: `Bearer ${this.supabaseKey}`,
+                        apikey: this.supabaseKey,
                         'Content-Type': file.mimetype,
                         'x-upsert': 'true',
                     },

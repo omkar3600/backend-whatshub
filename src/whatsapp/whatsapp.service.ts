@@ -170,6 +170,7 @@ export class WhatsappService {
                                 {
                                     headers: {
                                         Authorization: `Bearer ${supabaseKey}`,
+                                        apikey: supabaseKey,
                                         'Content-Type': mimeType,
                                         'x-upsert': 'true',
                                     },
