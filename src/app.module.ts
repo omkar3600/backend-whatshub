@@ -38,6 +38,8 @@ import { FlowsModule } from './flows/flows.module';
         username: process.env.REDIS_USERNAME || 'default',
         password: process.env.REDIS_PASSWORD || '',
         tls: process.env.REDIS_TLS === 'true' ? {} : undefined,
+        // Fail fast if Redis is unreachable — prevents HTTP requests from hanging forever
+        connectTimeout: 5000,
       },
     }),
     AuthModule,

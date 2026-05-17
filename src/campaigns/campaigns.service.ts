@@ -23,16 +23,27 @@ export class CampaignsService {
                 headerMediaUrl: headerMediaUrl || null,
                 scheduledAt: new Date(scheduledAt || Date.now()),
                 status: 'scheduled',
-                // Store extra options as JSON in a flexible field
+                // Store send options separately from stats so processor completion doesn't overwrite them
                 stats: { sendDelay: sendDelay ?? 300, excludeUnsubscribed: excludeUnsubscribed ?? false } as any,
             },
         });
 
+        // Fire-and-forget: do NOT await the queue add — if Redis is slow or unavailable,
+        // this prevents the HTTP request from hanging indefinitely.
         const delay = Math.max(0, new Date(campaign.scheduledAt).getTime() - Date.now());
-        await this.campaignsQueue.add('processCampaign', { campaignId: campaign.id }, { delay });
+        this.campaignsQueue.add('processCampaign', { campaignId: campaign.id }, { delay })
+            .catch((err) => {
+                console.error(`[Campaign] Failed to enqueue campaign ${campaign.id}:`, err?.message || err);
+                // Update campaign status to reflect queue failure so user knows
+                this.prisma.campaign.update({
+                    where: { id: campaign.id },
+                    data: { status: 'failed', failureHistory: [{ reason: 'Queue connection failed: ' + (err?.message || 'Redis unavailable'), timestamp: new Date() }] as any }
+                }).catch(() => {});
+            });
 
         return campaign;
     }
+
 
     async getCampaigns(shopId: string) {
         return this.prisma.campaign.findMany({

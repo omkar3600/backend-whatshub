@@ -149,7 +149,8 @@ export class CampaignProcessor extends WorkerHost {
             where: { id: campaignId },
             data: {
                 status: aborted ? 'aborted' : 'completed',
-                stats: { sent, delivered: 0, read: 0, clicked: 0, failed },
+                // Merge results into existing stats (preserves sendDelay/excludeUnsubscribed)
+                stats: { ...campaignMeta, sent, delivered: 0, read: 0, clicked: 0, failed },
                 failureHistory: failureHistory
             }
         });
