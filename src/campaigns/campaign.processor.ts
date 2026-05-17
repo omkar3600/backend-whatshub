@@ -5,6 +5,17 @@ import { WhatsappService } from '../whatsapp/whatsapp.service';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+/** Resolve body text: substitute {{1}}, {{2}} etc with actual parameter values */
+function resolveBodyText(bodyTemplate: string, components: any[]): string {
+    const bodyComp = components?.find((c: any) => c.type?.toLowerCase() === 'body');
+    if (!bodyComp?.parameters?.length) return bodyTemplate;
+    let resolved = bodyTemplate;
+    bodyComp.parameters.forEach((param: any, idx: number) => {
+        resolved = resolved.replace(`{{${idx + 1}}}`, param.text || '');
+    });
+    return resolved;
+}
+
 @Processor('campaigns', { concurrency: 3 })
 export class CampaignProcessor extends WorkerHost {
     constructor(
@@ -24,6 +35,20 @@ export class CampaignProcessor extends WorkerHost {
         // Guard: campaign must exist, have a valid template, and be in a processable state
         if (!campaign || !campaign.template) return;
         if (campaign.status !== 'scheduled' && campaign.status !== 'processing') return;
+
+        // Pre-resolve the body template text for this campaign
+        const templateComponents = campaign.templateParams as any[];
+        const rawBodyText = campaign.template.components
+            ? (campaign.template.components as any[]).find((c: any) => c.type === 'BODY')?.text || campaign.template.templateName
+            : campaign.template.templateName;
+        const resolvedBody = resolveBodyText(rawBodyText, templateComponents || []);
+
+        // Header media URL from the components array (if any)
+        const headerComp = templateComponents?.find((c: any) => c.type?.toLowerCase() === 'header');
+        const headerImageUrl: string | null = headerComp?.parameters?.[0]?.image?.link
+            || headerComp?.parameters?.[0]?.video?.link
+            || campaign.headerMediaUrl
+            || null;
 
         await this.prisma.campaign.update({
             where: { id: campaignId },
@@ -119,6 +144,40 @@ export class CampaignProcessor extends WorkerHost {
                     create: { campaignId, contactId: c.id, phone: c.phone, name: c.name, status: 'sent', wamid: wamid ?? null },
                     update: { status: 'sent', failReason: null, wamid: wamid ?? null },
                 });
+
+                // Save a Message record so the campaign send appears in the inbox chat window
+                // Find or create the conversation for this contact
+                try {
+                    const conversation = await this.prisma.conversation.upsert({
+                        where: { shopId_contactId: { shopId: campaign.shopId, contactId: c.id } },
+                        create: { shopId: campaign.shopId, contactId: c.id, lastMessageAt: new Date() },
+                        update: { lastMessageAt: new Date() },
+                    });
+                    await this.prisma.message.create({
+                        data: {
+                            shopId: campaign.shopId,
+                            conversationId: conversation.id,
+                            direction: 'outbound',
+                            type: 'template',
+                            // Store resolved body so inbox shows actual message text
+                            content: resolvedBody,
+                            // Store header image if present
+                            mediaUrl: headerImageUrl,
+                            status: 'sent',
+                            // Attach template + campaign info for the badge in the inbox
+                            templateData: {
+                                templateName: campaign.template.templateName,
+                                campaignName: campaign.name,
+                                campaignId,
+                                wamid: wamid ?? null,
+                                components: campaign.template.components,
+                            } as any,
+                        },
+                    });
+                } catch (msgErr) {
+                    // Don't fail the whole campaign if message save fails
+                    console.error(`[Campaign] Failed to save message record for ${c.phone}:`, msgErr);
+                }
             } catch (e: unknown) {
                 failed++;
                 const axiosErr = e as any;

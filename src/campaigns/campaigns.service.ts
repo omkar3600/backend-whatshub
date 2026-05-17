@@ -63,10 +63,40 @@ export class CampaignsService {
     }
 
     async getCampaigns(shopId: string) {
-        return this.prisma.campaign.findMany({
+        const campaigns = await this.prisma.campaign.findMany({
             where: { shopId },
-            include: { template: true },
+            include: {
+                template: true,
+                // Include aggregated contact stats for real-time counts
+                contacts: { select: { status: true } },
+            },
             orderBy: { createdAt: 'desc' },
+        });
+
+        // Compute live stats from CampaignContact records so delivered/read/failed stay up-to-date
+        return campaigns.map(c => {
+            const statusCounts = c.contacts.reduce((acc: Record<string, number>, contact) => {
+                acc[contact.status] = (acc[contact.status] || 0) + 1;
+                return acc;
+            }, {});
+            const configMeta = (c.stats as any) || {};
+            return {
+                ...c,
+                contacts: undefined, // don't send all contacts to list view
+                stats: {
+                    // Keep config metadata (sendDelay, excludeUnsubscribed) from stored stats
+                    sendDelay: configMeta.sendDelay,
+                    excludeUnsubscribed: configMeta.excludeUnsubscribed,
+                    // Live counts from CampaignContact
+                    total: c.contacts.length,
+                    sent: statusCounts['sent'] || 0,
+                    delivered: statusCounts['delivered'] || 0,
+                    read: statusCounts['read'] || 0,
+                    clicked: statusCounts['clicked'] || 0,
+                    failed: statusCounts['failed'] || 0,
+                    pending: statusCounts['pending'] || 0,
+                },
+            };
         });
     }
 

@@ -116,6 +116,7 @@ model Message {
   type           String
   content        String?
   mediaUrl       String?
+  templateData   Json?
   status         String       @default("sent")
   timestamp      DateTime     @default(now())
   createdAt      DateTime     @default(now())
