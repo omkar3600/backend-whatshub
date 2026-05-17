@@ -1,56 +1,50 @@
 import { Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 @Injectable()
 export class MediaService {
     private readonly logger = new Logger(MediaService.name);
-    private supabaseUrl: string;
-    private supabaseKey: string;
+    private s3: S3Client;
     private bucketName: string;
+    private publicUrl: string;
 
-    constructor(
-        private prisma: PrismaService,
-        private httpService: HttpService,
-    ) {
-        const dbUrl = process.env.DATABASE_URL || '';
-        const match = dbUrl.match(/postgres\.([a-z]+):/);
-        const projectRef = process.env.SUPABASE_PROJECT_REF || (match ? match[1] : '');
+    constructor(private prisma: PrismaService) {
+        const accountId = process.env.R2_ACCOUNT_ID || '';
+        const accessKeyId = process.env.R2_ACCESS_KEY_ID || '';
+        const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY || '';
+        this.bucketName = process.env.R2_BUCKET_NAME || 'whatshub-media';
+        this.publicUrl = process.env.R2_PUBLIC_URL || ''; // e.g. https://media.yourdomain.com
 
-        this.supabaseUrl = process.env.SUPABASE_URL || `https://${projectRef}.supabase.co`;
-        this.supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '';
-        this.bucketName = process.env.SUPABASE_STORAGE_BUCKET || 'media';
+        this.s3 = new S3Client({
+            region: 'auto',
+            endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+            credentials: { accessKeyId, secretAccessKey },
+        });
 
-        if (this.supabaseKey) {
-            this.logger.log(`MediaService: Using Supabase Storage (bucket: ${this.bucketName})`);
+        if (accessKeyId && secretAccessKey) {
+            this.logger.log(`MediaService: Using Cloudflare R2 (bucket: ${this.bucketName})`);
         } else {
-            this.logger.warn('MediaService: SUPABASE_SERVICE_KEY not set — uploads will fail!');
+            this.logger.warn('MediaService: R2 credentials not set — uploads will fail!');
         }
     }
 
     async uploadFile(shopId: string, file: Express.Multer.File): Promise<{ id: string; fileUrl: string; fileType: string; fileSize: number; fileName: string | null }> {
         const safeName = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-        const filePath = `shops/${shopId}/${safeName}`;
+        const key = `shops/${shopId}/${safeName}`;
 
         try {
-            const uploadUrl = `${this.supabaseUrl}/storage/v1/object/${this.bucketName}/${filePath}`;
-            this.logger.log(`Uploading to: ${uploadUrl}`);
+            await this.s3.send(new PutObjectCommand({
+                Bucket: this.bucketName,
+                Key: key,
+                Body: file.buffer,
+                ContentType: file.mimetype,
+            }));
 
-            await firstValueFrom(
-                this.httpService.post(uploadUrl, file.buffer, {
-                    headers: {
-                        Authorization: `Bearer ${this.supabaseKey}`,
-                        apikey: this.supabaseKey,
-                        'Content-Type': file.mimetype,
-                        'x-upsert': 'true',
-                    },
-                    maxBodyLength: 50 * 1024 * 1024,
-                    maxContentLength: 50 * 1024 * 1024,
-                })
-            );
-
-            const fileUrl = `${this.supabaseUrl}/storage/v1/object/public/${this.bucketName}/${filePath}`;
+            // Public URL: either custom domain or R2 dev URL
+            const fileUrl = this.publicUrl
+                ? `${this.publicUrl}/${key}`
+                : `https://${this.bucketName}.r2.dev/${key}`;
 
             const media = await this.prisma.mediaFile.create({
                 data: {
@@ -62,11 +56,10 @@ export class MediaService {
                 },
             });
 
-            this.logger.log(`Uploaded: ${fileUrl}`);
+            this.logger.log(`Uploaded to R2: ${fileUrl}`);
             return media;
         } catch (error: any) {
-            const detail = error?.response?.data || error?.message || String(error);
-            this.logger.error('Supabase Storage upload error:', JSON.stringify(detail));
+            this.logger.error('R2 upload error:', error?.message || error);
             throw new InternalServerErrorException('Media file upload failed.');
         }
     }
@@ -82,27 +75,53 @@ export class MediaService {
         const file = await this.prisma.mediaFile.findFirst({ where: { id, shopId } });
         if (!file) throw new NotFoundException('Media file not found');
 
-        // Try to delete from Supabase Storage
+        // Extract the R2 key from the URL
         try {
-            const urlParts = file.fileUrl.split(`/public/${this.bucketName}/`);
-            if (urlParts.length > 1) {
-                const storagePath = urlParts[1];
-                const deleteUrl = `${this.supabaseUrl}/storage/v1/object/${this.bucketName}`;
-                await firstValueFrom(
-                    this.httpService.delete(deleteUrl, {
-                        headers: {
-                            Authorization: `Bearer ${this.supabaseKey}`,
-                            apikey: this.supabaseKey,
-                            'Content-Type': 'application/json',
-                        },
-                        data: { prefixes: [storagePath] },
-                    })
-                );
+            let key = '';
+            if (this.publicUrl && file.fileUrl.startsWith(this.publicUrl)) {
+                key = file.fileUrl.replace(`${this.publicUrl}/`, '');
+            } else {
+                // Try extracting from r2.dev URL
+                const match = file.fileUrl.match(/r2\.dev\/(.+)$/);
+                if (match) key = match[1];
             }
-        } catch (err) {
-            this.logger.warn(`Could not delete from Supabase storage: ${err}`);
+
+            if (key) {
+                await this.s3.send(new DeleteObjectCommand({
+                    Bucket: this.bucketName,
+                    Key: key,
+                }));
+                this.logger.log(`Deleted from R2: ${key}`);
+            }
+        } catch (err: any) {
+            this.logger.warn(`Could not delete from R2: ${err?.message}`);
         }
 
         return this.prisma.mediaFile.delete({ where: { id } });
+    }
+
+    /** Delete ALL media files for a shop (used for cleanup) */
+    async deleteAllMediaFiles(shopId: string) {
+        const files = await this.prisma.mediaFile.findMany({ where: { shopId } });
+
+        for (const file of files) {
+            try {
+                let key = '';
+                if (this.publicUrl && file.fileUrl.startsWith(this.publicUrl)) {
+                    key = file.fileUrl.replace(`${this.publicUrl}/`, '');
+                } else {
+                    const match = file.fileUrl.match(/r2\.dev\/(.+)$/);
+                    if (match) key = match[1];
+                }
+                if (key) {
+                    await this.s3.send(new DeleteObjectCommand({
+                        Bucket: this.bucketName,
+                        Key: key,
+                    }));
+                }
+            } catch { }
+        }
+
+        return this.prisma.mediaFile.deleteMany({ where: { shopId } });
     }
 }
