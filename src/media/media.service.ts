@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
@@ -14,8 +14,6 @@ export class MediaService {
         private prisma: PrismaService,
         private httpService: HttpService,
     ) {
-        // Extract Supabase project ref from the DATABASE_URL
-        // DATABASE_URL looks like: postgresql://postgres.PROJECTREF:password@....
         const dbUrl = process.env.DATABASE_URL || '';
         const match = dbUrl.match(/postgres\.([a-z]+):/);
         const projectRef = process.env.SUPABASE_PROJECT_REF || (match ? match[1] : '');
@@ -31,12 +29,11 @@ export class MediaService {
         }
     }
 
-    async uploadFile(shopId: string, file: Express.Multer.File): Promise<{ id: string; fileUrl: string; fileType: string; fileSize: number }> {
+    async uploadFile(shopId: string, file: Express.Multer.File): Promise<{ id: string; fileUrl: string; fileType: string; fileSize: number; fileName: string | null }> {
         const safeName = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
         const filePath = `shops/${shopId}/${safeName}`;
 
         try {
-            // Upload via Supabase Storage REST API
             const uploadUrl = `${this.supabaseUrl}/storage/v1/object/${this.bucketName}/${filePath}`;
             this.logger.log(`Uploading to: ${uploadUrl}`);
 
@@ -53,11 +50,16 @@ export class MediaService {
                 })
             );
 
-            // Public URL for the file
             const fileUrl = `${this.supabaseUrl}/storage/v1/object/public/${this.bucketName}/${filePath}`;
 
             const media = await this.prisma.mediaFile.create({
-                data: { shopId, fileUrl, fileType: file.mimetype, fileSize: file.size },
+                data: {
+                    shopId,
+                    fileName: file.originalname,
+                    fileUrl,
+                    fileType: file.mimetype,
+                    fileSize: file.size,
+                },
             });
 
             this.logger.log(`Uploaded: ${fileUrl}`);
@@ -74,5 +76,33 @@ export class MediaService {
             where: { shopId },
             orderBy: { createdAt: 'desc' },
         });
+    }
+
+    async deleteMediaFile(shopId: string, id: string) {
+        const file = await this.prisma.mediaFile.findFirst({ where: { id, shopId } });
+        if (!file) throw new NotFoundException('Media file not found');
+
+        // Try to delete from Supabase Storage
+        try {
+            const urlParts = file.fileUrl.split(`/public/${this.bucketName}/`);
+            if (urlParts.length > 1) {
+                const storagePath = urlParts[1];
+                const deleteUrl = `${this.supabaseUrl}/storage/v1/object/${this.bucketName}`;
+                await firstValueFrom(
+                    this.httpService.delete(deleteUrl, {
+                        headers: {
+                            Authorization: `Bearer ${this.supabaseKey}`,
+                            apikey: this.supabaseKey,
+                            'Content-Type': 'application/json',
+                        },
+                        data: { prefixes: [storagePath] },
+                    })
+                );
+            }
+        } catch (err) {
+            this.logger.warn(`Could not delete from Supabase storage: ${err}`);
+        }
+
+        return this.prisma.mediaFile.delete({ where: { id } });
     }
 }

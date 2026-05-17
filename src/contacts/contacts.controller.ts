@@ -1,9 +1,12 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Query, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ContactsService } from './contacts.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { GetUser } from '../auth/decorators/get-user.decorator';
+import { memoryStorage } from 'multer';
+import type { Express } from 'express';
 
 @Controller('contacts')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -14,6 +17,16 @@ export class ContactsController {
     @Post()
     async createContact(@GetUser() user: any, @Body() body: any) {
         return this.contactsService.createContact(user.shopId, body);
+    }
+
+    @Post('import')
+    @UseInterceptors(FileInterceptor('file', {
+        storage: memoryStorage(),
+        limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+    }))
+    async importContacts(@GetUser() user: any, @UploadedFile() file: Express.Multer.File) {
+        if (!file) throw new BadRequestException('No file uploaded');
+        return this.contactsService.importFromExcel(user.shopId, file);
     }
 
     @Get()

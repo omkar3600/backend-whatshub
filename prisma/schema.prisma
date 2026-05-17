@@ -179,6 +179,7 @@ model CampaignContact {
 model MediaFile {
   id        String   @id @default(uuid())
   shopId    String
+  fileName  String?
   fileUrl   String
   fileType  String
   fileSize  Int
