@@ -102,19 +102,22 @@ export class CampaignProcessor extends WorkerHost {
                 // Convert null → undefined for headerMediaUrl
                 const headerMediaUrl = campaign.headerMediaUrl ?? undefined;
 
-                await this.whatsappService.sendOutboundMessage(
+                const result = await this.whatsappService.sendOutboundMessage(
                     campaign.shopId,
                     c.phone,
                     'template',
                     templateContent,
                     headerMediaUrl
                 );
+
+                // Capture the wamid (Meta message ID) from the API response
+                const wamid: string | undefined = result?.messages?.[0]?.id;
                 sent++;
 
                 pendingWrites.push({
                     where: { campaignId_phone: { campaignId, phone: c.phone } },
-                    create: { campaignId, contactId: c.id, phone: c.phone, name: c.name, status: 'sent' },
-                    update: { status: 'sent', failReason: null },
+                    create: { campaignId, contactId: c.id, phone: c.phone, name: c.name, status: 'sent', wamid: wamid ?? null },
+                    update: { status: 'sent', failReason: null, wamid: wamid ?? null },
                 });
             } catch (e: unknown) {
                 failed++;

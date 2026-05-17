@@ -353,15 +353,16 @@ export class WhatsappService {
         }
 
         // 2. Propagate status to CampaignContact for real-time analytics (delivered / read)
-        if (recipientPhone && ['delivered', 'read'].includes(status)) {
+        //    IMPORTANT: look up by wamid (exact Meta message ID), NOT by phone number.
+        //    Looking up by phone would cause regular inbox messages to falsely update campaign stats.
+        if (['delivered', 'read', 'sent'].includes(status)) {
             try {
-                // Status hierarchy: read > delivered > sent — only upgrade, never downgrade
-                const statusRank: Record<string, number> = { sent: 1, delivered: 2, read: 3, clicked: 4 };
+                const statusRank: Record<string, number> = { pending: 0, sent: 1, delivered: 2, read: 3, clicked: 4 };
                 const incomingRank = statusRank[status] ?? 0;
 
+                // Match by the exact wamid stored when the campaign message was sent
                 const existing = await this.prisma.campaignContact.findFirst({
-                    where: { phone: recipientPhone, campaign: { shopId } },
-                    orderBy: { sentAt: 'desc' },
+                    where: { wamid: messageId },
                 });
 
                 if (existing) {
@@ -371,13 +372,14 @@ export class WhatsappService {
                             where: { id: existing.id },
                             data: { status },
                         });
-                        this.logger.log(`[Campaign] Updated CampaignContact ${recipientPhone} → ${status}`);
+                        this.logger.log(`[Campaign] Updated CampaignContact wamid:${messageId} → ${status}`);
                     }
                 }
             } catch (e) {
-                this.logger.warn(`Failed to update CampaignContact for ${recipientPhone}: ${e}`);
+                this.logger.warn(`Failed to update CampaignContact for wamid ${messageId}: ${e}`);
             }
         }
+
     }
 
     async sendOutboundMessage(shopId: string, toPhone: string, type: string, content: any, mediaUrl?: string) {

@@ -164,7 +164,8 @@ model CampaignContact {
   contactId  String?
   phone      String
   name       String
-  status     String   @default("sent") // sent | delivered | read | clicked | failed
+  wamid      String?
+  status     String   @default("pending")
   failReason String?
   sentAt     DateTime @default(now())
   updatedAt  DateTime @updatedAt
