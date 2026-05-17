@@ -26,8 +26,19 @@ let AuthController = class AuthController {
     async register(body) {
         return this.authService.registerShop(body);
     }
-    async login(body) {
-        return this.authService.login(body);
+    async login(body, res) {
+        const result = await this.authService.login(body);
+        res.cookie('token', result.access_token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+        return result;
+    }
+    async logout(res) {
+        res.clearCookie('token');
+        return { message: 'Logged out successfully' };
     }
 };
 exports.AuthController = AuthController;
@@ -48,10 +59,18 @@ __decorate([
 __decorate([
     (0, common_1.Post)('login'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Res)({ passthrough: true })),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "login", null);
+__decorate([
+    (0, common_1.Post)('logout'),
+    __param(0, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
-], AuthController.prototype, "login", null);
+], AuthController.prototype, "logout", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])

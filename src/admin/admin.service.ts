@@ -7,15 +7,14 @@ export class AdminService {
     constructor(private prisma: PrismaService) { }
 
     async createShop(data: any) {
-        const { username, email, password, shopName, phone, ownerName, expiryDate } = data;
+        const { username, password, shopName, phone, ownerName, expiryDate } = data;
 
         const salt = await bcrypt.genSalt();
         const passwordHash = await bcrypt.hash(password, salt);
 
         const user = await this.prisma.user.create({
             data: {
-                username: username || email.split('@')[0],
-                email,
+                username,
                 passwordHash,
                 role: 'user',
             },
@@ -44,14 +43,14 @@ export class AdminService {
     async getShops() {
         return this.prisma.shop.findMany({
             include: {
-                owner: { select: { email: true, id: true, username: true } },
+                owner: { select: { id: true, username: true } },
                 subscription: true,
             },
         });
     }
 
     async updateShop(shopId: string, data: any) {
-        const { username, email, password, shopName, phone } = data;
+        const { username, password, shopName, phone } = data;
 
         const shop = await this.prisma.shop.findUnique({
             where: { id: shopId },
@@ -72,7 +71,6 @@ export class AdminService {
                 where: { id: shop.ownerId },
                 data: {
                     username: username || undefined,
-                    email: email || undefined,
                     passwordHash: passwordHash
                 }
             });
@@ -85,7 +83,7 @@ export class AdminService {
                     phone: phone || undefined,
                 },
                 include: {
-                    owner: { select: { email: true, id: true, username: true } },
+                    owner: { select: { id: true, username: true } },
                     subscription: true
                 }
             });
@@ -167,7 +165,6 @@ export class AdminService {
             const user = await tx.user.create({
                 data: {
                     username: request.username,
-                    email: request.email,
                     passwordHash: request.password,
                     role: 'user',
                 },

@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MediaModule = void 0;
 const common_1 = require("@nestjs/common");
+const axios_1 = require("@nestjs/axios");
 const media_controller_1 = require("./media.controller");
 const media_service_1 = require("./media.service");
 let MediaModule = class MediaModule {
@@ -15,8 +16,10 @@ let MediaModule = class MediaModule {
 exports.MediaModule = MediaModule;
 exports.MediaModule = MediaModule = __decorate([
     (0, common_1.Module)({
+        imports: [axios_1.HttpModule],
         controllers: [media_controller_1.MediaController],
-        providers: [media_service_1.MediaService]
+        providers: [media_service_1.MediaService],
+        exports: [media_service_1.MediaService],
     })
 ], MediaModule);
 //# sourceMappingURL=media.module.js.map

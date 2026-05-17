@@ -12,15 +12,15 @@ export class AuthService {
     ) { }
 
     async registerInterest(data: any) {
-        const { username, email, password, shopName, phone } = data;
+        const { username, password, shopName, phone } = data;
 
         const existingUser = await this.prisma.user.findUnique({ where: { username } });
         const existingRequest = await this.prisma.registrationInterest.findFirst({
-            where: { OR: [{ username }, { email }] }
+            where: { username }
         });
 
         if (existingUser || (existingRequest && existingRequest.status === 'pending')) {
-            throw new ConflictException('Username or email already in use or pending approval');
+            throw new ConflictException('Username already in use or pending approval');
         }
 
         const salt = await bcrypt.genSalt();
@@ -29,7 +29,6 @@ export class AuthService {
         await this.prisma.registrationInterest.create({
             data: {
                 username,
-                email,
                 password: passwordHash,
                 shopName,
                 phone,
@@ -41,7 +40,7 @@ export class AuthService {
     }
 
     async registerShop(data: any) {
-        const { username, email, password, shopName, phone } = data;
+        const { username, password, shopName, phone } = data;
 
         const existingUser = await this.prisma.user.findUnique({ where: { username } });
         if (existingUser) {
@@ -54,7 +53,6 @@ export class AuthService {
         const user = await this.prisma.user.create({
             data: {
                 username,
-                email,
                 passwordHash,
                 role: 'user',
             },
@@ -105,7 +103,6 @@ export class AuthService {
             user: {
                 id: user.id,
                 username: user.username,
-                email: user.email,
                 role: user.role,
                 shopId: user.shop?.id
             }

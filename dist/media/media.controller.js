@@ -20,6 +20,7 @@ const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
 const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 const get_user_decorator_1 = require("../auth/decorators/get-user.decorator");
+const multer_1 = require("multer");
 let MediaController = class MediaController {
     mediaService;
     constructor(mediaService) {
@@ -35,7 +36,10 @@ let MediaController = class MediaController {
 exports.MediaController = MediaController;
 __decorate([
     (0, common_1.Post)('upload'),
-    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file')),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', {
+        storage: (0, multer_1.memoryStorage)(),
+        limits: { fileSize: 50 * 1024 * 1024 },
+    })),
     __param(0, (0, get_user_decorator_1.GetUser)()),
     __param(1, (0, common_1.UploadedFile)()),
     __metadata("design:type", Function),

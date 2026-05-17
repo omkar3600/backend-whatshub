@@ -44,8 +44,8 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
                 return challenge;
             }
         }
-        const WEBHOOK_VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN || 'whatshub_webhook_password';
-        if (token === WEBHOOK_VERIFY_TOKEN) {
+        const WEBHOOK_VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN;
+        if (WEBHOOK_VERIFY_TOKEN && token === WEBHOOK_VERIFY_TOKEN) {
             this.logger.log('Webhook verified successfully.');
             return challenge;
         }
@@ -124,15 +124,80 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
                 unreadCount: 1,
             },
         });
-        const content = messageData.type === 'text' ? messageData.text.body : '';
+        let content = '';
+        let mediaUrl;
+        const msgType = messageData.type;
+        if (msgType === 'text') {
+            content = messageData.text?.body || '';
+        }
+        else if (['image', 'video', 'audio', 'document', 'sticker'].includes(msgType)) {
+            const mediaObj = messageData[msgType];
+            content = mediaObj?.caption || mediaObj?.filename || '';
+            if (mediaObj?.id) {
+                try {
+                    const creds = await this.prisma.whatsAppCredential.findUnique({ where: { shopId } });
+                    if (creds) {
+                        const metaResp = await (0, rxjs_1.firstValueFrom)(this.httpService.get(`https://graph.facebook.com/v18.0/${mediaObj.id}`, { headers: { Authorization: `Bearer ${creds.accessToken}` } }));
+                        const mediaDlUrl = metaResp.data.url;
+                        const fileResp = await (0, rxjs_1.firstValueFrom)(this.httpService.get(mediaDlUrl, {
+                            headers: { Authorization: `Bearer ${creds.accessToken}` },
+                            responseType: 'arraybuffer',
+                        }));
+                        const dbUrlMatch = (process.env.DATABASE_URL || '').match(/postgres\.([a-z]+):/);
+                        const projectRef = process.env.SUPABASE_PROJECT_REF || (dbUrlMatch ? dbUrlMatch[1] : '');
+                        const supabaseUrl = process.env.SUPABASE_URL || `https://${projectRef}.supabase.co`;
+                        const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '';
+                        const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'media';
+                        const ext = mediaObj.mime_type ? '.' + mediaObj.mime_type.split('/')[1].split(';')[0] : '';
+                        const fileName = `incoming/${shopId}/${mediaObj.id}${ext}`;
+                        const mimeType = mediaObj.mime_type || 'application/octet-stream';
+                        await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${supabaseUrl}/storage/v1/object/${bucket}/${fileName}`, Buffer.from(fileResp.data), {
+                            headers: {
+                                Authorization: `Bearer ${supabaseKey}`,
+                                apikey: supabaseKey,
+                                'Content-Type': mimeType,
+                                'x-upsert': 'true',
+                            },
+                            maxBodyLength: 50 * 1024 * 1024,
+                            maxContentLength: 50 * 1024 * 1024,
+                        }));
+                        mediaUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${fileName}`;
+                    }
+                }
+                catch (mediaErr) {
+                    this.logger.error(`[Media] Failed to download media ${mediaObj?.id}: ${mediaErr?.message}`);
+                    mediaUrl = undefined;
+                }
+            }
+        }
+        else if (msgType === 'location') {
+            const loc = messageData.location;
+            content = `📍 Location: ${loc?.name || ''} ${loc?.address || ''} (${loc?.latitude}, ${loc?.longitude})`;
+        }
+        else if (msgType === 'button') {
+            content = messageData.button?.text || '';
+        }
+        else if (msgType === 'interactive') {
+            const ia = messageData.interactive;
+            if (ia?.button_reply)
+                content = ia.button_reply.title;
+            else if (ia?.list_reply)
+                content = ia.list_reply.title;
+            else
+                content = JSON.stringify(ia);
+        }
+        else {
+            content = JSON.stringify(messageData);
+        }
         const savedMsg = await this.prisma.message.create({
             data: {
                 id: messageData.id,
                 shopId,
                 conversationId: conversation.id,
                 direction: 'inbound',
-                type: messageData.type,
+                type: msgType,
                 content,
+                mediaUrl,
                 status: 'delivered',
                 timestamp: new Date(parseInt(messageData.timestamp) * 1000),
             },

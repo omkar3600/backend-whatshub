@@ -10,7 +10,6 @@ datasource db {
 
 model User {
   id           String   @id @default(uuid())
-  email        String?  @unique
   passwordHash String
   role         String   @default("user")
   createdAt    DateTime @default(now())
@@ -22,7 +21,6 @@ model User {
 model RegistrationInterest {
   id        String   @id @default(uuid())
   username  String
-  email     String
   password  String // Hashed
   shopName  String
   phone     String
@@ -65,28 +63,28 @@ model Subscription {
 }
 
 model WhatsAppCredential {
-  id                String   @id @default(uuid())
-  shopId            String   @unique
-  businessAccountId String
-  phoneNumberId     String
-  accessToken       String
+  id                 String   @id @default(uuid())
+  shopId             String   @unique
+  businessAccountId  String
+  phoneNumberId      String
+  accessToken        String
   webhookVerifyToken String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  shop              Shop     @relation(fields: [shopId], references: [id])
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  shop               Shop     @relation(fields: [shopId], references: [id])
 }
 
 model Contact {
-  id               String             @id @default(uuid())
+  id               String            @id @default(uuid())
   shopId           String
   name             String
   phone            String
   tags             Json?
   city             String?
   notes            String?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  shop             Shop               @relation(fields: [shopId], references: [id])
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  shop             Shop              @relation(fields: [shopId], references: [id])
   conversations    Conversation[]
   campaignContacts CampaignContact[]
   flowSession      FlowSession?
@@ -213,20 +211,20 @@ model ChatbotConfig {
 }
 
 model Flow {
-  id           String   @id @default(uuid())
-  shopId       String
-  name         String
-  description  String?
-  category     String   @default("Custom")
-  status       String   @default("Draft")
-  nodeCount    Int      @default(0)
+  id             String          @id @default(uuid())
+  shopId         String
+  name           String
+  description    String?
+  category       String          @default("Custom")
+  status         String          @default("Draft")
+  nodeCount      Int             @default(0)
   nodes          Json?
   edges          Json?
   triggerKeyword String?
-  isDefault      Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  shop           Shop     @relation(fields: [shopId], references: [id])
+  isDefault      Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  shop           Shop            @relation(fields: [shopId], references: [id])
   analytics      FlowAnalytics[]
   versions       FlowVersion[]
   sessions       FlowSession[]

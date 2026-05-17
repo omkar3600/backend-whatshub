@@ -14,13 +14,23 @@ const common_1 = require("@nestjs/common");
 const passport_1 = require("@nestjs/passport");
 const passport_jwt_1 = require("passport-jwt");
 const prisma_service_1 = require("../prisma/prisma.service");
+const cookieExtractor = (req) => {
+    let token = null;
+    if (req && req.cookies) {
+        token = req.cookies['token'];
+    }
+    return token;
+};
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
     prisma;
     constructor(prisma) {
         super({
-            jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
+            jwtFromRequest: passport_jwt_1.ExtractJwt.fromExtractors([
+                passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
+                cookieExtractor,
+            ]),
             ignoreExpiration: false,
-            secretOrKey: process.env.JWT_SECRET || 'whatsup_super_secret',
+            secretOrKey: process.env.JWT_SECRET,
         });
         this.prisma = prisma;
     }

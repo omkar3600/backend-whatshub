@@ -1,3 +1,4 @@
+import type { Response } from 'express';
 import { AuthService } from './auth.service';
 export declare class AuthController {
     private readonly authService;
@@ -9,7 +10,7 @@ export declare class AuthController {
         message: string;
         shopId: string;
     }>;
-    login(body: any): Promise<{
+    login(body: any, res: Response): Promise<{
         access_token: string;
         user: {
             id: string;
@@ -18,5 +19,8 @@ export declare class AuthController {
             role: string;
             shopId: string | undefined;
         };
+    }>;
+    logout(res: Response): Promise<{
+        message: string;
     }>;
 }

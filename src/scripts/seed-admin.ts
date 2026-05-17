@@ -10,11 +10,15 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-    const email = 'admin@example.com';
-    const password = 'AdminPassword123';
+    const username = process.env.ADMIN_USERNAME;
+    const password = process.env.ADMIN_PASSWORD;
+
+    if (!username || !password) {
+        throw new Error('ADMIN_USERNAME and ADMIN_PASSWORD must be defined in the environment variables');
+    }
 
     const existing = await prisma.user.findUnique({
-        where: { email },
+        where: { username },
     });
 
     if (existing) {
@@ -27,15 +31,14 @@ async function main() {
 
     await prisma.user.create({
         data: {
-            username: email.split('@')[0],
-            email,
+            username,
             passwordHash,
             role: 'admin',
         },
     });
 
     console.log('Admin user created successfully!');
-    console.log('Email:', email);
+    console.log('Username:', username);
     console.log('Password:', password);
 }
 

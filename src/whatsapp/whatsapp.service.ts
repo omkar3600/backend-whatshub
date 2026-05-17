@@ -30,8 +30,8 @@ export class WhatsappService {
             }
         }
 
-        const WEBHOOK_VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN || 'whatshub_webhook_password';
-        if (token === WEBHOOK_VERIFY_TOKEN) {
+        const WEBHOOK_VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN;
+        if (WEBHOOK_VERIFY_TOKEN && token === WEBHOOK_VERIFY_TOKEN) {
             this.logger.log('Webhook verified successfully.');
             return challenge;
         }
@@ -340,13 +340,43 @@ export class WhatsappService {
     }
 
     private async handleMessageStatus(shopId: string, statusData: any) {
+        const { id: messageId, status, recipient_id: recipientPhone } = statusData;
+
+        // 1. Update the outbound message record
         try {
             await this.prisma.message.update({
-                where: { id: statusData.id },
-                data: { status: statusData.status },
+                where: { id: messageId },
+                data: { status },
             });
         } catch (e) {
-            this.logger.warn(`Status update failed for message ${statusData.id}. It might not exist.`);
+            this.logger.warn(`Status update failed for message ${messageId}. It might not exist.`);
+        }
+
+        // 2. Propagate status to CampaignContact for real-time analytics (delivered / read)
+        if (recipientPhone && ['delivered', 'read'].includes(status)) {
+            try {
+                // Status hierarchy: read > delivered > sent — only upgrade, never downgrade
+                const statusRank: Record<string, number> = { sent: 1, delivered: 2, read: 3, clicked: 4 };
+                const incomingRank = statusRank[status] ?? 0;
+
+                const existing = await this.prisma.campaignContact.findFirst({
+                    where: { phone: recipientPhone, campaign: { shopId } },
+                    orderBy: { sentAt: 'desc' },
+                });
+
+                if (existing) {
+                    const existingRank = statusRank[existing.status] ?? 0;
+                    if (incomingRank > existingRank) {
+                        await this.prisma.campaignContact.update({
+                            where: { id: existing.id },
+                            data: { status },
+                        });
+                        this.logger.log(`[Campaign] Updated CampaignContact ${recipientPhone} → ${status}`);
+                    }
+                }
+            } catch (e) {
+                this.logger.warn(`Failed to update CampaignContact for ${recipientPhone}: ${e}`);
+            }
         }
     }
 
@@ -397,9 +427,12 @@ export class WhatsappService {
                 };
             }
         } else if (type === 'template') {
+            const templateName = typeof content === 'string' ? content : content.name;
+            // Use the language stored on the template record (or fall back to 'en_US')
+            const templateLanguage = (typeof content !== 'string' && content.language) ? content.language : 'en_US';
             payload.template = {
-                name: typeof content === 'string' ? content : content.name,
-                language: { code: 'en_US' }
+                name: templateName,
+                language: { code: templateLanguage }
             };
             if (typeof content !== 'string' && content.components) {
                 payload.template.components = content.components;

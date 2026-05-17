@@ -4,8 +4,6 @@ export declare class MediaController {
     constructor(mediaService: MediaService);
     uploadFile(user: any, file: Express.Multer.File): Promise<{
         id: string;
-        createdAt: Date;
-        shopId: string;
         fileUrl: string;
         fileType: string;
         fileSize: number;

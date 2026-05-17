@@ -10,12 +10,16 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-    const email = 'admin@example.com';
-    const password = 'AdminPassword123';
+    const username = process.env.ADMIN_USERNAME;
+    const password = process.env.ADMIN_PASSWORD;
+
+    if (!username || !password) {
+        throw new Error('ADMIN_USERNAME and ADMIN_PASSWORD must be defined in the environment variables');
+    }
 
     // Delete if exists
     await prisma.user.deleteMany({
-        where: { email },
+        where: { username },
     });
 
     const salt = await bcrypt.genSalt();
@@ -23,8 +27,7 @@ async function main() {
 
     await prisma.user.create({
         data: {
-            username: email.split('@')[0],
-            email,
+            username,
             passwordHash,
             role: 'admin',
         },

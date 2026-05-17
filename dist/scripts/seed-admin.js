@@ -41,8 +41,11 @@ const pool = new pg.Pool({ connectionString: process.env.DIRECT_URL || process.e
 const adapter = new adapter_pg_1.PrismaPg(pool);
 const prisma = new client_1.PrismaClient({ adapter });
 async function main() {
-    const email = 'admin@example.com';
-    const password = 'AdminPassword123';
+    const email = process.env.ADMIN_EMAIL;
+    const password = process.env.ADMIN_PASSWORD;
+    if (!email || !password) {
+        throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD must be defined in the environment variables');
+    }
     const existing = await prisma.user.findUnique({
         where: { email },
     });

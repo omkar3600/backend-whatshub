@@ -3,7 +3,9 @@ import { Job } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
 
-@Processor('campaigns')
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+@Processor('campaigns', { concurrency: 3 })
 export class CampaignProcessor extends WorkerHost {
     constructor(
         private prisma: PrismaService,
@@ -13,7 +15,7 @@ export class CampaignProcessor extends WorkerHost {
     }
 
     async process(job: Job<any>) {
-        const { campaignId, limitToPhones } = job.data;
+        const { campaignId } = job.data;
         const campaign = await this.prisma.campaign.findUnique({
             where: { id: campaignId },
             include: { template: true }
@@ -32,11 +34,6 @@ export class CampaignProcessor extends WorkerHost {
             where: { shopId: campaign.shopId }
         });
 
-        // Narrow to specific phones if this is a retry job
-        if (limitToPhones && Array.isArray(limitToPhones)) {
-            contacts = contacts.filter(c => limitToPhones.includes(c.phone));
-        }
-
         // Filter by targetPhones if specified in the campaign
         const targetPhones = campaign.targetPhones as string[] | null;
         if (targetPhones && targetPhones.length > 0) {
@@ -52,27 +49,57 @@ export class CampaignProcessor extends WorkerHost {
             });
         }
 
+        // Exclude unsubscribed contacts if requested
+        // sendDelay and excludeUnsubscribed are stored inside the stats JSON field during campaign creation
+        const campaignMeta = (campaign.stats as any) || {};
+        const excludeUnsubscribed = campaignMeta.excludeUnsubscribed ?? false;
+        if (excludeUnsubscribed) {
+            contacts = contacts.filter(c => {
+                const tags = (c.tags as string[]) || [];
+                return !tags.includes('unsubscribed');
+            });
+        }
+
+        // Configurable send delay (ms) — default 300ms = ~3 msgs/sec, safe for all Meta tiers
+        const sendDelay: number = campaignMeta.sendDelay ?? 300;
+
         let sent = 0, failed = 0;
         const failureHistory: { phone: string; name: string; reason: string; timestamp: Date }[] = [];
 
-        for (const c of contacts) {
-            // Check if campaign was aborted midway
-            const currentCampaign = await this.prisma.campaign.findUnique({
-                where: { id: campaignId },
-                select: { status: true }
-            });
-            if (currentCampaign?.status === 'aborted') {
-                break;
+        // Pending DB writes — flushed every 50 records for efficiency
+        const pendingWrites: Parameters<typeof this.prisma.campaignContact.upsert>[0][] = [];
+
+        const flushWrites = async () => {
+            if (pendingWrites.length === 0) return;
+            const batch = pendingWrites.splice(0, pendingWrites.length);
+            await this.prisma.$transaction(batch.map(args => this.prisma.campaignContact.upsert(args)));
+        };
+
+        let aborted = false;
+
+        for (let i = 0; i < contacts.length; i++) {
+            const c = contacts[i];
+
+            // Check abort status every 20 messages to reduce DB load
+            if (i % 20 === 0) {
+                const currentCampaign = await this.prisma.campaign.findUnique({
+                    where: { id: campaignId },
+                    select: { status: true }
+                });
+                if (currentCampaign?.status === 'aborted') {
+                    aborted = true;
+                    break;
+                }
             }
 
             try {
                 const templateParamsObj = campaign.templateParams as any;
                 const templateContent =
                     templateParamsObj && Array.isArray(templateParamsObj) && templateParamsObj.length > 0
-                        ? { name: campaign.template.templateName, components: templateParamsObj }
-                        : campaign.template.templateName;
+                        ? { name: campaign.template.templateName, language: campaign.template.language, components: templateParamsObj }
+                        : { name: campaign.template.templateName, language: campaign.template.language };
 
-                // Convert null → undefined for headerMediaUrl (WhatsApp service expects string | undefined)
+                // Convert null → undefined for headerMediaUrl
                 const headerMediaUrl = campaign.headerMediaUrl ?? undefined;
 
                 await this.whatsappService.sendOutboundMessage(
@@ -84,57 +111,45 @@ export class CampaignProcessor extends WorkerHost {
                 );
                 sent++;
 
-                // Save per-contact record as "sent"
-                await this.prisma.campaignContact.upsert({
+                pendingWrites.push({
                     where: { campaignId_phone: { campaignId, phone: c.phone } },
-                    create: {
-                        campaignId,
-                        contactId: c.id,
-                        phone: c.phone,
-                        name: c.name,
-                        status: 'sent',
-                    },
+                    create: { campaignId, contactId: c.id, phone: c.phone, name: c.name, status: 'sent' },
                     update: { status: 'sent', failReason: null },
                 });
             } catch (e: unknown) {
                 failed++;
-                // Safely extract message from unknown error type
-                const reason =
-                    e instanceof Error ? e.message : typeof e === 'string' ? e : 'Unknown error';
+                const axiosErr = e as any;
+                const metaError = axiosErr?.response?.data?.error?.message;
+                const reason = metaError || (e instanceof Error ? e.message : typeof e === 'string' ? e : 'Unknown error');
 
-                failureHistory.push({
-                    phone: c.phone,
-                    name: c.name,
-                    reason,
-                    timestamp: new Date()
-                });
+                failureHistory.push({ phone: c.phone, name: c.name, reason, timestamp: new Date() });
 
-                // Save per-contact record as "failed"
-                await this.prisma.campaignContact.upsert({
+                pendingWrites.push({
                     where: { campaignId_phone: { campaignId, phone: c.phone } },
-                    create: {
-                        campaignId,
-                        contactId: c.id,
-                        phone: c.phone,
-                        name: c.name,
-                        status: 'failed',
-                        failReason: reason,
-                    },
+                    create: { campaignId, contactId: c.id, phone: c.phone, name: c.name, status: 'failed', failReason: reason },
                     update: { status: 'failed', failReason: reason },
                 });
             }
+
+            // Flush writes every 50 contacts
+            if (pendingWrites.length >= 50) {
+                await flushWrites();
+            }
+
+            // Rate limiting — pause between messages
+            if (i < contacts.length - 1) {
+                await sleep(sendDelay);
+            }
         }
 
-        const finalCampaign = await this.prisma.campaign.findUnique({
-            where: { id: campaignId },
-            select: { status: true }
-        });
+        // Flush any remaining writes
+        await flushWrites();
 
         await this.prisma.campaign.update({
             where: { id: campaignId },
             data: {
-                status: finalCampaign?.status === 'aborted' ? 'aborted' : 'completed',
-                stats: { sent, delivered: sent, read: 0, clicked: 0, failed },
+                status: aborted ? 'aborted' : 'completed',
+                stats: { sent, delivered: 0, read: 0, clicked: 0, failed },
                 failureHistory: failureHistory
             }
         });

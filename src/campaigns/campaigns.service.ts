@@ -11,7 +11,7 @@ export class CampaignsService {
     ) { }
 
     async createCampaign(shopId: string, data: any) {
-        const { name, templateId, targetTags, targetPhones, scheduledAt, templateParams, headerMediaUrl } = data;
+        const { name, templateId, targetTags, targetPhones, scheduledAt, templateParams, headerMediaUrl, sendDelay, excludeUnsubscribed } = data;
         const campaign = await this.prisma.campaign.create({
             data: {
                 shopId,
@@ -23,6 +23,8 @@ export class CampaignsService {
                 headerMediaUrl: headerMediaUrl || null,
                 scheduledAt: new Date(scheduledAt || Date.now()),
                 status: 'scheduled',
+                // Store extra options as JSON in a flexible field
+                stats: { sendDelay: sendDelay ?? 300, excludeUnsubscribed: excludeUnsubscribed ?? false } as any,
             },
         });
 
@@ -113,12 +115,15 @@ export class CampaignsService {
         if (!campaign) throw new NotFoundException('Campaign not found');
 
         const allContacts = campaign.contacts;
+        const readPhones = new Set(allContacts.filter(c => c.status === 'read').map(c => c.phone));
         const byStatus = {
             sent: allContacts.filter(c => c.status === 'sent'),
             delivered: allContacts.filter(c => c.status === 'delivered'),
             read: allContacts.filter(c => c.status === 'read'),
             clicked: allContacts.filter(c => c.status === 'clicked'),
             failed: allContacts.filter(c => c.status === 'failed'),
+            // Unread = delivered or sent but never progressed to 'read'
+            unread: allContacts.filter(c => ['delivered', 'sent'].includes(c.status) && !readPhones.has(c.phone)),
         };
 
         const stats = {
@@ -128,6 +133,7 @@ export class CampaignsService {
             read: byStatus.read.length,
             clicked: byStatus.clicked.length,
             failed: byStatus.failed.length,
+            unread: byStatus.unread.length,
         };
 
         return {

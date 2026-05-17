@@ -5,10 +5,13 @@ import helmet from 'helmet';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import * as path from 'path';
 import * as fs from 'fs';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  app.use(cookieParser());
 
   // Ensure uploads dir exists
   const uploadsDir = path.join(process.cwd(), 'uploads');
@@ -17,8 +20,19 @@ async function bootstrap() {
   // Serve uploaded files statically at /uploads
   app.useStaticAssets(uploadsDir, { prefix: '/uploads' });
 
-  // Security headers (disable CSP so frontend can load media from backend)
-  app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+  // Security headers (enable CSP but allow cross-origin images/media if needed)
+  app.use(helmet({ 
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        mediaSrc: ["'self'", "https:"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+      },
+    },
+  }));
 
   // Global validation pipe — validates all incoming request bodies
   app.useGlobalPipes(new ValidationPipe({

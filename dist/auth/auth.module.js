@@ -21,7 +21,7 @@ exports.AuthModule = AuthModule = __decorate([
         imports: [
             passport_1.PassportModule.register({ defaultStrategy: 'jwt' }),
             jwt_1.JwtModule.register({
-                secret: process.env.JWT_SECRET || 'whatsup_super_secret',
+                secret: process.env.JWT_SECRET,
                 signOptions: { expiresIn: process.env.JWT_EXPIRATION || '7d' },
             }),
         ],
