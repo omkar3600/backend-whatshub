@@ -11,7 +11,29 @@ export class CampaignsService {
     ) { }
 
     async createCampaign(shopId: string, data: any) {
-        const { name, templateId, targetTags, targetPhones, scheduledAt, templateParams, headerMediaUrl, sendDelay, excludeUnsubscribed } = data;
+        const { name, templateId, targetTags, targetPhones, scheduledAt, templateParams, headerMediaUrl, sendDelay, excludeUnsubscribed, sendNow } = data;
+
+        // Validate: if not sending now, scheduled time must be in the future
+        let resolvedScheduledAt: Date;
+        let queueDelay: number;
+
+        if (sendNow) {
+            // Instant launch — no time needed, fire immediately
+            resolvedScheduledAt = new Date();
+            queueDelay = 0;
+        } else {
+            if (!scheduledAt) {
+                throw new Error('scheduledAt is required for scheduled campaigns');
+            }
+            resolvedScheduledAt = new Date(scheduledAt);
+            const msUntilSend = resolvedScheduledAt.getTime() - Date.now();
+            if (msUntilSend < 30_000) {
+                // Reject if less than 30 seconds in the future
+                throw new Error('Scheduled time must be at least 30 seconds in the future');
+            }
+            queueDelay = msUntilSend;
+        }
+
         const campaign = await this.prisma.campaign.create({
             data: {
                 shopId,
@@ -21,20 +43,16 @@ export class CampaignsService {
                 targetPhones: targetPhones || [],
                 templateParams: templateParams || {},
                 headerMediaUrl: headerMediaUrl || null,
-                scheduledAt: new Date(scheduledAt || Date.now()),
+                scheduledAt: resolvedScheduledAt,
                 status: 'scheduled',
-                // Store send options separately from stats so processor completion doesn't overwrite them
                 stats: { sendDelay: sendDelay ?? 300, excludeUnsubscribed: excludeUnsubscribed ?? false } as any,
             },
         });
 
-        // Fire-and-forget: do NOT await the queue add — if Redis is slow or unavailable,
-        // this prevents the HTTP request from hanging indefinitely.
-        const delay = Math.max(0, new Date(campaign.scheduledAt).getTime() - Date.now());
-        this.campaignsQueue.add('processCampaign', { campaignId: campaign.id }, { delay })
+        // Fire-and-forget: do NOT await — prevents HTTP request from hanging if Redis is slow
+        this.campaignsQueue.add('processCampaign', { campaignId: campaign.id }, { delay: queueDelay })
             .catch((err) => {
                 console.error(`[Campaign] Failed to enqueue campaign ${campaign.id}:`, err?.message || err);
-                // Update campaign status to reflect queue failure so user knows
                 this.prisma.campaign.update({
                     where: { id: campaign.id },
                     data: { status: 'failed', failureHistory: [{ reason: 'Queue connection failed: ' + (err?.message || 'Redis unavailable'), timestamp: new Date() }] as any }
@@ -43,7 +61,6 @@ export class CampaignsService {
 
         return campaign;
     }
-
 
     async getCampaigns(shopId: string) {
         return this.prisma.campaign.findMany({
