@@ -28,19 +28,19 @@ let EmbeddedSignupController = EmbeddedSignupController_1 = class EmbeddedSignup
         return this.signupService.getConfig();
     }
     async processCallback(req, dto) {
-        this.logger.log(`Processing embedded signup callback for user ${req.user.sub}`);
-        return this.signupService.processCallback(req.user.sub, dto.code, dto.sessionInfo);
+        this.logger.log(`Processing embedded signup callback for user ${req.user.id}`);
+        return this.signupService.processCallback(req.user.id, dto.code, dto.sessionInfo);
     }
     async getConnectionStatus(req) {
-        return this.signupService.getConnectionStatus(req.user.sub);
+        return this.signupService.getConnectionStatus(req.user.id);
     }
     async disconnectWaba(req, wabaAccountId) {
-        this.logger.log(`Disconnecting WABA ${wabaAccountId} for user ${req.user.sub}`);
-        return this.signupService.disconnectWaba(req.user.sub, wabaAccountId);
+        this.logger.log(`Disconnecting WABA ${wabaAccountId} for user ${req.user.id}`);
+        return this.signupService.disconnectWaba(req.user.id, wabaAccountId);
     }
     async reconnectWaba(req, wabaAccountId, dto) {
-        this.logger.log(`Reconnecting WABA ${wabaAccountId} for user ${req.user.sub}`);
-        return this.signupService.reconnectWaba(req.user.sub, wabaAccountId, dto.code);
+        this.logger.log(`Reconnecting WABA ${wabaAccountId} for user ${req.user.id}`);
+        return this.signupService.reconnectWaba(req.user.id, wabaAccountId, dto.code);
     }
 };
 exports.EmbeddedSignupController = EmbeddedSignupController;
