@@ -14,23 +14,36 @@ exports.TemplatesService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const axios_1 = require("@nestjs/axios");
+const crypto_service_1 = require("../common/services/crypto.service");
 const rxjs_1 = require("rxjs");
 let TemplatesService = TemplatesService_1 = class TemplatesService {
     prisma;
     httpService;
+    cryptoService;
     logger = new common_1.Logger(TemplatesService_1.name);
-    constructor(prisma, httpService) {
+    graphApiBase = `https://graph.facebook.com/${process.env.META_API_VERSION || 'v18.0'}`;
+    constructor(prisma, httpService, cryptoService) {
         this.prisma = prisma;
         this.httpService = httpService;
+        this.cryptoService = cryptoService;
+    }
+    async getCredentials(shopId) {
+        const account = await this.prisma.whatsAppBusinessAccount.findFirst({
+            where: { shopId, status: 'active' },
+        });
+        if (!account) {
+            throw new common_1.BadRequestException('WhatsApp credentials not found. Please configure them in Settings or connect via Embedded Signup.');
+        }
+        return {
+            accessToken: this.cryptoService.decrypt(account.accessToken),
+            businessAccountId: account.wabaId || account.businessAccountId,
+        };
     }
     async createTemplate(shopId, data) {
         const { templateName, category, language, components } = data;
-        const creds = await this.prisma.whatsAppCredential.findUnique({ where: { shopId } });
-        if (!creds) {
-            throw new common_1.BadRequestException('WhatsApp credentials not found. Please configure them in Settings.');
-        }
+        const creds = await this.getCredentials(shopId);
         this.logger.log(`Submitting template "${templateName}" to Meta for shop ${shopId}`);
-        const url = `https://graph.facebook.com/v18.0/${creds.businessAccountId}/message_templates`;
+        const url = `${this.graphApiBase}/${creds.businessAccountId}/message_templates`;
         try {
             const metaPayload = { name: templateName, category, language, components };
             this.logger.log(`[Template] Sending to Meta: ${JSON.stringify(metaPayload)}`);
@@ -60,10 +73,8 @@ let TemplatesService = TemplatesService_1 = class TemplatesService {
         }
     }
     async syncTemplates(shopId) {
-        const creds = await this.prisma.whatsAppCredential.findUnique({ where: { shopId } });
-        if (!creds)
-            throw new common_1.BadRequestException('WhatsApp credentials not found');
-        const url = `https://graph.facebook.com/v18.0/${creds.businessAccountId}/message_templates`;
+        const creds = await this.getCredentials(shopId);
+        const url = `${this.graphApiBase}/${creds.businessAccountId}/message_templates`;
         try {
             const response = await (0, rxjs_1.firstValueFrom)(this.httpService.get(url, {
                 headers: { Authorization: `Bearer ${creds.accessToken}` }
@@ -121,20 +132,18 @@ let TemplatesService = TemplatesService_1 = class TemplatesService {
         if (!template) {
             throw new common_1.NotFoundException('Template not found');
         }
-        const creds = await this.prisma.whatsAppCredential.findUnique({ where: { shopId } });
-        if (creds) {
-            const url = `https://graph.facebook.com/v18.0/${creds.businessAccountId}/message_templates`;
-            try {
-                await (0, rxjs_1.firstValueFrom)(this.httpService.delete(url, {
-                    params: { name: template.templateName },
-                    headers: { Authorization: `Bearer ${creds.accessToken}` }
-                }));
-                this.logger.log(`Deleted template "${template.templateName}" from Meta for shop ${shopId}`);
-            }
-            catch (error) {
-                const errorMsg = error.response?.data?.error?.message || error.message;
-                this.logger.warn(`Failed to delete template "${template.templateName}" from Meta: ${errorMsg}`);
-            }
+        try {
+            const creds = await this.getCredentials(shopId);
+            const url = `${this.graphApiBase}/${creds.businessAccountId}/message_templates`;
+            await (0, rxjs_1.firstValueFrom)(this.httpService.delete(url, {
+                params: { name: template.templateName },
+                headers: { Authorization: `Bearer ${creds.accessToken}` }
+            }));
+            this.logger.log(`Deleted template "${template.templateName}" from Meta for shop ${shopId}`);
+        }
+        catch (error) {
+            const errorMsg = error.response?.data?.error?.message || error.message;
+            this.logger.warn(`Failed to delete template "${template.templateName}" from Meta: ${errorMsg}`);
         }
         try {
             const deletedCampaigns = await this.prisma.campaign.deleteMany({ where: { templateId: id } });
@@ -154,6 +163,7 @@ exports.TemplatesService = TemplatesService;
 exports.TemplatesService = TemplatesService = TemplatesService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        axios_1.HttpService])
+        axios_1.HttpService,
+        crypto_service_1.CryptoService])
 ], TemplatesService);
 //# sourceMappingURL=templates.service.js.map

@@ -18,7 +18,19 @@ export declare class CampaignsController {
         headerMediaUrl: string | null;
         failureHistory: import("@prisma/client/runtime/library").JsonValue | null;
     }>;
-    getCampaigns(user: any): Promise<({
+    getCampaigns(user: any): Promise<{
+        contacts: undefined;
+        stats: {
+            sendDelay: any;
+            excludeUnsubscribed: any;
+            total: number;
+            sent: number;
+            delivered: number;
+            read: number;
+            clicked: number;
+            failed: number;
+            pending: number;
+        };
         template: {
             id: string;
             createdAt: Date;
@@ -30,14 +42,12 @@ export declare class CampaignsController {
             language: string;
             components: import("@prisma/client/runtime/library").JsonValue;
         };
-    } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         name: string;
         status: string;
         shopId: string;
-        stats: import("@prisma/client/runtime/library").JsonValue | null;
         templateId: string;
         targetTags: import("@prisma/client/runtime/library").JsonValue | null;
         targetPhones: import("@prisma/client/runtime/library").JsonValue | null;
@@ -45,7 +55,7 @@ export declare class CampaignsController {
         templateParams: import("@prisma/client/runtime/library").JsonValue | null;
         headerMediaUrl: string | null;
         failureHistory: import("@prisma/client/runtime/library").JsonValue | null;
-    })[]>;
+    }[]>;
     getCampaignAnalytics(user: any, id: string): Promise<{
         campaign: {
             template: {
@@ -66,9 +76,10 @@ export declare class CampaignsController {
                 name: string;
                 status: string;
                 contactId: string | null;
-                sentAt: Date;
                 campaignId: string;
+                wamid: string | null;
                 failReason: string | null;
+                sentAt: Date;
             }[];
         } & {
             id: string;
@@ -93,6 +104,7 @@ export declare class CampaignsController {
             read: number;
             clicked: number;
             failed: number;
+            unread: number;
         };
         contacts: {
             sent: {
@@ -102,9 +114,10 @@ export declare class CampaignsController {
                 name: string;
                 status: string;
                 contactId: string | null;
-                sentAt: Date;
                 campaignId: string;
+                wamid: string | null;
                 failReason: string | null;
+                sentAt: Date;
             }[];
             delivered: {
                 phone: string;
@@ -113,9 +126,10 @@ export declare class CampaignsController {
                 name: string;
                 status: string;
                 contactId: string | null;
-                sentAt: Date;
                 campaignId: string;
+                wamid: string | null;
                 failReason: string | null;
+                sentAt: Date;
             }[];
             read: {
                 phone: string;
@@ -124,9 +138,10 @@ export declare class CampaignsController {
                 name: string;
                 status: string;
                 contactId: string | null;
-                sentAt: Date;
                 campaignId: string;
+                wamid: string | null;
                 failReason: string | null;
+                sentAt: Date;
             }[];
             clicked: {
                 phone: string;
@@ -135,9 +150,10 @@ export declare class CampaignsController {
                 name: string;
                 status: string;
                 contactId: string | null;
-                sentAt: Date;
                 campaignId: string;
+                wamid: string | null;
                 failReason: string | null;
+                sentAt: Date;
             }[];
             failed: {
                 phone: string;
@@ -146,9 +162,22 @@ export declare class CampaignsController {
                 name: string;
                 status: string;
                 contactId: string | null;
-                sentAt: Date;
                 campaignId: string;
+                wamid: string | null;
                 failReason: string | null;
+                sentAt: Date;
+            }[];
+            unread: {
+                phone: string;
+                id: string;
+                updatedAt: Date;
+                name: string;
+                status: string;
+                contactId: string | null;
+                campaignId: string;
+                wamid: string | null;
+                failReason: string | null;
+                sentAt: Date;
             }[];
         };
     }>;

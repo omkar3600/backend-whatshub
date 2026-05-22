@@ -11,7 +11,9 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const bullmq_1 = require("@nestjs/bullmq");
 const throttler_1 = require("@nestjs/throttler");
+const schedule_1 = require("@nestjs/schedule");
 const core_1 = require("@nestjs/core");
+const common_module_1 = require("./common/common.module");
 const auth_module_1 = require("./auth/auth.module");
 const prisma_module_1 = require("./prisma/prisma.module");
 const admin_module_1 = require("./admin/admin.module");
@@ -27,6 +29,7 @@ const templates_module_1 = require("./templates/templates.module");
 const media_module_1 = require("./media/media.module");
 const users_module_1 = require("./users/users.module");
 const chatbot_module_1 = require("./chatbot/chatbot.module");
+const embedded_signup_module_1 = require("./embedded-signup/embedded-signup.module");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const flows_module_1 = require("./flows/flows.module");
@@ -37,11 +40,13 @@ exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
             config_1.ConfigModule.forRoot({ isGlobal: true }),
+            schedule_1.ScheduleModule.forRoot(),
             throttler_1.ThrottlerModule.forRoot([{
                     ttl: 60000,
                     limit: 120,
                 }]),
             prisma_module_1.PrismaModule,
+            common_module_1.CommonModule,
             bullmq_1.BullModule.forRoot({
                 connection: {
                     host: process.env.REDIS_HOST || 'localhost',
@@ -49,6 +54,7 @@ exports.AppModule = AppModule = __decorate([
                     username: process.env.REDIS_USERNAME || 'default',
                     password: process.env.REDIS_PASSWORD || '',
                     tls: process.env.REDIS_TLS === 'true' ? {} : undefined,
+                    connectTimeout: 5000,
                 },
             }),
             auth_module_1.AuthModule,
@@ -65,6 +71,7 @@ exports.AppModule = AppModule = __decorate([
             media_module_1.MediaModule,
             users_module_1.UsersModule,
             chatbot_module_1.ChatbotModule,
+            embedded_signup_module_1.EmbeddedSignupModule,
             flows_module_1.FlowsModule,
         ],
         controllers: [app_controller_1.AppController],

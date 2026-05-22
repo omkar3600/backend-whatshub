@@ -19,6 +19,7 @@ export declare class ConversationsController {
         createdAt: Date;
         updatedAt: Date;
         shopId: string;
+        phoneNumberId: string | null;
         lastMessageAt: Date;
         unreadCount: number;
         aiPaused: boolean;
@@ -41,6 +42,7 @@ export declare class ConversationsController {
         createdAt: Date;
         updatedAt: Date;
         shopId: string;
+        phoneNumberId: string | null;
         lastMessageAt: Date;
         unreadCount: number;
         aiPaused: boolean;
@@ -63,6 +65,7 @@ export declare class ConversationsController {
         createdAt: Date;
         updatedAt: Date;
         shopId: string;
+        phoneNumberId: string | null;
         lastMessageAt: Date;
         unreadCount: number;
         aiPaused: boolean;
@@ -73,6 +76,7 @@ export declare class ConversationsController {
         createdAt: Date;
         updatedAt: Date;
         shopId: string;
+        phoneNumberId: string | null;
         lastMessageAt: Date;
         unreadCount: number;
         aiPaused: boolean;

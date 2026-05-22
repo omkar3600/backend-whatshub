@@ -1,0 +1,90 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var EmbeddedSignupController_1;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.EmbeddedSignupController = void 0;
+const common_1 = require("@nestjs/common");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const embedded_signup_service_1 = require("./embedded-signup.service");
+const signup_callback_dto_1 = require("./dto/signup-callback.dto");
+let EmbeddedSignupController = EmbeddedSignupController_1 = class EmbeddedSignupController {
+    signupService;
+    logger = new common_1.Logger(EmbeddedSignupController_1.name);
+    constructor(signupService) {
+        this.signupService = signupService;
+    }
+    getConfig() {
+        return this.signupService.getConfig();
+    }
+    async processCallback(req, dto) {
+        this.logger.log(`Processing embedded signup callback for user ${req.user.sub}`);
+        return this.signupService.processCallback(req.user.sub, dto.code, dto.sessionInfo);
+    }
+    async getConnectionStatus(req) {
+        return this.signupService.getConnectionStatus(req.user.sub);
+    }
+    async disconnectWaba(req, wabaAccountId) {
+        this.logger.log(`Disconnecting WABA ${wabaAccountId} for user ${req.user.sub}`);
+        return this.signupService.disconnectWaba(req.user.sub, wabaAccountId);
+    }
+    async reconnectWaba(req, wabaAccountId, dto) {
+        this.logger.log(`Reconnecting WABA ${wabaAccountId} for user ${req.user.sub}`);
+        return this.signupService.reconnectWaba(req.user.sub, wabaAccountId, dto.code);
+    }
+};
+exports.EmbeddedSignupController = EmbeddedSignupController;
+__decorate([
+    (0, common_1.Get)('config'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], EmbeddedSignupController.prototype, "getConfig", null);
+__decorate([
+    (0, common_1.Post)('callback'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, signup_callback_dto_1.SignupCallbackDto]),
+    __metadata("design:returntype", Promise)
+], EmbeddedSignupController.prototype, "processCallback", null);
+__decorate([
+    (0, common_1.Get)('status'),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], EmbeddedSignupController.prototype, "getConnectionStatus", null);
+__decorate([
+    (0, common_1.Post)('disconnect/:wabaAccountId'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('wabaAccountId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], EmbeddedSignupController.prototype, "disconnectWaba", null);
+__decorate([
+    (0, common_1.Post)('reconnect/:wabaAccountId'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('wabaAccountId')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, signup_callback_dto_1.SignupCallbackDto]),
+    __metadata("design:returntype", Promise)
+], EmbeddedSignupController.prototype, "reconnectWaba", null);
+exports.EmbeddedSignupController = EmbeddedSignupController = EmbeddedSignupController_1 = __decorate([
+    (0, common_1.Controller)('embedded-signup'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __metadata("design:paramtypes", [embedded_signup_service_1.EmbeddedSignupService])
+], EmbeddedSignupController);
+//# sourceMappingURL=embedded-signup.controller.js.map

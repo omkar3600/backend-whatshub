@@ -57,20 +57,19 @@ let AuthService = AuthService_1 = class AuthService {
         this.jwtService = jwtService;
     }
     async registerInterest(data) {
-        const { username, email, password, shopName, phone } = data;
+        const { username, password, shopName, phone } = data;
         const existingUser = await this.prisma.user.findUnique({ where: { username } });
         const existingRequest = await this.prisma.registrationInterest.findFirst({
-            where: { OR: [{ username }, { email }] }
+            where: { username }
         });
         if (existingUser || (existingRequest && existingRequest.status === 'pending')) {
-            throw new common_1.ConflictException('Username or email already in use or pending approval');
+            throw new common_1.ConflictException('Username already in use or pending approval');
         }
         const salt = await bcrypt.genSalt();
         const passwordHash = await bcrypt.hash(password, salt);
         await this.prisma.registrationInterest.create({
             data: {
                 username,
-                email,
                 password: passwordHash,
                 shopName,
                 phone,
@@ -80,7 +79,7 @@ let AuthService = AuthService_1 = class AuthService {
         return { message: 'Registration interest submitted. Please wait for admin approval.' };
     }
     async registerShop(data) {
-        const { username, email, password, shopName, phone } = data;
+        const { username, password, shopName, phone } = data;
         const existingUser = await this.prisma.user.findUnique({ where: { username } });
         if (existingUser) {
             throw new common_1.ConflictException('Username already in use');
@@ -90,7 +89,6 @@ let AuthService = AuthService_1 = class AuthService {
         const user = await this.prisma.user.create({
             data: {
                 username,
-                email,
                 passwordHash,
                 role: 'user',
             },
@@ -132,7 +130,6 @@ let AuthService = AuthService_1 = class AuthService {
             user: {
                 id: user.id,
                 username: user.username,
-                email: user.email,
                 role: user.role,
                 shopId: user.shop?.id
             }

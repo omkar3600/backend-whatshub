@@ -13,17 +13,25 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ShopsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const crypto_service_1 = require("../common/services/crypto.service");
 let ShopsService = ShopsService_1 = class ShopsService {
     prisma;
+    cryptoService;
     logger = new common_1.Logger(ShopsService_1.name);
-    constructor(prisma) {
+    constructor(prisma, cryptoService) {
         this.prisma = prisma;
+        this.cryptoService = cryptoService;
     }
     async getShopOverview(shopId) {
         this.logger.log(`Fetching overview for shopId: ${shopId}`);
         const shop = await this.prisma.shop.findUnique({
             where: { id: shopId },
-            include: { subscription: true, whatsappCreds: true },
+            include: {
+                subscription: true,
+                whatsappAccounts: {
+                    include: { phoneNumbers: true },
+                },
+            },
         });
         if (!shop)
             throw new common_1.NotFoundException('Shop not found');
@@ -47,31 +55,73 @@ let ShopsService = ShopsService_1 = class ShopsService {
         });
     }
     async getWhatsAppCredentials(shopId) {
-        return this.prisma.whatsAppCredential.findUnique({
-            where: { shopId },
+        const account = await this.prisma.whatsAppBusinessAccount.findFirst({
+            where: { shopId, status: 'active' },
+            include: { phoneNumbers: true },
         });
+        if (!account)
+            return null;
+        return {
+            id: account.id,
+            businessAccountId: account.businessAccountId,
+            wabaId: account.wabaId,
+            businessName: account.businessName,
+            phoneNumberId: account.phoneNumbers.find(p => p.isDefault)?.phoneNumberId || account.phoneNumbers[0]?.phoneNumberId,
+            status: account.status,
+            tokenType: account.tokenType,
+            tokenExpiry: account.tokenExpiry,
+            onboardingSource: account.onboardingSource,
+            phoneNumbers: account.phoneNumbers,
+        };
     }
     async updateWhatsAppCredentials(shopId, data) {
         const { businessAccountId, phoneNumberId, accessToken } = data;
-        return this.prisma.whatsAppCredential.upsert({
-            where: { shopId },
+        const encryptedToken = this.cryptoService.encrypt(accessToken);
+        const account = await this.prisma.whatsAppBusinessAccount.upsert({
+            where: {
+                id: await this.getExistingAccountId(shopId) || 'new-record',
+            },
             create: {
                 shopId,
                 businessAccountId,
-                phoneNumberId,
-                accessToken,
+                accessToken: encryptedToken,
+                status: 'active',
+                onboardingSource: 'manual',
             },
             update: {
                 businessAccountId,
-                phoneNumberId,
-                accessToken,
+                accessToken: encryptedToken,
             },
         });
+        if (phoneNumberId) {
+            await this.prisma.whatsAppPhoneNumber.upsert({
+                where: { phoneNumberId },
+                create: {
+                    shopId,
+                    wabaAccountId: account.id,
+                    phoneNumberId,
+                    isDefault: true,
+                    status: 'active',
+                },
+                update: {
+                    isDefault: true,
+                    status: 'active',
+                },
+            });
+        }
+        return account;
+    }
+    async getExistingAccountId(shopId) {
+        const existing = await this.prisma.whatsAppBusinessAccount.findFirst({
+            where: { shopId },
+        });
+        return existing?.id || null;
     }
 };
 exports.ShopsService = ShopsService;
 exports.ShopsService = ShopsService = ShopsService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        crypto_service_1.CryptoService])
 ], ShopsService);
 //# sourceMappingURL=shops.service.js.map

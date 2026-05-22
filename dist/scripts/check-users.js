@@ -9,7 +9,7 @@ const prisma = new client_1.PrismaClient({ adapter });
 async function main() {
     const users = await prisma.user.findMany();
     console.log('--- USERS IN DB ---');
-    users.forEach(u => console.log(`Email: ${u.email}, Role: ${u.role}, Hash: ${u.passwordHash.substring(0, 10)}...`));
+    users.forEach(u => console.log(`Username: ${u.username}, Role: ${u.role}, Hash: ${u.passwordHash.substring(0, 10)}...`));
 }
 main()
     .catch(console.error)

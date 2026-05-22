@@ -30,25 +30,27 @@ model RegistrationInterest {
 }
 
 model Shop {
-  id            String              @id @default(uuid())
-  ownerId       String              @unique
-  shopName      String
-  phone         String
-  status        String              @default("active")
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  automations   Automation[]
-  campaigns     Campaign[]
-  contacts      Contact[]
-  conversations Conversation[]
-  mediaFiles    MediaFile[]
-  messages      Message[]
-  owner         User                @relation(fields: [ownerId], references: [id])
-  subscription  Subscription?
-  templates     Template[]
-  whatsappCreds WhatsAppCredential?
-  chatbotConfig ChatbotConfig?
-  flows         Flow[]
+  id               String              @id @default(uuid())
+  ownerId          String              @unique
+  shopName         String
+  phone            String
+  status           String              @default("active")
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  automations      Automation[]
+  campaigns        Campaign[]
+  contacts         Contact[]
+  conversations    Conversation[]
+  mediaFiles       MediaFile[]
+  messages         Message[]
+  owner            User                @relation(fields: [ownerId], references: [id])
+  subscription     Subscription?
+  templates        Template[]
+  whatsappAccounts WhatsAppBusinessAccount[]
+  phoneNumbers     WhatsAppPhoneNumber[]
+  onboardingEvents OnboardingEvent[]
+  chatbotConfig    ChatbotConfig?
+  flows            Flow[]
 }
 
 model Subscription {
@@ -62,16 +64,92 @@ model Subscription {
   shop       Shop     @relation(fields: [shopId], references: [id])
 }
 
-model WhatsAppCredential {
+model WhatsAppBusinessAccount {
   id                 String   @id @default(uuid())
-  shopId             String   @unique
+  shopId             String
   businessAccountId  String
-  phoneNumberId      String
+  wabaId             String?
+  businessName       String?
   accessToken        String
+  tokenType          String   @default("long_lived")
+  tokenExpiry        DateTime?
   webhookVerifyToken String?
+  status             String   @default("active") // active, disconnected, suspended, token_expired
+  onboardingSource   String   @default("manual") // manual, embedded_signup
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   shop               Shop     @relation(fields: [shopId], references: [id])
+  phoneNumbers       WhatsAppPhoneNumber[]
+
+  @@index([shopId])
+  @@index([businessAccountId])
+  @@index([wabaId])
+}
+
+model WhatsAppPhoneNumber {
+  id                 String   @id @default(uuid())
+  shopId             String
+  wabaAccountId      String
+  phoneNumberId      String   @unique
+  displayPhoneNumber String?
+  verifiedName       String?
+  qualityRating      String?
+  messagingLimit     String?
+  status             String   @default("active")
+  isDefault          Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  shop               Shop     @relation(fields: [shopId], references: [id])
+  wabaAccount        WhatsAppBusinessAccount @relation(fields: [wabaAccountId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
+  @@index([phoneNumberId])
+}
+
+model WebhookAuditLog {
+  id               String   @id @default(uuid())
+  shopId           String?
+  phoneNumberId    String?
+  eventType        String
+  waMessageId      String?
+  payload          Json
+  processingStatus String   @default("pending")
+  errorMessage     String?
+  retryCount       Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  @@index([shopId])
+  @@index([phoneNumberId])
+  @@index([processingStatus])
+  @@index([createdAt])
+}
+
+model DeadLetterEvent {
+  id              String    @id @default(uuid())
+  sourceType      String
+  originalPayload Json
+  errorMessage    String?
+  retryCount      Int       @default(0)
+  maxRetries      Int       @default(3)
+  lastAttemptAt   DateTime?
+  resolvedAt      DateTime?
+  status          String    @default("pending")
+  createdAt       DateTime  @default(now())
+
+  @@index([status])
+  @@index([sourceType])
+}
+
+model OnboardingEvent {
+  id        String   @id @default(uuid())
+  shopId    String
+  eventType String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  shop      Shop     @relation(fields: [shopId], references: [id])
+
+  @@index([shopId])
+  @@index([eventType])
 }
 
 model Contact {
@@ -96,6 +174,7 @@ model Conversation {
   id            String    @id @default(uuid())
   shopId        String
   contactId     String
+  phoneNumberId String?
   lastMessageAt DateTime  @default(now())
   unreadCount   Int       @default(0)
   aiPaused      Boolean   @default(false)
@@ -112,6 +191,7 @@ model Message {
   id             String       @id @default(uuid())
   shopId         String
   conversationId String
+  phoneNumberId  String?
   direction      String
   type           String
   content        String?

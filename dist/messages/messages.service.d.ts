@@ -10,11 +10,13 @@ export declare class MessagesService {
         updatedAt: Date;
         status: string;
         shopId: string;
+        phoneNumberId: string | null;
         conversationId: string;
         direction: string;
         type: string;
         content: string | null;
         mediaUrl: string | null;
+        templateData: import("@prisma/client/runtime/library").JsonValue | null;
         timestamp: Date;
     }[]>;
     sendMessage(shopId: string, conversationId: string, data: any): Promise<{
@@ -23,11 +25,13 @@ export declare class MessagesService {
         updatedAt: Date;
         status: string;
         shopId: string;
+        phoneNumberId: string | null;
         conversationId: string;
         direction: string;
         type: string;
         content: string | null;
         mediaUrl: string | null;
+        templateData: import("@prisma/client/runtime/library").JsonValue | null;
         timestamp: Date;
     }>;
     deleteMessage(shopId: string, messageId: string): Promise<{

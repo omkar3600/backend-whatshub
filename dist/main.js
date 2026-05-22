@@ -45,7 +45,9 @@ const fs = __importStar(require("fs"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 async function bootstrap() {
     const logger = new common_1.Logger('Bootstrap');
-    const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    const app = await core_1.NestFactory.create(app_module_1.AppModule, {
+        rawBody: true,
+    });
     app.use((0, cookie_parser_1.default)());
     const uploadsDir = path.join(process.cwd(), 'uploads');
     if (!fs.existsSync(uploadsDir))

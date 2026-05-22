@@ -8,11 +8,13 @@ export declare class MessagesController {
         updatedAt: Date;
         status: string;
         shopId: string;
+        phoneNumberId: string | null;
         conversationId: string;
         direction: string;
         type: string;
         content: string | null;
         mediaUrl: string | null;
+        templateData: import("@prisma/client/runtime/library").JsonValue | null;
         timestamp: Date;
     }[]>;
     sendMessage(user: any, conversationId: string, body: any): Promise<{
@@ -21,11 +23,13 @@ export declare class MessagesController {
         updatedAt: Date;
         status: string;
         shopId: string;
+        phoneNumberId: string | null;
         conversationId: string;
         direction: string;
         type: string;
         content: string | null;
         mediaUrl: string | null;
+        templateData: import("@prisma/client/runtime/library").JsonValue | null;
         timestamp: Date;
     }>;
     clearConversationMessages(user: any, conversationId: string): Promise<{

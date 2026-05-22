@@ -1,40 +1,50 @@
-import { Controller, Get, Post, Body, Query, Res, HttpStatus, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Query, Body, HttpCode, HttpStatus, Logger, Req, UseGuards } from '@nestjs/common';
 import { WhatsappService } from '../whatsapp.service';
-import type { Response } from 'express';
+import { SkipThrottle } from '@nestjs/throttler';
+import { WebhookSignatureGuard } from '../../common/guards/webhook-signature.guard';
 
+@SkipThrottle()
 @Controller('webhooks/whatsapp')
 export class WebhooksController {
     private readonly logger = new Logger(WebhooksController.name);
+
     constructor(private readonly whatsappService: WhatsappService) { }
 
+    /**
+     * Meta webhook verification endpoint.
+     * Called by Meta when setting up the webhook URL.
+     */
     @Get()
-    async verifyWebhook(
+    verifyWebhook(
         @Query('hub.mode') mode: string,
         @Query('hub.verify_token') token: string,
         @Query('hub.challenge') challenge: string,
-        @Query('shopId') shopId: string, // Unique per-shop verification
-        @Res() res: Response,
     ) {
-        this.logger.log(`Webhook Verification — mode: ${mode}, shopId: ${shopId}`);
-
-        const verifiedChallenge = await this.whatsappService.verifyWebhook(mode, token, challenge, shopId);
-        if (verifiedChallenge) {
-            this.logger.log('Verification Success.');
-            return res.status(HttpStatus.OK).end(verifiedChallenge);
-        }
-        this.logger.warn('Verification Failed. Token mismatch or invalid mode.');
-        return res.status(HttpStatus.FORBIDDEN).end();
+        this.logger.log('Webhook verification request received');
+        return this.whatsappService.verifyWebhook(mode, token, challenge);
     }
 
+    /**
+     * Main webhook event handler.
+     * Receives events from ALL tenants via a single endpoint.
+     * Always responds 200 OK immediately (Meta requirement).
+     * Signature verification via WebhookSignatureGuard.
+     */
     @Post()
-    async handleIncomingEvent(@Body() body: any, @Res() res: Response) {
-        // Ack immediately to prevent Meta from retrying
-        res.status(HttpStatus.OK).send('EVENT_RECEIVED');
+    @HttpCode(HttpStatus.OK)
+    @UseGuards(WebhookSignatureGuard)
+    async handleWebhook(
+        @Body() body: any,
+        @Req() req: any,
+    ) {
+        this.logger.log('Webhook event received');
+        this.logger.debug(`Webhook body: ${JSON.stringify(body)}`);
 
-        try {
-            await this.whatsappService.processWebhookEvent(body);
-        } catch (error) {
-            this.logger.error('Error processing webhook event:', error.message);
-        }
+        // Process asynchronously — don't block the response to Meta
+        this.whatsappService.processWebhookEvent(body).catch(error => {
+            this.logger.error(`Error processing webhook: ${error.message}`);
+        });
+
+        return { status: 'ok' };
     }
 }

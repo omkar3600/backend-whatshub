@@ -1,8 +1,10 @@
-import { Module } from '@nestjs/common';
+ï»¿import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
+import { CommonModule } from './common/common.module';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { AdminModule } from './admin/admin.module';
@@ -18,6 +20,7 @@ import { TemplatesModule } from './templates/templates.module';
 import { MediaModule } from './media/media.module';
 import { UsersModule } from './users/users.module';
 import { ChatbotModule } from './chatbot/chatbot.module';
+import { EmbeddedSignupModule } from './embedded-signup/embedded-signup.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { FlowsModule } from './flows/flows.module';
@@ -25,12 +28,14 @@ import { FlowsModule } from './flows/flows.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     // Rate limiting: 60 requests per 60 seconds per IP
     ThrottlerModule.forRoot([{
       ttl: 60000,
-      limit: 120, // Increased from 60 to 120 to prevent 429s on initial load
+      limit: 120,
     }]),
     PrismaModule,
+    CommonModule,
     BullModule.forRoot({
       connection: {
         host: process.env.REDIS_HOST || 'localhost',
@@ -38,7 +43,6 @@ import { FlowsModule } from './flows/flows.module';
         username: process.env.REDIS_USERNAME || 'default',
         password: process.env.REDIS_PASSWORD || '',
         tls: process.env.REDIS_TLS === 'true' ? {} : undefined,
-        // Fail fast if Redis is unreachable — prevents HTTP requests from hanging forever
         connectTimeout: 5000,
       },
     }),
@@ -56,12 +60,12 @@ import { FlowsModule } from './flows/flows.module';
     MediaModule,
     UsersModule,
     ChatbotModule,
+    EmbeddedSignupModule,
     FlowsModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    // Apply rate limiting globally
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

@@ -1,32 +1,46 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
+import { CryptoService } from '../common/services/crypto.service';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class TemplatesService {
     private readonly logger = new Logger(TemplatesService.name);
+    private readonly graphApiBase = `https://graph.facebook.com/${process.env.META_API_VERSION || 'v18.0'}`;
+
     constructor(
         private prisma: PrismaService,
         private httpService: HttpService,
+        private cryptoService: CryptoService,
     ) { }
+
+    private async getCredentials(shopId: string) {
+        const account = await this.prisma.whatsAppBusinessAccount.findFirst({
+            where: { shopId, status: 'active' },
+        });
+
+        if (!account) {
+            throw new BadRequestException('WhatsApp credentials not found. Please configure them in Settings or connect via Embedded Signup.');
+        }
+
+        return {
+            accessToken: this.cryptoService.decrypt(account.accessToken),
+            businessAccountId: account.wabaId || account.businessAccountId,
+        };
+    }
 
     async createTemplate(shopId: string, data: any) {
         const { templateName, category, language, components } = data;
-        const creds = await this.prisma.whatsAppCredential.findUnique({ where: { shopId } });
-
-        if (!creds) {
-            throw new BadRequestException('WhatsApp credentials not found. Please configure them in Settings.');
-        }
+        const creds = await this.getCredentials(shopId);
 
         this.logger.log(`Submitting template "${templateName}" to Meta for shop ${shopId}`);
 
-        const url = `https://graph.facebook.com/v18.0/${creds.businessAccountId}/message_templates`;
+        const url = `${this.graphApiBase}/${creds.businessAccountId}/message_templates`;
 
         try {
             const metaPayload = { name: templateName, category, language, components };
             this.logger.log(`[Template] Sending to Meta: ${JSON.stringify(metaPayload)}`);
-            // 1. Submit to Meta
             const metaResponse = await firstValueFrom(
                 this.httpService.post(url, metaPayload, {
                     headers: {
@@ -38,7 +52,6 @@ export class TemplatesService {
 
             this.logger.log(`Meta response for "${templateName}":`, metaResponse.data);
 
-            // 2. Save locally
             return await this.prisma.template.create({
                 data: {
                     shopId,
@@ -58,10 +71,9 @@ export class TemplatesService {
     }
 
     async syncTemplates(shopId: string) {
-        const creds = await this.prisma.whatsAppCredential.findUnique({ where: { shopId } });
-        if (!creds) throw new BadRequestException('WhatsApp credentials not found');
+        const creds = await this.getCredentials(shopId);
 
-        const url = `https://graph.facebook.com/v18.0/${creds.businessAccountId}/message_templates`;
+        const url = `${this.graphApiBase}/${creds.businessAccountId}/message_templates`;
 
         try {
             const response = await firstValueFrom(
@@ -70,12 +82,11 @@ export class TemplatesService {
                 })
             );
 
-            const metaTemplates = response.data.data; // Meta returns { data: [...] }
+            const metaTemplates = response.data.data;
             let updated = 0;
             let imported = 0;
 
             for (const mt of metaTemplates) {
-                // Check if template exists locally
                 const existing = await this.prisma.template.findFirst({
                     where: {
                         shopId,
@@ -91,7 +102,6 @@ export class TemplatesService {
                     });
                     updated++;
                 } else {
-                    // Import missing template
                     await this.prisma.template.create({
                         data: {
                             shopId,
@@ -115,8 +125,6 @@ export class TemplatesService {
     }
 
     async getTemplates(shopId: string) {
-        // Return cached templates immediately (no Meta API call on every load)
-        // Use the explicit /sync endpoint or the webhook for status updates
         return this.prisma.template.findMany({
             where: { shopId },
             orderBy: { createdAt: 'desc' },
@@ -124,7 +132,6 @@ export class TemplatesService {
     }
 
     async deleteTemplate(shopId: string, id: string) {
-        // 1. Get template details
         const template = await this.prisma.template.findFirst({
             where: { id, shopId }
         });
@@ -133,27 +140,23 @@ export class TemplatesService {
             throw new NotFoundException('Template not found');
         }
 
-        // 3. Delete from Meta
-        const creds = await this.prisma.whatsAppCredential.findUnique({ where: { shopId } });
-        if (creds) {
-            // Meta DELETE endpoint: /v18.0/{waba_id}/message_templates?name={template_name}
-            const url = `https://graph.facebook.com/v18.0/${creds.businessAccountId}/message_templates`;
-            try {
-                await firstValueFrom(
-                    this.httpService.delete(url, {
-                        params: { name: template.templateName },
-                        headers: { Authorization: `Bearer ${creds.accessToken}` }
-                    })
-                );
-                this.logger.log(`Deleted template "${template.templateName}" from Meta for shop ${shopId}`);
-            } catch (error) {
-                const errorMsg = error.response?.data?.error?.message || error.message;
-                this.logger.warn(`Failed to delete template "${template.templateName}" from Meta: ${errorMsg}`);
-                // Note: We proceed with local deletion even if Meta fails (e.g. if it was already deleted there)
-            }
+        // Delete from Meta
+        try {
+            const creds = await this.getCredentials(shopId);
+            const url = `${this.graphApiBase}/${creds.businessAccountId}/message_templates`;
+            await firstValueFrom(
+                this.httpService.delete(url, {
+                    params: { name: template.templateName },
+                    headers: { Authorization: `Bearer ${creds.accessToken}` }
+                })
+            );
+            this.logger.log(`Deleted template "${template.templateName}" from Meta for shop ${shopId}`);
+        } catch (error) {
+            const errorMsg = error.response?.data?.error?.message || error.message;
+            this.logger.warn(`Failed to delete template "${template.templateName}" from Meta: ${errorMsg}`);
         }
 
-        // 4. Delete locally (explicitly delete campaigns first to ensure no FK constraint error)
+        // Delete locally
         try {
             const deletedCampaigns = await this.prisma.campaign.deleteMany({ where: { templateId: id } });
             if (deletedCampaigns.count > 0) {

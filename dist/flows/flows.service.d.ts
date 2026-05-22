@@ -11,13 +11,13 @@ export declare class FlowsService {
         name: string;
         status: string;
         shopId: string;
+        isDefault: boolean;
         description: string | null;
         category: string;
         nodeCount: number;
         nodes: import("@prisma/client/runtime/library").JsonValue | null;
         edges: import("@prisma/client/runtime/library").JsonValue | null;
         triggerKeyword: string | null;
-        isDefault: boolean;
     }>;
     getFlows(shopId: string): Promise<{
         id: string;
@@ -26,13 +26,13 @@ export declare class FlowsService {
         name: string;
         status: string;
         shopId: string;
+        isDefault: boolean;
         description: string | null;
         category: string;
         nodeCount: number;
         nodes: import("@prisma/client/runtime/library").JsonValue | null;
         edges: import("@prisma/client/runtime/library").JsonValue | null;
         triggerKeyword: string | null;
-        isDefault: boolean;
     }[]>;
     getFlow(shopId: string, id: string): Promise<{
         id: string;
@@ -41,13 +41,13 @@ export declare class FlowsService {
         name: string;
         status: string;
         shopId: string;
+        isDefault: boolean;
         description: string | null;
         category: string;
         nodeCount: number;
         nodes: import("@prisma/client/runtime/library").JsonValue | null;
         edges: import("@prisma/client/runtime/library").JsonValue | null;
         triggerKeyword: string | null;
-        isDefault: boolean;
     }>;
     updateFlow(shopId: string, id: string, data: any): Promise<{
         id: string;
@@ -56,13 +56,13 @@ export declare class FlowsService {
         name: string;
         status: string;
         shopId: string;
+        isDefault: boolean;
         description: string | null;
         category: string;
         nodeCount: number;
         nodes: import("@prisma/client/runtime/library").JsonValue | null;
         edges: import("@prisma/client/runtime/library").JsonValue | null;
         triggerKeyword: string | null;
-        isDefault: boolean;
     }>;
     getFlowVersions(shopId: string, flowId: string): Promise<{
         id: string;
@@ -89,13 +89,13 @@ export declare class FlowsService {
         name: string;
         status: string;
         shopId: string;
+        isDefault: boolean;
         description: string | null;
         category: string;
         nodeCount: number;
         nodes: import("@prisma/client/runtime/library").JsonValue | null;
         edges: import("@prisma/client/runtime/library").JsonValue | null;
         triggerKeyword: string | null;
-        isDefault: boolean;
     }>;
     getFlowAnalytics(shopId: string, flowId: string): Promise<{}>;
     simulateFlow(id: string, data: any): Promise<import("./flow-engine.service").SimulationResult>;

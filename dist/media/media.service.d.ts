@@ -1,25 +1,35 @@
 import { PrismaService } from '../prisma/prisma.service';
-import { HttpService } from '@nestjs/axios';
 export declare class MediaService {
     private prisma;
-    private httpService;
     private readonly logger;
-    private supabaseUrl;
-    private supabaseKey;
+    private s3;
     private bucketName;
-    constructor(prisma: PrismaService, httpService: HttpService);
+    private publicUrl;
+    constructor(prisma: PrismaService);
     uploadFile(shopId: string, file: Express.Multer.File): Promise<{
         id: string;
         fileUrl: string;
         fileType: string;
         fileSize: number;
+        fileName: string | null;
     }>;
     getMediaFiles(shopId: string): Promise<{
         id: string;
         createdAt: Date;
         shopId: string;
+        fileName: string | null;
         fileUrl: string;
         fileType: string;
         fileSize: number;
     }[]>;
+    deleteMediaFile(shopId: string, id: string): Promise<{
+        id: string;
+        createdAt: Date;
+        shopId: string;
+        fileName: string | null;
+        fileUrl: string;
+        fileType: string;
+        fileSize: number;
+    }>;
+    deleteAllMediaFiles(shopId: string): Promise<import("@prisma/client").Prisma.BatchPayload>;
 }

@@ -1,8 +1,10 @@
 import { PrismaService } from '../prisma/prisma.service';
+import { CryptoService } from '../common/services/crypto.service';
 export declare class ShopsService {
     private prisma;
+    private cryptoService;
     private readonly logger;
-    constructor(prisma: PrismaService);
+    constructor(prisma: PrismaService, cryptoService: CryptoService);
     getShopOverview(shopId: string): Promise<{
         shop: {
             subscription: {
@@ -14,16 +16,36 @@ export declare class ShopsService {
                 startDate: Date;
                 shopId: string;
             } | null;
-            whatsappCreds: {
+            whatsappAccounts: ({
+                phoneNumbers: {
+                    id: string;
+                    createdAt: Date;
+                    updatedAt: Date;
+                    status: string;
+                    shopId: string;
+                    wabaAccountId: string;
+                    phoneNumberId: string;
+                    displayPhoneNumber: string | null;
+                    verifiedName: string | null;
+                    qualityRating: string | null;
+                    messagingLimit: string | null;
+                    isDefault: boolean;
+                }[];
+            } & {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
+                status: string;
                 shopId: string;
                 businessAccountId: string;
-                phoneNumberId: string;
+                wabaId: string | null;
+                businessName: string | null;
                 accessToken: string;
+                tokenType: string;
+                tokenExpiry: Date | null;
                 webhookVerifyToken: string | null;
-            } | null;
+                onboardingSource: string;
+            })[];
         } & {
             shopName: string;
             phone: string;
@@ -50,22 +72,43 @@ export declare class ShopsService {
     }>;
     getWhatsAppCredentials(shopId: string): Promise<{
         id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        shopId: string;
         businessAccountId: string;
+        wabaId: string | null;
+        businessName: string | null;
         phoneNumberId: string;
-        accessToken: string;
-        webhookVerifyToken: string | null;
+        status: string;
+        tokenType: string;
+        tokenExpiry: Date | null;
+        onboardingSource: string;
+        phoneNumbers: {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            status: string;
+            shopId: string;
+            wabaAccountId: string;
+            phoneNumberId: string;
+            displayPhoneNumber: string | null;
+            verifiedName: string | null;
+            qualityRating: string | null;
+            messagingLimit: string | null;
+            isDefault: boolean;
+        }[];
     } | null>;
     updateWhatsAppCredentials(shopId: string, data: any): Promise<{
         id: string;
         createdAt: Date;
         updatedAt: Date;
+        status: string;
         shopId: string;
         businessAccountId: string;
-        phoneNumberId: string;
+        wabaId: string | null;
+        businessName: string | null;
         accessToken: string;
+        tokenType: string;
+        tokenExpiry: Date | null;
         webhookVerifyToken: string | null;
+        onboardingSource: string;
     }>;
+    private getExistingAccountId;
 }

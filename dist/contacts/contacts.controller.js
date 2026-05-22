@@ -14,11 +14,13 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ContactsController = void 0;
 const common_1 = require("@nestjs/common");
+const platform_express_1 = require("@nestjs/platform-express");
 const contacts_service_1 = require("./contacts.service");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
 const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 const get_user_decorator_1 = require("../auth/decorators/get-user.decorator");
+const multer_1 = require("multer");
 let ContactsController = class ContactsController {
     contactsService;
     constructor(contactsService) {
@@ -26,6 +28,11 @@ let ContactsController = class ContactsController {
     }
     async createContact(user, body) {
         return this.contactsService.createContact(user.shopId, body);
+    }
+    async importContacts(user, file) {
+        if (!file)
+            throw new common_1.BadRequestException('No file uploaded');
+        return this.contactsService.importFromExcel(user.shopId, file);
     }
     async getContacts(user, query) {
         return this.contactsService.getContacts(user.shopId, query);
@@ -49,6 +56,18 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], ContactsController.prototype, "createContact", null);
+__decorate([
+    (0, common_1.Post)('import'),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', {
+        storage: (0, multer_1.memoryStorage)(),
+        limits: { fileSize: 10 * 1024 * 1024 },
+    })),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.UploadedFile)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], ContactsController.prototype, "importContacts", null);
 __decorate([
     (0, common_1.Get)(),
     __param(0, (0, get_user_decorator_1.GetUser)()),

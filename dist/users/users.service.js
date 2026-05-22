@@ -57,7 +57,6 @@ let UsersService = class UsersService {
             select: {
                 id: true,
                 username: true,
-                email: true,
                 role: true,
                 createdAt: true,
             },
@@ -67,7 +66,7 @@ let UsersService = class UsersService {
         return user;
     }
     async updateProfile(userId, data) {
-        const { username, email } = data;
+        const { username } = data;
         if (username) {
             const existing = await this.prisma.user.findFirst({
                 where: { username, NOT: { id: userId } },
@@ -77,11 +76,10 @@ let UsersService = class UsersService {
         }
         return this.prisma.user.update({
             where: { id: userId },
-            data: { username, email },
+            data: { username },
             select: {
                 id: true,
                 username: true,
-                email: true,
                 role: true,
             },
         });

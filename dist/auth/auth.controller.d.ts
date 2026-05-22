@@ -15,7 +15,6 @@ export declare class AuthController {
         user: {
             id: string;
             username: string;
-            email: string | null;
             role: string;
             shopId: string | undefined;
         };

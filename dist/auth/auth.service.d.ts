@@ -17,7 +17,6 @@ export declare class AuthService {
         user: {
             id: string;
             username: string;
-            email: string | null;
             role: string;
             shopId: string | undefined;
         };

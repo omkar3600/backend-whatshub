@@ -17,6 +17,7 @@ exports.WhatsappService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const axios_1 = require("@nestjs/axios");
+const crypto_service_1 = require("../common/services/crypto.service");
 const rxjs_1 = require("rxjs");
 const chat_gateway_1 = require("../chat/chat.gateway");
 const chatbot_service_1 = require("../chatbot/chatbot.service");
@@ -24,29 +25,98 @@ const flow_engine_service_1 = require("../flows/flow-engine.service");
 let WhatsappService = WhatsappService_1 = class WhatsappService {
     prisma;
     httpService;
+    cryptoService;
     chatGateway;
     chatbotService;
     flowEngineService;
     logger = new common_1.Logger(WhatsappService_1.name);
-    constructor(prisma, httpService, chatGateway, chatbotService, flowEngineService) {
+    graphApiBase = `https://graph.facebook.com/${process.env.META_API_VERSION || 'v18.0'}`;
+    constructor(prisma, httpService, cryptoService, chatGateway, chatbotService, flowEngineService) {
         this.prisma = prisma;
         this.httpService = httpService;
+        this.cryptoService = cryptoService;
         this.chatGateway = chatGateway;
         this.chatbotService = chatbotService;
         this.flowEngineService = flowEngineService;
     }
-    async verifyWebhook(mode, token, challenge, shopId) {
+    async getCredentials(shopId) {
+        const account = await this.prisma.whatsAppBusinessAccount.findFirst({
+            where: { shopId, status: 'active' },
+            include: {
+                phoneNumbers: {
+                    where: { status: 'active', isDefault: true },
+                    take: 1,
+                },
+            },
+        });
+        if (account) {
+            const defaultPhone = account.phoneNumbers[0];
+            if (!defaultPhone) {
+                const anyPhone = await this.prisma.whatsAppPhoneNumber.findFirst({
+                    where: { wabaAccountId: account.id, status: 'active' },
+                });
+                if (!anyPhone) {
+                    throw new Error(`No active phone numbers found for shop ${shopId}`);
+                }
+                return {
+                    shopId,
+                    phoneNumberId: anyPhone.phoneNumberId,
+                    accessToken: this.cryptoService.decrypt(account.accessToken),
+                    businessAccountId: account.businessAccountId,
+                    wabaId: account.wabaId || account.businessAccountId,
+                };
+            }
+            return {
+                shopId,
+                phoneNumberId: defaultPhone.phoneNumberId,
+                accessToken: this.cryptoService.decrypt(account.accessToken),
+                businessAccountId: account.businessAccountId,
+                wabaId: account.wabaId || account.businessAccountId,
+            };
+        }
+        throw new Error(`WhatsApp credentials not found for shop ${shopId}`);
+    }
+    async getCredentialsByPhoneNumberId(phoneNumberId) {
+        const phone = await this.prisma.whatsAppPhoneNumber.findUnique({
+            where: { phoneNumberId },
+            include: { wabaAccount: true },
+        });
+        if (!phone || phone.status !== 'active' || phone.wabaAccount.status !== 'active') {
+            return null;
+        }
+        return {
+            shopId: phone.shopId,
+            phoneNumberId: phone.phoneNumberId,
+            accessToken: this.cryptoService.decrypt(phone.wabaAccount.accessToken),
+            businessAccountId: phone.wabaAccount.businessAccountId,
+            wabaId: phone.wabaAccount.wabaId || phone.wabaAccount.businessAccountId,
+        };
+    }
+    async getShopByWabaId(wabaId) {
+        const account = await this.prisma.whatsAppBusinessAccount.findFirst({
+            where: {
+                OR: [
+                    { businessAccountId: wabaId },
+                    { wabaId: wabaId },
+                ],
+                status: 'active',
+            },
+        });
+        return account?.shopId || null;
+    }
+    async verifyWebhook(mode, token, challenge) {
         if (mode !== 'subscribe')
             return null;
-        if (shopId) {
-            const creds = await this.prisma.whatsAppCredential.findUnique({ where: { shopId } });
-            if (creds?.webhookVerifyToken && token === creds.webhookVerifyToken) {
-                return challenge;
-            }
-        }
         const WEBHOOK_VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN;
         if (WEBHOOK_VERIFY_TOKEN && token === WEBHOOK_VERIFY_TOKEN) {
             this.logger.log('Webhook verified successfully.');
+            return challenge;
+        }
+        const account = await this.prisma.whatsAppBusinessAccount.findFirst({
+            where: { webhookVerifyToken: token },
+        });
+        if (account) {
+            this.logger.log(`Webhook verified for shop ${account.shopId}`);
             return challenge;
         }
         return null;
@@ -55,23 +125,41 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
         if (body.object === 'whatsapp_business_account') {
             for (const entry of body.entry) {
                 const wabaId = entry.id;
-                const shopCreds = await this.prisma.whatsAppCredential.findFirst({
-                    where: { businessAccountId: wabaId },
-                });
-                if (!shopCreds) {
+                const shopId = await this.getShopByWabaId(wabaId);
+                if (!shopId) {
                     this.logger.warn(`Received webhook for unknown WABA ID: ${wabaId}`);
+                    await this.logWebhookAudit(null, null, 'unknown_waba', null, body, 'failed', `Unknown WABA ID: ${wabaId}`);
                     continue;
                 }
-                const changes = entry.changes[0];
-                const value = changes.value;
-                if (value.messages) {
-                    await this.handleIncomingMessage(shopCreds.shopId, value.contacts[0], value.messages[0]);
-                }
-                if (value.statuses) {
-                    await this.handleMessageStatus(shopCreds.shopId, value.statuses[0]);
-                }
-                if (changes.field === 'message_template_status_update') {
-                    await this.handleTemplateStatusUpdate(shopCreds.shopId, value);
+                for (const change of entry.changes || []) {
+                    const value = change.value;
+                    const phoneNumberId = value?.metadata?.phone_number_id;
+                    try {
+                        if (value.messages) {
+                            await this.handleIncomingMessage(shopId, phoneNumberId, value.contacts[0], value.messages[0]);
+                            await this.logWebhookAudit(shopId, phoneNumberId, 'message', value.messages[0]?.id, value, 'processed');
+                        }
+                        if (value.statuses) {
+                            await this.handleMessageStatus(shopId, value.statuses[0]);
+                            await this.logWebhookAudit(shopId, phoneNumberId, 'status', value.statuses[0]?.id, value, 'processed');
+                        }
+                        if (change.field === 'message_template_status_update') {
+                            await this.handleTemplateStatusUpdate(shopId, value);
+                            await this.logWebhookAudit(shopId, phoneNumberId, 'template_status', null, value, 'processed');
+                        }
+                    }
+                    catch (error) {
+                        this.logger.error(`Error processing webhook for shop ${shopId}: ${error.message}`);
+                        await this.logWebhookAudit(shopId, phoneNumberId, 'error', null, value, 'failed', error.message);
+                        await this.prisma.deadLetterEvent.create({
+                            data: {
+                                sourceType: 'webhook',
+                                originalPayload: value,
+                                errorMessage: error.message,
+                                status: 'pending',
+                            },
+                        });
+                    }
                 }
             }
         }
@@ -95,7 +183,7 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
             data: { status }
         });
     }
-    async handleIncomingMessage(shopId, contactData, messageData) {
+    async handleIncomingMessage(shopId, phoneNumberId, contactData, messageData) {
         const contact = await this.prisma.contact.upsert({
             where: {
                 shopId_phone: { shopId, phone: contactData.wa_id },
@@ -116,10 +204,12 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
             update: {
                 lastMessageAt: new Date(),
                 unreadCount: { increment: 1 },
+                phoneNumberId: phoneNumberId || undefined,
             },
             create: {
                 shopId,
                 contactId: contact.id,
+                phoneNumberId: phoneNumberId || undefined,
                 lastMessageAt: new Date(),
                 unreadCount: 1,
             },
@@ -135,34 +225,32 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
             content = mediaObj?.caption || mediaObj?.filename || '';
             if (mediaObj?.id) {
                 try {
-                    const creds = await this.prisma.whatsAppCredential.findUnique({ where: { shopId } });
-                    if (creds) {
-                        const metaResp = await (0, rxjs_1.firstValueFrom)(this.httpService.get(`https://graph.facebook.com/v18.0/${mediaObj.id}`, { headers: { Authorization: `Bearer ${creds.accessToken}` } }));
-                        const mediaDlUrl = metaResp.data.url;
-                        const fileResp = await (0, rxjs_1.firstValueFrom)(this.httpService.get(mediaDlUrl, {
-                            headers: { Authorization: `Bearer ${creds.accessToken}` },
-                            responseType: 'arraybuffer',
-                        }));
-                        const dbUrlMatch = (process.env.DATABASE_URL || '').match(/postgres\.([a-z]+):/);
-                        const projectRef = process.env.SUPABASE_PROJECT_REF || (dbUrlMatch ? dbUrlMatch[1] : '');
-                        const supabaseUrl = process.env.SUPABASE_URL || `https://${projectRef}.supabase.co`;
-                        const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '';
-                        const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'media';
-                        const ext = mediaObj.mime_type ? '.' + mediaObj.mime_type.split('/')[1].split(';')[0] : '';
-                        const fileName = `incoming/${shopId}/${mediaObj.id}${ext}`;
-                        const mimeType = mediaObj.mime_type || 'application/octet-stream';
-                        await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${supabaseUrl}/storage/v1/object/${bucket}/${fileName}`, Buffer.from(fileResp.data), {
-                            headers: {
-                                Authorization: `Bearer ${supabaseKey}`,
-                                apikey: supabaseKey,
-                                'Content-Type': mimeType,
-                                'x-upsert': 'true',
-                            },
-                            maxBodyLength: 50 * 1024 * 1024,
-                            maxContentLength: 50 * 1024 * 1024,
-                        }));
-                        mediaUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${fileName}`;
-                    }
+                    const creds = await this.getCredentials(shopId);
+                    const metaResp = await (0, rxjs_1.firstValueFrom)(this.httpService.get(`${this.graphApiBase}/${mediaObj.id}`, { headers: { Authorization: `Bearer ${creds.accessToken}` } }));
+                    const mediaDlUrl = metaResp.data.url;
+                    const fileResp = await (0, rxjs_1.firstValueFrom)(this.httpService.get(mediaDlUrl, {
+                        headers: { Authorization: `Bearer ${creds.accessToken}` },
+                        responseType: 'arraybuffer',
+                    }));
+                    const dbUrlMatch = (process.env.DATABASE_URL || '').match(/postgres\.([a-z]+):/);
+                    const projectRef = process.env.SUPABASE_PROJECT_REF || (dbUrlMatch ? dbUrlMatch[1] : '');
+                    const supabaseUrl = process.env.SUPABASE_URL || `https://${projectRef}.supabase.co`;
+                    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '';
+                    const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'media';
+                    const ext = mediaObj.mime_type ? '.' + mediaObj.mime_type.split('/')[1].split(';')[0] : '';
+                    const fileName = `incoming/${shopId}/${mediaObj.id}${ext}`;
+                    const mimeType = mediaObj.mime_type || 'application/octet-stream';
+                    await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${supabaseUrl}/storage/v1/object/${bucket}/${fileName}`, Buffer.from(fileResp.data), {
+                        headers: {
+                            Authorization: `Bearer ${supabaseKey}`,
+                            apikey: supabaseKey,
+                            'Content-Type': mimeType,
+                            'x-upsert': 'true',
+                        },
+                        maxBodyLength: 50 * 1024 * 1024,
+                        maxContentLength: 50 * 1024 * 1024,
+                    }));
+                    mediaUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${fileName}`;
                 }
                 catch (mediaErr) {
                     this.logger.error(`[Media] Failed to download media ${mediaObj?.id}: ${mediaErr?.message}`);
@@ -194,6 +282,7 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
                 id: messageData.id,
                 shopId,
                 conversationId: conversation.id,
+                phoneNumberId: phoneNumberId || undefined,
                 direction: 'inbound',
                 type: msgType,
                 content,
@@ -230,6 +319,7 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
                             data: {
                                 shopId,
                                 conversationId: conversation.id,
+                                phoneNumberId: phoneNumberId || undefined,
                                 direction: 'outbound',
                                 type: 'text',
                                 content: auto.replyText,
@@ -278,6 +368,7 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
                         data: {
                             shopId,
                             conversationId: conversation.id,
+                            phoneNumberId: phoneNumberId || undefined,
                             direction: 'outbound',
                             type: 'text',
                             content: aiReply.text,
@@ -303,20 +394,41 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
         }
     }
     async handleMessageStatus(shopId, statusData) {
+        const { id: messageId, status, recipient_id: recipientPhone } = statusData;
         try {
             await this.prisma.message.update({
-                where: { id: statusData.id },
-                data: { status: statusData.status },
+                where: { id: messageId },
+                data: { status },
             });
         }
         catch (e) {
-            this.logger.warn(`Status update failed for message ${statusData.id}. It might not exist.`);
+            this.logger.warn(`Status update failed for message ${messageId}. It might not exist.`);
+        }
+        if (['delivered', 'read', 'sent'].includes(status)) {
+            try {
+                const statusRank = { pending: 0, sent: 1, delivered: 2, read: 3, clicked: 4 };
+                const incomingRank = statusRank[status] ?? 0;
+                const existing = await this.prisma.campaignContact.findFirst({
+                    where: { wamid: messageId },
+                });
+                if (existing) {
+                    const existingRank = statusRank[existing.status] ?? 0;
+                    if (incomingRank > existingRank) {
+                        await this.prisma.campaignContact.update({
+                            where: { id: existing.id },
+                            data: { status },
+                        });
+                        this.logger.log(`[Campaign] Updated CampaignContact wamid:${messageId} → ${status}`);
+                    }
+                }
+            }
+            catch (e) {
+                this.logger.warn(`Failed to update CampaignContact for wamid ${messageId}: ${e}`);
+            }
         }
     }
     async sendOutboundMessage(shopId, toPhone, type, content, mediaUrl) {
-        const creds = await this.prisma.whatsAppCredential.findUnique({ where: { shopId } });
-        if (!creds)
-            throw new Error('WhatsApp credentials not found for this shop');
+        const creds = await this.getCredentials(shopId);
         const payload = {
             messaging_product: 'whatsapp',
             recipient_type: 'individual',
@@ -361,15 +473,17 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
             }
         }
         else if (type === 'template') {
+            const templateName = typeof content === 'string' ? content : content.name;
+            const templateLanguage = (typeof content !== 'string' && content.language) ? content.language : 'en_US';
             payload.template = {
-                name: typeof content === 'string' ? content : content.name,
-                language: { code: 'en_US' }
+                name: templateName,
+                language: { code: templateLanguage }
             };
             if (typeof content !== 'string' && content.components) {
                 payload.template.components = content.components;
             }
         }
-        const url = `https://graph.facebook.com/v18.0/${creds.phoneNumberId}/messages`;
+        const url = `${this.graphApiBase}/${creds.phoneNumberId}/messages`;
         try {
             const response = await (0, rxjs_1.firstValueFrom)(this.httpService.post(url, payload, {
                 headers: {
@@ -386,13 +500,32 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
             throw error;
         }
     }
+    async logWebhookAudit(shopId, phoneNumberId, eventType, waMessageId, payload, processingStatus, errorMessage) {
+        try {
+            await this.prisma.webhookAuditLog.create({
+                data: {
+                    shopId,
+                    phoneNumberId,
+                    eventType,
+                    waMessageId,
+                    payload,
+                    processingStatus,
+                    errorMessage,
+                },
+            });
+        }
+        catch (e) {
+            this.logger.error(`Failed to log webhook audit: ${e.message}`);
+        }
+    }
 };
 exports.WhatsappService = WhatsappService;
 exports.WhatsappService = WhatsappService = WhatsappService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __param(4, (0, common_1.Inject)((0, common_1.forwardRef)(() => flow_engine_service_1.FlowEngineService))),
+    __param(5, (0, common_1.Inject)((0, common_1.forwardRef)(() => flow_engine_service_1.FlowEngineService))),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         axios_1.HttpService,
+        crypto_service_1.CryptoService,
         chat_gateway_1.ChatGateway,
         chatbot_service_1.ChatbotService,
         flow_engine_service_1.FlowEngineService])

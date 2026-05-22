@@ -53,6 +53,27 @@ let AdminController = class AdminController {
     async rejectRequest(id) {
         return this.adminService.rejectRegistrationRequest(id);
     }
+    async getTenantConnections() {
+        return this.adminService.getTenantConnections();
+    }
+    async getWebhookFailures(shopId) {
+        return this.adminService.getWebhookFailures(shopId);
+    }
+    async getDeadLetterEvents(status) {
+        return this.adminService.getDeadLetterEvents(status);
+    }
+    async getTokenHealth() {
+        return this.adminService.getTokenHealth();
+    }
+    async suspendShop(shopId) {
+        return this.adminService.suspendShop(shopId);
+    }
+    async getOnboardingStatus(shopId) {
+        return this.adminService.getOnboardingStatus(shopId);
+    }
+    async setWhatsAppCredentials(shopId, body) {
+        return this.adminService.setWhatsAppCredentials(shopId, body);
+    }
 };
 exports.AdminController = AdminController;
 __decorate([
@@ -125,6 +146,54 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "rejectRequest", null);
+__decorate([
+    (0, common_1.Get)('tenant-connections'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getTenantConnections", null);
+__decorate([
+    (0, common_1.Get)('webhook-failures'),
+    __param(0, (0, common_1.Query)('shopId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getWebhookFailures", null);
+__decorate([
+    (0, common_1.Get)('dead-letter-events'),
+    __param(0, (0, common_1.Query)('status')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getDeadLetterEvents", null);
+__decorate([
+    (0, common_1.Get)('token-health'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getTokenHealth", null);
+__decorate([
+    (0, common_1.Post)('shops/:shopId/suspend'),
+    __param(0, (0, common_1.Param)('shopId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "suspendShop", null);
+__decorate([
+    (0, common_1.Get)('shops/:shopId/onboarding-status'),
+    __param(0, (0, common_1.Param)('shopId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getOnboardingStatus", null);
+__decorate([
+    (0, common_1.Post)('shops/:shopId/whatsapp-credentials'),
+    __param(0, (0, common_1.Param)('shopId')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "setWhatsAppCredentials", null);
 exports.AdminController = AdminController = __decorate([
     (0, common_1.Controller)('admin'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),

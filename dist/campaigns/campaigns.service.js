@@ -25,7 +25,24 @@ let CampaignsService = class CampaignsService {
         this.campaignsQueue = campaignsQueue;
     }
     async createCampaign(shopId, data) {
-        const { name, templateId, targetTags, targetPhones, scheduledAt, templateParams, headerMediaUrl } = data;
+        const { name, templateId, targetTags, targetPhones, scheduledAt, templateParams, headerMediaUrl, sendDelay, excludeUnsubscribed, sendNow } = data;
+        let resolvedScheduledAt;
+        let queueDelay;
+        if (sendNow) {
+            resolvedScheduledAt = new Date();
+            queueDelay = 0;
+        }
+        else {
+            if (!scheduledAt) {
+                throw new Error('scheduledAt is required for scheduled campaigns');
+            }
+            resolvedScheduledAt = new Date(scheduledAt);
+            const msUntilSend = resolvedScheduledAt.getTime() - Date.now();
+            if (msUntilSend < 30_000) {
+                throw new Error('Scheduled time must be at least 30 seconds in the future');
+            }
+            queueDelay = msUntilSend;
+        }
         const campaign = await this.prisma.campaign.create({
             data: {
                 shopId,
@@ -35,19 +52,51 @@ let CampaignsService = class CampaignsService {
                 targetPhones: targetPhones || [],
                 templateParams: templateParams || {},
                 headerMediaUrl: headerMediaUrl || null,
-                scheduledAt: new Date(scheduledAt || Date.now()),
+                scheduledAt: resolvedScheduledAt,
                 status: 'scheduled',
+                stats: { sendDelay: sendDelay ?? 300, excludeUnsubscribed: excludeUnsubscribed ?? false },
             },
         });
-        const delay = Math.max(0, new Date(campaign.scheduledAt).getTime() - Date.now());
-        await this.campaignsQueue.add('processCampaign', { campaignId: campaign.id }, { delay });
+        this.campaignsQueue.add('processCampaign', { campaignId: campaign.id }, { delay: queueDelay })
+            .catch((err) => {
+            console.error(`[Campaign] Failed to enqueue campaign ${campaign.id}:`, err?.message || err);
+            this.prisma.campaign.update({
+                where: { id: campaign.id },
+                data: { status: 'failed', failureHistory: [{ reason: 'Queue connection failed: ' + (err?.message || 'Redis unavailable'), timestamp: new Date() }] }
+            }).catch(() => { });
+        });
         return campaign;
     }
     async getCampaigns(shopId) {
-        return this.prisma.campaign.findMany({
+        const campaigns = await this.prisma.campaign.findMany({
             where: { shopId },
-            include: { template: true },
+            include: {
+                template: true,
+                contacts: { select: { status: true } },
+            },
             orderBy: { createdAt: 'desc' },
+        });
+        return campaigns.map(c => {
+            const statusCounts = c.contacts.reduce((acc, contact) => {
+                acc[contact.status] = (acc[contact.status] || 0) + 1;
+                return acc;
+            }, {});
+            const configMeta = c.stats || {};
+            return {
+                ...c,
+                contacts: undefined,
+                stats: {
+                    sendDelay: configMeta.sendDelay,
+                    excludeUnsubscribed: configMeta.excludeUnsubscribed,
+                    total: c.contacts.length,
+                    sent: statusCounts['sent'] || 0,
+                    delivered: statusCounts['delivered'] || 0,
+                    read: statusCounts['read'] || 0,
+                    clicked: statusCounts['clicked'] || 0,
+                    failed: statusCounts['failed'] || 0,
+                    pending: statusCounts['pending'] || 0,
+                },
+            };
         });
     }
     async deleteCampaign(shopId, campaignId) {
@@ -110,12 +159,14 @@ let CampaignsService = class CampaignsService {
         if (!campaign)
             throw new common_1.NotFoundException('Campaign not found');
         const allContacts = campaign.contacts;
+        const readPhones = new Set(allContacts.filter(c => c.status === 'read').map(c => c.phone));
         const byStatus = {
             sent: allContacts.filter(c => c.status === 'sent'),
             delivered: allContacts.filter(c => c.status === 'delivered'),
             read: allContacts.filter(c => c.status === 'read'),
             clicked: allContacts.filter(c => c.status === 'clicked'),
             failed: allContacts.filter(c => c.status === 'failed'),
+            unread: allContacts.filter(c => ['delivered', 'sent'].includes(c.status) && !readPhones.has(c.phone)),
         };
         const stats = {
             total: allContacts.length,
@@ -124,6 +175,7 @@ let CampaignsService = class CampaignsService {
             read: byStatus.read.length,
             clicked: byStatus.clicked.length,
             failed: byStatus.failed.length,
+            unread: byStatus.unread.length,
         };
         return {
             campaign,

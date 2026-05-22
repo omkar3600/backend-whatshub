@@ -32,6 +32,9 @@ let MediaController = class MediaController {
     async getMediaFiles(user) {
         return this.mediaService.getMediaFiles(user.shopId);
     }
+    async deleteMediaFile(user, id) {
+        return this.mediaService.deleteMediaFile(user.shopId, id);
+    }
 };
 exports.MediaController = MediaController;
 __decorate([
@@ -53,6 +56,14 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], MediaController.prototype, "getMediaFiles", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], MediaController.prototype, "deleteMediaFile", null);
 exports.MediaController = MediaController = __decorate([
     (0, common_1.Controller)('media'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),

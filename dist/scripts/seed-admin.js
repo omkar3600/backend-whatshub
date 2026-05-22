@@ -41,13 +41,13 @@ const pool = new pg.Pool({ connectionString: process.env.DIRECT_URL || process.e
 const adapter = new adapter_pg_1.PrismaPg(pool);
 const prisma = new client_1.PrismaClient({ adapter });
 async function main() {
-    const email = process.env.ADMIN_EMAIL;
+    const username = process.env.ADMIN_USERNAME;
     const password = process.env.ADMIN_PASSWORD;
-    if (!email || !password) {
-        throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD must be defined in the environment variables');
+    if (!username || !password) {
+        throw new Error('ADMIN_USERNAME and ADMIN_PASSWORD must be defined in the environment variables');
     }
     const existing = await prisma.user.findUnique({
-        where: { email },
+        where: { username },
     });
     if (existing) {
         console.log('Admin user already exists.');
@@ -57,14 +57,13 @@ async function main() {
     const passwordHash = await bcrypt.hash(password, salt);
     await prisma.user.create({
         data: {
-            username: email.split('@')[0],
-            email,
+            username,
             passwordHash,
             role: 'admin',
         },
     });
     console.log('Admin user created successfully!');
-    console.log('Email:', email);
+    console.log('Username:', username);
     console.log('Password:', password);
 }
 main()

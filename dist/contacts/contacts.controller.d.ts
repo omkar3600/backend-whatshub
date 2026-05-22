@@ -13,6 +13,11 @@ export declare class ContactsController {
         city: string | null;
         notes: string | null;
     }>;
+    importContacts(user: any, file: Express.Multer.File): Promise<{
+        imported: number;
+        skipped: number;
+        errors: string[];
+    }>;
     getContacts(user: any, query: any): Promise<{
         phone: string;
         id: string;

@@ -45,20 +45,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const crypto_service_1 = require("../common/services/crypto.service");
 const bcrypt = __importStar(require("bcryptjs"));
 let AdminService = class AdminService {
     prisma;
-    constructor(prisma) {
+    cryptoService;
+    constructor(prisma, cryptoService) {
         this.prisma = prisma;
+        this.cryptoService = cryptoService;
     }
     async createShop(data) {
-        const { username, email, password, shopName, phone, ownerName, expiryDate } = data;
+        const { username, password, shopName, phone, ownerName, expiryDate } = data;
         const salt = await bcrypt.genSalt();
         const passwordHash = await bcrypt.hash(password, salt);
         const user = await this.prisma.user.create({
             data: {
-                username: username || email.split('@')[0],
-                email,
+                username,
                 passwordHash,
                 role: 'user',
             },
@@ -83,13 +85,16 @@ let AdminService = class AdminService {
     async getShops() {
         return this.prisma.shop.findMany({
             include: {
-                owner: { select: { email: true, id: true, username: true } },
+                owner: { select: { id: true, username: true } },
                 subscription: true,
+                whatsappAccounts: {
+                    include: { phoneNumbers: true },
+                },
             },
         });
     }
     async updateShop(shopId, data) {
-        const { username, email, password, shopName, phone } = data;
+        const { username, password, shopName, phone } = data;
         const shop = await this.prisma.shop.findUnique({
             where: { id: shopId },
             include: { owner: true }
@@ -106,7 +111,6 @@ let AdminService = class AdminService {
                 where: { id: shop.ownerId },
                 data: {
                     username: username || undefined,
-                    email: email || undefined,
                     passwordHash: passwordHash
                 }
             });
@@ -117,7 +121,7 @@ let AdminService = class AdminService {
                     phone: phone || undefined,
                 },
                 include: {
-                    owner: { select: { email: true, id: true, username: true } },
+                    owner: { select: { id: true, username: true } },
                     subscription: true
                 }
             });
@@ -153,7 +157,9 @@ let AdminService = class AdminService {
             await prisma.template.deleteMany({ where: { shopId } });
             await prisma.mediaFile.deleteMany({ where: { shopId } });
             await prisma.automation.deleteMany({ where: { shopId } });
-            await prisma.whatsAppCredential.deleteMany({ where: { shopId } });
+            await prisma.onboardingEvent.deleteMany({ where: { shopId } });
+            await prisma.whatsAppPhoneNumber.deleteMany({ where: { shopId } });
+            await prisma.whatsAppBusinessAccount.deleteMany({ where: { shopId } });
             await prisma.conversation.deleteMany({ where: { shopId } });
             await prisma.contact.deleteMany({ where: { shopId } });
             await prisma.subscription.deleteMany({ where: { shopId } });
@@ -179,7 +185,6 @@ let AdminService = class AdminService {
             const user = await tx.user.create({
                 data: {
                     username: request.username,
-                    email: request.email,
                     passwordHash: request.password,
                     role: 'user',
                 },
@@ -218,7 +223,7 @@ let AdminService = class AdminService {
         });
     }
     async getStats() {
-        const [totalShops, activeShops, disabledShops, expiredSubscriptions] = await Promise.all([
+        const [totalShops, activeShops, disabledShops, expiredSubscriptions, connectedWabas, totalPhoneNumbers] = await Promise.all([
             this.prisma.shop.count(),
             this.prisma.shop.count({ where: { status: 'active' } }),
             this.prisma.shop.count({ where: { status: 'disabled' } }),
@@ -227,19 +232,175 @@ let AdminService = class AdminService {
                     expiryDate: { lt: new Date() },
                     status: 'active'
                 }
-            })
+            }),
+            this.prisma.whatsAppBusinessAccount.count({ where: { status: 'active' } }),
+            this.prisma.whatsAppPhoneNumber.count({ where: { status: 'active' } }),
         ]);
         return {
             totalShops,
             activeShops,
             disabledShops,
-            expiredSubscriptions
+            expiredSubscriptions,
+            connectedWabas,
+            totalPhoneNumbers,
         };
+    }
+    async getTenantConnections() {
+        const shops = await this.prisma.shop.findMany({
+            include: {
+                owner: { select: { id: true, username: true } },
+                subscription: true,
+                whatsappAccounts: {
+                    include: { phoneNumbers: true },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+        return shops.map(shop => {
+            const accounts = shop.whatsappAccounts.map(account => {
+                let tokenHealth = 'valid';
+                if (account.tokenExpiry) {
+                    const daysLeft = (account.tokenExpiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+                    if (daysLeft <= 0)
+                        tokenHealth = 'expired';
+                    else if (daysLeft <= 7)
+                        tokenHealth = 'expiring_soon';
+                }
+                return {
+                    id: account.id,
+                    wabaId: account.wabaId || account.businessAccountId,
+                    businessName: account.businessName,
+                    status: account.status,
+                    tokenHealth,
+                    tokenExpiry: account.tokenExpiry,
+                    onboardingSource: account.onboardingSource,
+                    phoneNumbers: account.phoneNumbers.map(pn => ({
+                        phoneNumberId: pn.phoneNumberId,
+                        displayPhoneNumber: pn.displayPhoneNumber,
+                        verifiedName: pn.verifiedName,
+                        qualityRating: pn.qualityRating,
+                        messagingLimit: pn.messagingLimit,
+                        status: pn.status,
+                    })),
+                };
+            });
+            return {
+                shopId: shop.id,
+                shopName: shop.shopName,
+                owner: shop.owner,
+                status: shop.status,
+                subscription: shop.subscription,
+                isConnected: accounts.some(a => a.status === 'active'),
+                accounts,
+            };
+        });
+    }
+    async getWebhookFailures(shopId) {
+        const where = { processingStatus: { in: ['failed', 'dead_letter'] } };
+        if (shopId)
+            where.shopId = shopId;
+        return this.prisma.webhookAuditLog.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            take: 100,
+        });
+    }
+    async getDeadLetterEvents(status) {
+        const where = {};
+        if (status)
+            where.status = status;
+        return this.prisma.deadLetterEvent.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            take: 100,
+        });
+    }
+    async getTokenHealth() {
+        const accounts = await this.prisma.whatsAppBusinessAccount.findMany({
+            where: { status: { in: ['active', 'token_expired'] } },
+            include: {
+                shop: { select: { shopName: true } },
+            },
+        });
+        return accounts.map(account => {
+            let tokenHealth = 'valid';
+            if (account.tokenExpiry) {
+                const daysLeft = (account.tokenExpiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+                if (daysLeft <= 0)
+                    tokenHealth = 'expired';
+                else if (daysLeft <= 7)
+                    tokenHealth = 'expiring_soon';
+            }
+            return {
+                shopName: account.shop.shopName,
+                wabaId: account.wabaId || account.businessAccountId,
+                businessName: account.businessName,
+                status: account.status,
+                tokenHealth,
+                tokenExpiry: account.tokenExpiry,
+            };
+        });
+    }
+    async suspendShop(shopId) {
+        await this.prisma.whatsAppBusinessAccount.updateMany({
+            where: { shopId },
+            data: { status: 'suspended' },
+        });
+        await this.prisma.whatsAppPhoneNumber.updateMany({
+            where: { shopId },
+            data: { status: 'inactive' },
+        });
+        return { message: 'Shop WhatsApp access suspended' };
+    }
+    async getOnboardingStatus(shopId) {
+        const events = await this.prisma.onboardingEvent.findMany({
+            where: { shopId },
+            orderBy: { createdAt: 'desc' },
+        });
+        const latestEvent = events[0];
+        let status = 'not_started';
+        if (latestEvent) {
+            if (latestEvent.eventType === 'completed')
+                status = 'connected';
+            else if (latestEvent.eventType === 'failed')
+                status = 'failed';
+            else if (latestEvent.eventType === 'disconnected')
+                status = 'disconnected';
+            else
+                status = 'in_progress';
+        }
+        return { status, events };
+    }
+    async setWhatsAppCredentials(shopId, data) {
+        const { businessAccountId, phoneNumberId, accessToken } = data;
+        const encryptedToken = this.cryptoService.encrypt(accessToken);
+        const account = await this.prisma.whatsAppBusinessAccount.create({
+            data: {
+                shopId,
+                businessAccountId,
+                accessToken: encryptedToken,
+                status: 'active',
+                onboardingSource: 'manual',
+            },
+        });
+        if (phoneNumberId) {
+            await this.prisma.whatsAppPhoneNumber.create({
+                data: {
+                    shopId,
+                    wabaAccountId: account.id,
+                    phoneNumberId,
+                    isDefault: true,
+                    status: 'active',
+                },
+            });
+        }
+        return { message: 'WhatsApp credentials set successfully', account };
     }
 };
 exports.AdminService = AdminService;
 exports.AdminService = AdminService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        crypto_service_1.CryptoService])
 ], AdminService);
 //# sourceMappingURL=admin.service.js.map

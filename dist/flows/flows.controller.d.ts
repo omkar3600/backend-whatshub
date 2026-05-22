@@ -9,13 +9,13 @@ export declare class FlowsController {
         name: string;
         status: string;
         shopId: string;
+        isDefault: boolean;
         description: string | null;
         category: string;
         nodeCount: number;
         nodes: import("@prisma/client/runtime/library").JsonValue | null;
         edges: import("@prisma/client/runtime/library").JsonValue | null;
         triggerKeyword: string | null;
-        isDefault: boolean;
     }>;
     getFlows(user: any): Promise<{
         id: string;
@@ -24,13 +24,13 @@ export declare class FlowsController {
         name: string;
         status: string;
         shopId: string;
+        isDefault: boolean;
         description: string | null;
         category: string;
         nodeCount: number;
         nodes: import("@prisma/client/runtime/library").JsonValue | null;
         edges: import("@prisma/client/runtime/library").JsonValue | null;
         triggerKeyword: string | null;
-        isDefault: boolean;
     }[]>;
     getFlow(user: any, id: string): Promise<{
         id: string;
@@ -39,13 +39,13 @@ export declare class FlowsController {
         name: string;
         status: string;
         shopId: string;
+        isDefault: boolean;
         description: string | null;
         category: string;
         nodeCount: number;
         nodes: import("@prisma/client/runtime/library").JsonValue | null;
         edges: import("@prisma/client/runtime/library").JsonValue | null;
         triggerKeyword: string | null;
-        isDefault: boolean;
     }>;
     getFlowAnalytics(user: any, id: string): Promise<{}>;
     getFlowVersions(user: any, id: string): Promise<{
@@ -71,13 +71,13 @@ export declare class FlowsController {
         name: string;
         status: string;
         shopId: string;
+        isDefault: boolean;
         description: string | null;
         category: string;
         nodeCount: number;
         nodes: import("@prisma/client/runtime/library").JsonValue | null;
         edges: import("@prisma/client/runtime/library").JsonValue | null;
         triggerKeyword: string | null;
-        isDefault: boolean;
     }>;
     deleteFlow(user: any, id: string): Promise<{
         message: string;
@@ -89,12 +89,12 @@ export declare class FlowsController {
         name: string;
         status: string;
         shopId: string;
+        isDefault: boolean;
         description: string | null;
         category: string;
         nodeCount: number;
         nodes: import("@prisma/client/runtime/library").JsonValue | null;
         edges: import("@prisma/client/runtime/library").JsonValue | null;
         triggerKeyword: string | null;
-        isDefault: boolean;
     }>;
 }

@@ -1,71 +1,191 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
+import { CryptoService } from '../common/services/crypto.service';
 import { firstValueFrom } from 'rxjs';
 import { ChatGateway } from '../chat/chat.gateway';
 import { ChatbotService } from '../chatbot/chatbot.service';
 import { FlowEngineService } from '../flows/flow-engine.service';
 
+interface WhatsAppCredentials {
+    shopId: string;
+    phoneNumberId: string;
+    accessToken: string; // Decrypted
+    businessAccountId: string;
+    wabaId: string;
+}
+
 @Injectable()
 export class WhatsappService {
     private readonly logger = new Logger(WhatsappService.name);
+    private readonly graphApiBase = `https://graph.facebook.com/${process.env.META_API_VERSION || 'v18.0'}`;
 
     constructor(
         private prisma: PrismaService,
         private httpService: HttpService,
+        private cryptoService: CryptoService,
         private chatGateway: ChatGateway,
         private chatbotService: ChatbotService,
         @Inject(forwardRef(() => FlowEngineService))
         private flowEngineService: FlowEngineService,
     ) { }
 
-    async verifyWebhook(mode: string, token: string, challenge: string, shopId?: string) {
-        if (mode !== 'subscribe') return null;
+    /**
+     * Get decrypted credentials for a shop.
+     * Tries the new WhatsAppBusinessAccount model first,
+     * falls back to legacy WhatsAppCredential-style env vars for backward compat.
+     */
+    async getCredentials(shopId: string): Promise<WhatsAppCredentials> {
+        // Try new multi-tenant model first
+        const account = await this.prisma.whatsAppBusinessAccount.findFirst({
+            where: { shopId, status: 'active' },
+            include: {
+                phoneNumbers: {
+                    where: { status: 'active', isDefault: true },
+                    take: 1,
+                },
+            },
+        });
 
-        // If shopId is provided, check their specific token
-        if (shopId) {
-            const creds = await this.prisma.whatsAppCredential.findUnique({ where: { shopId } });
-            if (creds?.webhookVerifyToken && token === creds.webhookVerifyToken) {
-                return challenge;
+        if (account) {
+            const defaultPhone = account.phoneNumbers[0];
+            if (!defaultPhone) {
+                // Account exists but no active default phone — try any active phone
+                const anyPhone = await this.prisma.whatsAppPhoneNumber.findFirst({
+                    where: { wabaAccountId: account.id, status: 'active' },
+                });
+                if (!anyPhone) {
+                    throw new Error(`No active phone numbers found for shop ${shopId}`);
+                }
+                return {
+                    shopId,
+                    phoneNumberId: anyPhone.phoneNumberId,
+                    accessToken: this.cryptoService.decrypt(account.accessToken),
+                    businessAccountId: account.businessAccountId,
+                    wabaId: account.wabaId || account.businessAccountId,
+                };
             }
+
+            return {
+                shopId,
+                phoneNumberId: defaultPhone.phoneNumberId,
+                accessToken: this.cryptoService.decrypt(account.accessToken),
+                businessAccountId: account.businessAccountId,
+                wabaId: account.wabaId || account.businessAccountId,
+            };
         }
+
+        throw new Error(`WhatsApp credentials not found for shop ${shopId}`);
+    }
+
+    /**
+     * Get credentials by phone number ID — used for webhook routing.
+     */
+    async getCredentialsByPhoneNumberId(phoneNumberId: string): Promise<WhatsAppCredentials | null> {
+        const phone = await this.prisma.whatsAppPhoneNumber.findUnique({
+            where: { phoneNumberId },
+            include: { wabaAccount: true },
+        });
+
+        if (!phone || phone.status !== 'active' || phone.wabaAccount.status !== 'active') {
+            return null;
+        }
+
+        return {
+            shopId: phone.shopId,
+            phoneNumberId: phone.phoneNumberId,
+            accessToken: this.cryptoService.decrypt(phone.wabaAccount.accessToken),
+            businessAccountId: phone.wabaAccount.businessAccountId,
+            wabaId: phone.wabaAccount.wabaId || phone.wabaAccount.businessAccountId,
+        };
+    }
+
+    /**
+     * Look up shopId from a WABA ID (businessAccountId or wabaId).
+     */
+    async getShopByWabaId(wabaId: string): Promise<string | null> {
+        const account = await this.prisma.whatsAppBusinessAccount.findFirst({
+            where: {
+                OR: [
+                    { businessAccountId: wabaId },
+                    { wabaId: wabaId },
+                ],
+                status: 'active',
+            },
+        });
+        return account?.shopId || null;
+    }
+
+    async verifyWebhook(mode: string, token: string, challenge: string) {
+        if (mode !== 'subscribe') return null;
 
         const WEBHOOK_VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN;
         if (WEBHOOK_VERIFY_TOKEN && token === WEBHOOK_VERIFY_TOKEN) {
             this.logger.log('Webhook verified successfully.');
             return challenge;
         }
+
+        // Check per-shop tokens
+        const account = await this.prisma.whatsAppBusinessAccount.findFirst({
+            where: { webhookVerifyToken: token },
+        });
+        if (account) {
+            this.logger.log(`Webhook verified for shop ${account.shopId}`);
+            return challenge;
+        }
+
         return null;
     }
 
     async processWebhookEvent(body: any) {
-        // Determine event type: message received, message status, etc.
         if (body.object === 'whatsapp_business_account') {
             for (const entry of body.entry) {
-                // Attempt to find the shop matching this WhatsApp account ID
                 const wabaId = entry.id;
-                const shopCreds = await this.prisma.whatsAppCredential.findFirst({
-                    where: { businessAccountId: wabaId },
-                });
 
-                if (!shopCreds) {
+                // Look up shop via the new multi-tenant model
+                const shopId = await this.getShopByWabaId(wabaId);
+
+                if (!shopId) {
                     this.logger.warn(`Received webhook for unknown WABA ID: ${wabaId}`);
+
+                    // Log to audit
+                    await this.logWebhookAudit(null, null, 'unknown_waba', null, body, 'failed', `Unknown WABA ID: ${wabaId}`);
                     continue;
                 }
 
-                const changes = entry.changes[0];
-                const value = changes.value;
+                for (const change of entry.changes || []) {
+                    const value = change.value;
+                    const phoneNumberId = value?.metadata?.phone_number_id;
 
-                if (value.messages) {
-                    await this.handleIncomingMessage(shopCreds.shopId, value.contacts[0], value.messages[0]);
-                }
+                    try {
+                        if (value.messages) {
+                            await this.handleIncomingMessage(shopId, phoneNumberId, value.contacts[0], value.messages[0]);
+                            await this.logWebhookAudit(shopId, phoneNumberId, 'message', value.messages[0]?.id, value, 'processed');
+                        }
 
-                if (value.statuses) {
-                    await this.handleMessageStatus(shopCreds.shopId, value.statuses[0]);
-                }
+                        if (value.statuses) {
+                            await this.handleMessageStatus(shopId, value.statuses[0]);
+                            await this.logWebhookAudit(shopId, phoneNumberId, 'status', value.statuses[0]?.id, value, 'processed');
+                        }
 
-                if (changes.field === 'message_template_status_update') {
-                    await this.handleTemplateStatusUpdate(shopCreds.shopId, value);
+                        if (change.field === 'message_template_status_update') {
+                            await this.handleTemplateStatusUpdate(shopId, value);
+                            await this.logWebhookAudit(shopId, phoneNumberId, 'template_status', null, value, 'processed');
+                        }
+                    } catch (error) {
+                        this.logger.error(`Error processing webhook for shop ${shopId}: ${error.message}`);
+                        await this.logWebhookAudit(shopId, phoneNumberId, 'error', null, value, 'failed', error.message);
+
+                        // Store in dead letter for retry
+                        await this.prisma.deadLetterEvent.create({
+                            data: {
+                                sourceType: 'webhook',
+                                originalPayload: value,
+                                errorMessage: error.message,
+                                status: 'pending',
+                            },
+                        });
+                    }
                 }
             }
         }
@@ -75,7 +195,6 @@ export class WhatsappService {
         const { event, message_template_id, message_template_name, message_template_language, reason } = value;
         this.logger.log(`[Webhook] Template status update for shop ${shopId}: ${message_template_name} -> ${event}`);
 
-        // Map Meta status to our local status
         let status = 'pending';
         if (event === 'APPROVED') status = 'approved';
         else if (event === 'REJECTED') status = 'rejected';
@@ -91,7 +210,7 @@ export class WhatsappService {
         });
     }
 
-    private async handleIncomingMessage(shopId: string, contactData: any, messageData: any) {
+    private async handleIncomingMessage(shopId: string, phoneNumberId: string | undefined, contactData: any, messageData: any) {
         // 1. Upsert Contact
         const contact = await this.prisma.contact.upsert({
             where: {
@@ -115,10 +234,12 @@ export class WhatsappService {
             update: {
                 lastMessageAt: new Date(),
                 unreadCount: { increment: 1 },
+                phoneNumberId: phoneNumberId || undefined,
             },
             create: {
                 shopId,
                 contactId: contact.id,
+                phoneNumberId: phoneNumberId || undefined,
                 lastMessageAt: new Date(),
                 unreadCount: 1,
             },
@@ -134,56 +255,51 @@ export class WhatsappService {
         } else if (['image', 'video', 'audio', 'document', 'sticker'].includes(msgType)) {
             const mediaObj = messageData[msgType];
             content = mediaObj?.caption || mediaObj?.filename || '';
-            // Fetch the real download URL from Meta API
             if (mediaObj?.id) {
                 try {
-                    const creds = await this.prisma.whatsAppCredential.findUnique({ where: { shopId } });
-                    if (creds) {
-                        const metaResp = await firstValueFrom(
-                            this.httpService.get(
-                                `https://graph.facebook.com/v18.0/${mediaObj.id}`,
-                                { headers: { Authorization: `Bearer ${creds.accessToken}` } }
-                            )
-                        );
-                        const mediaDlUrl: string = metaResp.data.url;
-                        // Download the actual file bytes from the temporary signed URL
-                        const fileResp = await firstValueFrom(
-                            this.httpService.get(mediaDlUrl, {
-                                headers: { Authorization: `Bearer ${creds.accessToken}` },
-                                responseType: 'arraybuffer',
-                            })
-                        );
-                        // Upload to Supabase Storage
-                        const dbUrlMatch = (process.env.DATABASE_URL || '').match(/postgres\.([a-z]+):/);
-                        const projectRef = process.env.SUPABASE_PROJECT_REF || (dbUrlMatch ? dbUrlMatch[1] : '');
-                        const supabaseUrl = process.env.SUPABASE_URL || `https://${projectRef}.supabase.co`;
-                        const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '';
-                        const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'media';
-                        const ext = mediaObj.mime_type ? '.' + mediaObj.mime_type.split('/')[1].split(';')[0] : '';
-                        const fileName = `incoming/${shopId}/${mediaObj.id}${ext}`;
-                        const mimeType = mediaObj.mime_type || 'application/octet-stream';
+                    const creds = await this.getCredentials(shopId);
+                    const metaResp = await firstValueFrom(
+                        this.httpService.get(
+                            `${this.graphApiBase}/${mediaObj.id}`,
+                            { headers: { Authorization: `Bearer ${creds.accessToken}` } }
+                        )
+                    );
+                    const mediaDlUrl: string = metaResp.data.url;
+                    const fileResp = await firstValueFrom(
+                        this.httpService.get(mediaDlUrl, {
+                            headers: { Authorization: `Bearer ${creds.accessToken}` },
+                            responseType: 'arraybuffer',
+                        })
+                    );
+                    // Upload to Supabase Storage
+                    const dbUrlMatch = (process.env.DATABASE_URL || '').match(/postgres\.([a-z]+):/);
+                    const projectRef = process.env.SUPABASE_PROJECT_REF || (dbUrlMatch ? dbUrlMatch[1] : '');
+                    const supabaseUrl = process.env.SUPABASE_URL || `https://${projectRef}.supabase.co`;
+                    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '';
+                    const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'media';
+                    const ext = mediaObj.mime_type ? '.' + mediaObj.mime_type.split('/')[1].split(';')[0] : '';
+                    const fileName = `incoming/${shopId}/${mediaObj.id}${ext}`;
+                    const mimeType = mediaObj.mime_type || 'application/octet-stream';
 
-                        await firstValueFrom(
-                            this.httpService.post(
-                                `${supabaseUrl}/storage/v1/object/${bucket}/${fileName}`,
-                                Buffer.from(fileResp.data),
-                                {
-                                    headers: {
-                                        Authorization: `Bearer ${supabaseKey}`,
-                                        apikey: supabaseKey,
-                                        'Content-Type': mimeType,
-                                        'x-upsert': 'true',
-                                    },
-                                    maxBodyLength: 50 * 1024 * 1024,
-                                    maxContentLength: 50 * 1024 * 1024,
-                                }
-                            )
-                        );
-                        mediaUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${fileName}`;
-                    }
+                    await firstValueFrom(
+                        this.httpService.post(
+                            `${supabaseUrl}/storage/v1/object/${bucket}/${fileName}`,
+                            Buffer.from(fileResp.data),
+                            {
+                                headers: {
+                                    Authorization: `Bearer ${supabaseKey}`,
+                                    apikey: supabaseKey,
+                                    'Content-Type': mimeType,
+                                    'x-upsert': 'true',
+                                },
+                                maxBodyLength: 50 * 1024 * 1024,
+                                maxContentLength: 50 * 1024 * 1024,
+                            }
+                        )
+                    );
+                    mediaUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${fileName}`;
                 } catch (mediaErr: any) {
                     this.logger.error(`[Media] Failed to download media ${mediaObj?.id}: ${mediaErr?.message}`);
-                    // Fall back to using the Meta media ID as reference
                     mediaUrl = undefined;
                 }
             }
@@ -203,9 +319,10 @@ export class WhatsappService {
 
         const savedMsg = await this.prisma.message.create({
             data: {
-                id: messageData.id, // Use Meta's message ID
+                id: messageData.id,
                 shopId,
                 conversationId: conversation.id,
+                phoneNumberId: phoneNumberId || undefined,
                 direction: 'inbound',
                 type: msgType,
                 content,
@@ -237,18 +354,17 @@ export class WhatsappService {
             for (const auto of automations) {
                 const keyword = auto.triggerKeyword?.toLowerCase().trim();
                 if (!keyword) continue;
-                // Use contains matching: trigger if message includes the keyword
                 if (incomingText.includes(keyword) || keyword === incomingText) {
                     this.logger.log(`[Automation] MATCH! Keyword="${keyword}" → sending reply to ${contactData.wa_id}`);
                     try {
                         await this.sendOutboundMessage(shopId, contactData.wa_id, 'text', auto.replyText);
                         this.logger.log(`[Automation] Reply sent successfully to ${contactData.wa_id}`);
-                        
-                        // --- Save and Notify ---
+
                         const savedAutoMsg = await this.prisma.message.create({
                             data: {
                                 shopId,
                                 conversationId: conversation.id,
+                                phoneNumberId: phoneNumberId || undefined,
                                 direction: 'outbound',
                                 type: 'text',
                                 content: auto.replyText,
@@ -260,12 +376,10 @@ export class WhatsappService {
                             contact: { name: contact.name, phone: contact.phone }
                         });
 
-                        // Update conversation lastMessageAt
                         await this.prisma.conversation.update({
                             where: { id: conversation.id },
                             data: { lastMessageAt: new Date() },
                         });
-                        // -----------------------
 
                         automationFired = true;
                     } catch (sendErr: unknown) {
@@ -275,7 +389,7 @@ export class WhatsappService {
                             : sendErr instanceof Error ? sendErr.message : String(sendErr);
                         this.logger.error(`[Automation] FAILED to send reply: ${detail}`);
                     }
-                    break; // Only fire the first matching automation
+                    break;
                 }
             }
         }
@@ -289,9 +403,8 @@ export class WhatsappService {
             }
         }
 
-        // --- AI Chatbot (only if no automation fired and no flow fired and AI not paused) ---
+        // --- AI Chatbot ---
         if (!automationFired && !flowFired && messageData.type === 'text') {
-            // Check if this conversation has AI paused
             const conv = await this.prisma.conversation.findUnique({
                 where: { id: conversation.id },
                 select: { aiPaused: true },
@@ -306,12 +419,12 @@ export class WhatsappService {
                 if (aiReply.text) {
                     this.logger.log(`[Chatbot] Sending AI reply to ${contactData.wa_id}`);
                     await this.sendOutboundMessage(shopId, contactData.wa_id, 'text', aiReply.text);
-                    
-                    // --- Save and Notify ---
+
                     const savedAiMsg = await this.prisma.message.create({
                         data: {
                             shopId,
                             conversationId: conversation.id,
+                            phoneNumberId: phoneNumberId || undefined,
                             direction: 'outbound',
                             type: 'text',
                             content: aiReply.text,
@@ -323,12 +436,10 @@ export class WhatsappService {
                         contact: { name: contact.name, phone: contact.phone }
                     });
 
-                    // Update conversation lastMessageAt
                     await this.prisma.conversation.update({
                         where: { id: conversation.id },
                         data: { lastMessageAt: new Date() },
                     });
-                    // -----------------------
 
                 } else if (aiReply.error) {
                     this.logger.error(`[Chatbot] Failed to generate AI reply for ${contactData.wa_id}: ${aiReply.error}`);
@@ -342,7 +453,6 @@ export class WhatsappService {
     private async handleMessageStatus(shopId: string, statusData: any) {
         const { id: messageId, status, recipient_id: recipientPhone } = statusData;
 
-        // 1. Update the outbound message record
         try {
             await this.prisma.message.update({
                 where: { id: messageId },
@@ -352,15 +462,11 @@ export class WhatsappService {
             this.logger.warn(`Status update failed for message ${messageId}. It might not exist.`);
         }
 
-        // 2. Propagate status to CampaignContact for real-time analytics (delivered / read)
-        //    IMPORTANT: look up by wamid (exact Meta message ID), NOT by phone number.
-        //    Looking up by phone would cause regular inbox messages to falsely update campaign stats.
         if (['delivered', 'read', 'sent'].includes(status)) {
             try {
                 const statusRank: Record<string, number> = { pending: 0, sent: 1, delivered: 2, read: 3, clicked: 4 };
                 const incomingRank = statusRank[status] ?? 0;
 
-                // Match by the exact wamid stored when the campaign message was sent
                 const existing = await this.prisma.campaignContact.findFirst({
                     where: { wamid: messageId },
                 });
@@ -379,12 +485,10 @@ export class WhatsappService {
                 this.logger.warn(`Failed to update CampaignContact for wamid ${messageId}: ${e}`);
             }
         }
-
     }
 
     async sendOutboundMessage(shopId: string, toPhone: string, type: string, content: any, mediaUrl?: string) {
-        const creds = await this.prisma.whatsAppCredential.findUnique({ where: { shopId } });
-        if (!creds) throw new Error('WhatsApp credentials not found for this shop');
+        const creds = await this.getCredentials(shopId);
 
         const payload: any = {
             messaging_product: 'whatsapp',
@@ -401,7 +505,7 @@ export class WhatsappService {
             const config = content.config || {};
             payload.type = 'interactive';
             payload.interactive = {
-                type: 'button', // Defaulting to button for now
+                type: 'button',
                 body: { text: content.text || content.body || '' },
                 action: {
                     buttons: (config.buttons || []).map((btn: any, idx: number) => ({
@@ -419,7 +523,6 @@ export class WhatsappService {
             if (config.footer) {
                 payload.interactive.footer = { text: config.footer };
             }
-            // Support media header if present
             if (config.mediaType && (config.imageUrl || config.videoUrl)) {
                 payload.interactive.header = {
                     type: config.mediaType.toLowerCase() === 'image' ? 'image' : 'video',
@@ -430,7 +533,6 @@ export class WhatsappService {
             }
         } else if (type === 'template') {
             const templateName = typeof content === 'string' ? content : content.name;
-            // Use the language stored on the template record (or fall back to 'en_US')
             const templateLanguage = (typeof content !== 'string' && content.language) ? content.language : 'en_US';
             payload.template = {
                 name: templateName,
@@ -441,7 +543,7 @@ export class WhatsappService {
             }
         }
 
-        const url = `https://graph.facebook.com/v18.0/${creds.phoneNumberId}/messages`;
+        const url = `${this.graphApiBase}/${creds.phoneNumberId}/messages`;
 
         try {
             const response = await firstValueFrom(
@@ -458,6 +560,34 @@ export class WhatsappService {
             const detail = axiosErr?.response?.data || (error instanceof Error ? error.message : String(error));
             this.logger.error('Error sending WhatsApp message', detail);
             throw error;
+        }
+    }
+
+    // ─── Audit Logging ─────────────────────────────────────────────────────
+
+    private async logWebhookAudit(
+        shopId: string | null,
+        phoneNumberId: string | null,
+        eventType: string,
+        waMessageId: string | null,
+        payload: any,
+        processingStatus: string,
+        errorMessage?: string,
+    ): Promise<void> {
+        try {
+            await this.prisma.webhookAuditLog.create({
+                data: {
+                    shopId,
+                    phoneNumberId,
+                    eventType,
+                    waMessageId,
+                    payload,
+                    processingStatus,
+                    errorMessage,
+                },
+            });
+        } catch (e) {
+            this.logger.error(`Failed to log webhook audit: ${e.message}`);
         }
     }
 }

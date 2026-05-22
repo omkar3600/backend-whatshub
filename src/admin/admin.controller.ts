@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Put, Body, Param, UseGuards, Delete } from '@nestjs/common';
+import { Controller, Post, Get, Put, Body, Param, UseGuards, Delete, Query } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -58,5 +58,42 @@ export class AdminController {
     @Post('requests/:id/reject')
     async rejectRequest(@Param('id') id: string) {
         return this.adminService.rejectRegistrationRequest(id);
+    }
+
+    // ─── New Multi-Tenant Admin Endpoints ────────────────────────────────
+
+    @Get('tenant-connections')
+    async getTenantConnections() {
+        return this.adminService.getTenantConnections();
+    }
+
+    @Get('webhook-failures')
+    async getWebhookFailures(@Query('shopId') shopId?: string) {
+        return this.adminService.getWebhookFailures(shopId);
+    }
+
+    @Get('dead-letter-events')
+    async getDeadLetterEvents(@Query('status') status?: string) {
+        return this.adminService.getDeadLetterEvents(status);
+    }
+
+    @Get('token-health')
+    async getTokenHealth() {
+        return this.adminService.getTokenHealth();
+    }
+
+    @Post('shops/:shopId/suspend')
+    async suspendShop(@Param('shopId') shopId: string) {
+        return this.adminService.suspendShop(shopId);
+    }
+
+    @Get('shops/:shopId/onboarding-status')
+    async getOnboardingStatus(@Param('shopId') shopId: string) {
+        return this.adminService.getOnboardingStatus(shopId);
+    }
+
+    @Post('shops/:shopId/whatsapp-credentials')
+    async setWhatsAppCredentials(@Param('shopId') shopId: string, @Body() body: any) {
+        return this.adminService.setWhatsAppCredentials(shopId, body);
     }
 }

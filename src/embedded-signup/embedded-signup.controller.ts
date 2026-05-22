@@ -1,0 +1,61 @@
+import { Controller, Get, Post, Param, Body, UseGuards, Req, Logger } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { EmbeddedSignupService } from './embedded-signup.service';
+import { SignupCallbackDto } from './dto/signup-callback.dto';
+
+@Controller('embedded-signup')
+@UseGuards(JwtAuthGuard)
+export class EmbeddedSignupController {
+    private readonly logger = new Logger(EmbeddedSignupController.name);
+
+    constructor(private readonly signupService: EmbeddedSignupService) { }
+
+    /**
+     * Returns the Meta App configuration needed for the frontend to launch
+     * the Embedded Signup popup.
+     */
+    @Get('config')
+    getConfig() {
+        return this.signupService.getConfig();
+    }
+
+    /**
+     * Receives the authorization code from the frontend after the user
+     * completes the Meta Embedded Signup popup. Processes the full OAuth flow.
+     */
+    @Post('callback')
+    async processCallback(@Req() req: any, @Body() dto: SignupCallbackDto) {
+        this.logger.log(`Processing embedded signup callback for user ${req.user.sub}`);
+        return this.signupService.processCallback(req.user.sub, dto.code, dto.sessionInfo);
+    }
+
+    /**
+     * Returns the connection status for all WABAs belonging to the current shop.
+     */
+    @Get('status')
+    async getConnectionStatus(@Req() req: any) {
+        return this.signupService.getConnectionStatus(req.user.sub);
+    }
+
+    /**
+     * Soft-disconnects a WABA from the shop.
+     */
+    @Post('disconnect/:wabaAccountId')
+    async disconnectWaba(@Req() req: any, @Param('wabaAccountId') wabaAccountId: string) {
+        this.logger.log(`Disconnecting WABA ${wabaAccountId} for user ${req.user.sub}`);
+        return this.signupService.disconnectWaba(req.user.sub, wabaAccountId);
+    }
+
+    /**
+     * Re-initiates OAuth for an existing disconnected WABA.
+     */
+    @Post('reconnect/:wabaAccountId')
+    async reconnectWaba(
+        @Req() req: any,
+        @Param('wabaAccountId') wabaAccountId: string,
+        @Body() dto: SignupCallbackDto,
+    ) {
+        this.logger.log(`Reconnecting WABA ${wabaAccountId} for user ${req.user.sub}`);
+        return this.signupService.reconnectWaba(req.user.sub, wabaAccountId, dto.code);
+    }
+}

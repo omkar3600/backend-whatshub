@@ -4,14 +4,12 @@ export declare class UsersController {
     constructor(usersService: UsersService);
     getProfile(user: any): Promise<{
         username: string;
-        email: string | null;
         id: string;
         role: string;
         createdAt: Date;
     }>;
     updateProfile(user: any, body: any): Promise<{
         username: string;
-        email: string | null;
         id: string;
         role: string;
     }>;

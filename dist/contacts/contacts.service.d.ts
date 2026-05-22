@@ -1,6 +1,7 @@
 import { PrismaService } from '../prisma/prisma.service';
 export declare class ContactsService {
     private prisma;
+    private readonly logger;
     constructor(prisma: PrismaService);
     createContact(shopId: string, data: any): Promise<{
         phone: string;
@@ -12,6 +13,11 @@ export declare class ContactsService {
         tags: import("@prisma/client/runtime/library").JsonValue | null;
         city: string | null;
         notes: string | null;
+    }>;
+    importFromExcel(shopId: string, file: Express.Multer.File): Promise<{
+        imported: number;
+        skipped: number;
+        errors: string[];
     }>;
     getContacts(shopId: string, filters: any): Promise<{
         phone: string;

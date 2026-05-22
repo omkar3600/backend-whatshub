@@ -13,57 +13,59 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MediaService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
-const axios_1 = require("@nestjs/axios");
-const rxjs_1 = require("rxjs");
+const client_s3_1 = require("@aws-sdk/client-s3");
 let MediaService = MediaService_1 = class MediaService {
     prisma;
-    httpService;
     logger = new common_1.Logger(MediaService_1.name);
-    supabaseUrl;
-    supabaseKey;
+    s3;
     bucketName;
-    constructor(prisma, httpService) {
+    publicUrl;
+    constructor(prisma) {
         this.prisma = prisma;
-        this.httpService = httpService;
-        const dbUrl = process.env.DATABASE_URL || '';
-        const match = dbUrl.match(/postgres\.([a-z]+):/);
-        const projectRef = process.env.SUPABASE_PROJECT_REF || (match ? match[1] : '');
-        this.supabaseUrl = process.env.SUPABASE_URL || `https://${projectRef}.supabase.co`;
-        this.supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || '';
-        this.bucketName = process.env.SUPABASE_STORAGE_BUCKET || 'media';
-        if (this.supabaseKey) {
-            this.logger.log(`MediaService: Using Supabase Storage (bucket: ${this.bucketName})`);
+        const accountId = process.env.R2_ACCOUNT_ID || '';
+        const accessKeyId = process.env.R2_ACCESS_KEY_ID || '';
+        const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY || '';
+        this.bucketName = process.env.R2_BUCKET_NAME || 'whatshub-media';
+        this.publicUrl = process.env.R2_PUBLIC_URL || '';
+        this.s3 = new client_s3_1.S3Client({
+            region: 'auto',
+            endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+            credentials: { accessKeyId, secretAccessKey },
+        });
+        if (accessKeyId && secretAccessKey) {
+            this.logger.log(`MediaService: Using Cloudflare R2 (bucket: ${this.bucketName})`);
         }
         else {
-            this.logger.warn('MediaService: SUPABASE_SERVICE_KEY not set — uploads will fail!');
+            this.logger.warn('MediaService: R2 credentials not set — uploads will fail!');
         }
     }
     async uploadFile(shopId, file) {
         const safeName = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-        const filePath = `shops/${shopId}/${safeName}`;
+        const key = `shops/${shopId}/${safeName}`;
         try {
-            const uploadUrl = `${this.supabaseUrl}/storage/v1/object/${this.bucketName}/${filePath}`;
-            this.logger.log(`Uploading to: ${uploadUrl}`);
-            await (0, rxjs_1.firstValueFrom)(this.httpService.post(uploadUrl, file.buffer, {
-                headers: {
-                    Authorization: `Bearer ${this.supabaseKey}`,
-                    apikey: this.supabaseKey,
-                    'Content-Type': file.mimetype,
-                    'x-upsert': 'true',
-                },
-                maxBodyLength: 50 * 1024 * 1024,
-                maxContentLength: 50 * 1024 * 1024,
+            await this.s3.send(new client_s3_1.PutObjectCommand({
+                Bucket: this.bucketName,
+                Key: key,
+                Body: file.buffer,
+                ContentType: file.mimetype,
             }));
-            const fileUrl = `${this.supabaseUrl}/storage/v1/object/public/${this.bucketName}/${filePath}`;
+            const fileUrl = this.publicUrl
+                ? `${this.publicUrl}/${key}`
+                : `https://${this.bucketName}.r2.dev/${key}`;
             const media = await this.prisma.mediaFile.create({
-                data: { shopId, fileUrl, fileType: file.mimetype, fileSize: file.size },
+                data: {
+                    shopId,
+                    fileName: file.originalname,
+                    fileUrl,
+                    fileType: file.mimetype,
+                    fileSize: file.size,
+                },
             });
-            this.logger.log(`Uploaded: ${fileUrl}`);
+            this.logger.log(`Uploaded to R2: ${fileUrl}`);
             return media;
         }
         catch (error) {
-            const detail = error?.response?.data || error?.message || String(error);
-            this.logger.error('Supabase Storage upload error:', JSON.stringify(detail));
+            this.logger.error('R2 upload error:', error?.message || error);
             throw new common_1.InternalServerErrorException('Media file upload failed.');
         }
     }
@@ -73,11 +75,61 @@ let MediaService = MediaService_1 = class MediaService {
             orderBy: { createdAt: 'desc' },
         });
     }
+    async deleteMediaFile(shopId, id) {
+        const file = await this.prisma.mediaFile.findFirst({ where: { id, shopId } });
+        if (!file)
+            throw new common_1.NotFoundException('Media file not found');
+        try {
+            let key = '';
+            if (this.publicUrl && file.fileUrl.startsWith(this.publicUrl)) {
+                key = file.fileUrl.replace(`${this.publicUrl}/`, '');
+            }
+            else {
+                const match = file.fileUrl.match(/r2\.dev\/(.+)$/);
+                if (match)
+                    key = match[1];
+            }
+            if (key) {
+                await this.s3.send(new client_s3_1.DeleteObjectCommand({
+                    Bucket: this.bucketName,
+                    Key: key,
+                }));
+                this.logger.log(`Deleted from R2: ${key}`);
+            }
+        }
+        catch (err) {
+            this.logger.warn(`Could not delete from R2: ${err?.message}`);
+        }
+        return this.prisma.mediaFile.delete({ where: { id } });
+    }
+    async deleteAllMediaFiles(shopId) {
+        const files = await this.prisma.mediaFile.findMany({ where: { shopId } });
+        for (const file of files) {
+            try {
+                let key = '';
+                if (this.publicUrl && file.fileUrl.startsWith(this.publicUrl)) {
+                    key = file.fileUrl.replace(`${this.publicUrl}/`, '');
+                }
+                else {
+                    const match = file.fileUrl.match(/r2\.dev\/(.+)$/);
+                    if (match)
+                        key = match[1];
+                }
+                if (key) {
+                    await this.s3.send(new client_s3_1.DeleteObjectCommand({
+                        Bucket: this.bucketName,
+                        Key: key,
+                    }));
+                }
+            }
+            catch { }
+        }
+        return this.prisma.mediaFile.deleteMany({ where: { shopId } });
+    }
 };
 exports.MediaService = MediaService;
 exports.MediaService = MediaService = MediaService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        axios_1.HttpService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
 ], MediaService);
 //# sourceMappingURL=media.service.js.map

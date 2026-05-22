@@ -1,10 +1,14 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
+import { CryptoService } from '../common/services/crypto.service';
 export declare class TemplatesService {
     private prisma;
     private httpService;
+    private cryptoService;
     private readonly logger;
-    constructor(prisma: PrismaService, httpService: HttpService);
+    private readonly graphApiBase;
+    constructor(prisma: PrismaService, httpService: HttpService, cryptoService: CryptoService);
+    private getCredentials;
     createTemplate(shopId: string, data: any): Promise<{
         id: string;
         createdAt: Date;

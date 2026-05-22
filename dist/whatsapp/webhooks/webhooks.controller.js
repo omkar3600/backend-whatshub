@@ -16,30 +16,25 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.WebhooksController = void 0;
 const common_1 = require("@nestjs/common");
 const whatsapp_service_1 = require("../whatsapp.service");
+const throttler_1 = require("@nestjs/throttler");
+const webhook_signature_guard_1 = require("../../common/guards/webhook-signature.guard");
 let WebhooksController = WebhooksController_1 = class WebhooksController {
     whatsappService;
     logger = new common_1.Logger(WebhooksController_1.name);
     constructor(whatsappService) {
         this.whatsappService = whatsappService;
     }
-    async verifyWebhook(mode, token, challenge, shopId, res) {
-        this.logger.log(`Webhook Verification — mode: ${mode}, shopId: ${shopId}`);
-        const verifiedChallenge = await this.whatsappService.verifyWebhook(mode, token, challenge, shopId);
-        if (verifiedChallenge) {
-            this.logger.log('Verification Success.');
-            return res.status(common_1.HttpStatus.OK).end(verifiedChallenge);
-        }
-        this.logger.warn('Verification Failed. Token mismatch or invalid mode.');
-        return res.status(common_1.HttpStatus.FORBIDDEN).end();
+    verifyWebhook(mode, token, challenge) {
+        this.logger.log('Webhook verification request received');
+        return this.whatsappService.verifyWebhook(mode, token, challenge);
     }
-    async handleIncomingEvent(body, res) {
-        res.status(common_1.HttpStatus.OK).send('EVENT_RECEIVED');
-        try {
-            await this.whatsappService.processWebhookEvent(body);
-        }
-        catch (error) {
-            this.logger.error('Error processing webhook event:', error.message);
-        }
+    async handleWebhook(body, req) {
+        this.logger.log('Webhook event received');
+        this.logger.debug(`Webhook body: ${JSON.stringify(body)}`);
+        this.whatsappService.processWebhookEvent(body).catch(error => {
+            this.logger.error(`Error processing webhook: ${error.message}`);
+        });
+        return { status: 'ok' };
     }
 };
 exports.WebhooksController = WebhooksController;
@@ -48,21 +43,22 @@ __decorate([
     __param(0, (0, common_1.Query)('hub.mode')),
     __param(1, (0, common_1.Query)('hub.verify_token')),
     __param(2, (0, common_1.Query)('hub.challenge')),
-    __param(3, (0, common_1.Query)('shopId')),
-    __param(4, (0, common_1.Res)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String, Object]),
-    __metadata("design:returntype", Promise)
+    __metadata("design:paramtypes", [String, String, String]),
+    __metadata("design:returntype", void 0)
 ], WebhooksController.prototype, "verifyWebhook", null);
 __decorate([
     (0, common_1.Post)(),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, common_1.UseGuards)(webhook_signature_guard_1.WebhookSignatureGuard),
     __param(0, (0, common_1.Body)()),
-    __param(1, (0, common_1.Res)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
-], WebhooksController.prototype, "handleIncomingEvent", null);
+], WebhooksController.prototype, "handleWebhook", null);
 exports.WebhooksController = WebhooksController = WebhooksController_1 = __decorate([
+    (0, throttler_1.SkipThrottle)(),
     (0, common_1.Controller)('webhooks/whatsapp'),
     __metadata("design:paramtypes", [whatsapp_service_1.WhatsappService])
 ], WebhooksController);
