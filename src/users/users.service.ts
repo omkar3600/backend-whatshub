@@ -14,6 +14,13 @@ export class UsersService {
                 username: true,
                 role: true,
                 createdAt: true,
+                shop: {
+                    select: {
+                        id: true,
+                        shopName: true,
+                        phone: true
+                    }
+                }
             },
         });
         if (!user) throw new NotFoundException('User not found');
