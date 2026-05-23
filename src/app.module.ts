@@ -24,6 +24,7 @@ import { EmbeddedSignupModule } from './embedded-signup/embedded-signup.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { FlowsModule } from './flows/flows.module';
+import { SequencesModule } from './sequences/sequences.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { FlowsModule } from './flows/flows.module';
     ChatbotModule,
     EmbeddedSignupModule,
     FlowsModule,
+    SequencesModule,
   ],
   controllers: [AppController],
   providers: [

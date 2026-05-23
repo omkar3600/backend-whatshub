@@ -3,6 +3,11 @@ export declare class UsersService {
     private prisma;
     constructor(prisma: PrismaService);
     getProfile(userId: string): Promise<{
+        shop: {
+            shopName: string;
+            phone: string;
+            id: string;
+        } | null;
         username: string;
         id: string;
         role: string;

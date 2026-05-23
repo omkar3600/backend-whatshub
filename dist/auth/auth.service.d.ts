@@ -19,6 +19,11 @@ export declare class AuthService {
             username: string;
             role: string;
             shopId: string | undefined;
+            shop: {
+                id: string;
+                shopName: string;
+                phone: string;
+            } | null;
         };
     }>;
 }

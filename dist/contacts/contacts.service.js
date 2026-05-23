@@ -46,12 +46,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ContactsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const sequences_service_1 = require("../sequences/sequences.service");
 const XLSX = __importStar(require("xlsx"));
 let ContactsService = ContactsService_1 = class ContactsService {
     prisma;
+    sequencesService;
     logger = new common_1.Logger(ContactsService_1.name);
-    constructor(prisma) {
+    constructor(prisma, sequencesService) {
         this.prisma = prisma;
+        this.sequencesService = sequencesService;
     }
     async createContact(shopId, data) {
         const { name, phone, tags, city, notes } = data;
@@ -136,7 +139,7 @@ let ContactsService = ContactsService_1 = class ContactsService {
                 tags = String(mapped.tags).split(',').map(t => t.trim()).filter(Boolean);
             }
             try {
-                await this.prisma.contact.upsert({
+                const contact = await this.prisma.contact.upsert({
                     where: { shopId_phone: { shopId, phone } },
                     create: { shopId, name, phone, tags, city, notes },
                     update: {
@@ -146,6 +149,9 @@ let ContactsService = ContactsService_1 = class ContactsService {
                         ...(notes ? { notes } : {}),
                     },
                 });
+                if (tags.length > 0) {
+                    await this.sequencesService.handleContactTagsUpdated(shopId, contact.id, tags);
+                }
                 imported++;
             }
             catch (err) {
@@ -172,10 +178,14 @@ let ContactsService = ContactsService_1 = class ContactsService {
     }
     async updateContact(shopId, id, data) {
         const { name, phone, tags, city, notes } = data;
-        return this.prisma.contact.update({
+        const contact = await this.prisma.contact.update({
             where: { id, shopId },
             data: { name, phone, tags, city, notes },
         });
+        if (tags && tags.length > 0) {
+            await this.sequencesService.handleContactTagsUpdated(shopId, id, tags);
+        }
+        return contact;
     }
     async deleteContact(shopId, id) {
         return this.prisma.contact.delete({
@@ -186,6 +196,7 @@ let ContactsService = ContactsService_1 = class ContactsService {
 exports.ContactsService = ContactsService;
 exports.ContactsService = ContactsService = ContactsService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        sequences_service_1.SequencesService])
 ], ContactsService);
 //# sourceMappingURL=contacts.service.js.map

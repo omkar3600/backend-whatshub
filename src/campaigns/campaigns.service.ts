@@ -11,7 +11,7 @@ export class CampaignsService {
     ) { }
 
     async createCampaign(shopId: string, data: any) {
-        const { name, templateId, targetTags, targetPhones, scheduledAt, templateParams, headerMediaUrl, sendDelay, excludeUnsubscribed, sendNow } = data;
+        const { name, templateId, targetTags, targetPhones, targetFilters, scheduledAt, templateParams, headerMediaUrl, sendDelay, excludeUnsubscribed, sendNow } = data;
 
         // Validate: if not sending now, scheduled time must be in the future
         let resolvedScheduledAt: Date;
@@ -41,6 +41,7 @@ export class CampaignsService {
                 templateId,
                 targetTags: targetTags || [],
                 targetPhones: targetPhones || [],
+                targetFilters: targetFilters || null,
                 templateParams: templateParams || {},
                 headerMediaUrl: headerMediaUrl || null,
                 scheduledAt: resolvedScheduledAt,

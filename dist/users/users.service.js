@@ -59,6 +59,13 @@ let UsersService = class UsersService {
                 username: true,
                 role: true,
                 createdAt: true,
+                shop: {
+                    select: {
+                        id: true,
+                        shopName: true,
+                        phone: true
+                    }
+                }
             },
         });
         if (!user)

@@ -39,13 +39,13 @@ let EmbeddedSignupService = EmbeddedSignupService_1 = class EmbeddedSignupServic
             scopes: 'whatsapp_business_management,whatsapp_business_messaging',
         };
     }
-    async processCallback(userId, code, sessionInfo) {
+    async processCallback(userId, code, sessionInfo, redirectUri) {
         const shop = await this.prisma.shop.findUnique({ where: { ownerId: userId } });
         if (!shop)
             throw new common_1.NotFoundException('Shop not found');
         await this.logOnboardingEvent(shop.id, 'signup_started', { sessionInfo });
         try {
-            const tokenData = await this.exchangeCodeForToken(code);
+            const tokenData = await this.exchangeCodeForToken(code, redirectUri);
             await this.logOnboardingEvent(shop.id, 'token_exchanged', {
                 tokenType: tokenData.token_type,
             });
@@ -186,15 +186,16 @@ let EmbeddedSignupService = EmbeddedSignupService_1 = class EmbeddedSignupServic
             };
         }
         catch (error) {
-            this.logger.error(`Embedded signup failed for shop ${shop.id}: ${error.message}`);
+            const metaApiError = error.response?.data || error.message;
+            this.logger.error(`Embedded signup failed for shop ${shop.id}:`, JSON.stringify(metaApiError));
             await this.logOnboardingEvent(shop.id, 'failed', {
-                error: error.message,
+                error: metaApiError,
                 stack: error.stack,
             });
             if (error instanceof common_1.BadRequestException || error instanceof common_1.NotFoundException) {
                 throw error;
             }
-            throw new common_1.BadRequestException(`Failed to connect WhatsApp: ${error.message}`);
+            throw new common_1.BadRequestException(`Failed to connect WhatsApp. Meta API Error: ${JSON.stringify(metaApiError)}`);
         }
     }
     async getConnectionStatus(userId) {
@@ -265,7 +266,7 @@ let EmbeddedSignupService = EmbeddedSignupService_1 = class EmbeddedSignupServic
         await this.logOnboardingEvent(shop.id, 'disconnected', { wabaAccountId });
         return { success: true, message: 'WhatsApp Business Account disconnected' };
     }
-    async reconnectWaba(userId, wabaAccountId, code) {
+    async reconnectWaba(userId, wabaAccountId, code, redirectUri) {
         const shop = await this.prisma.shop.findUnique({ where: { ownerId: userId } });
         if (!shop)
             throw new common_1.NotFoundException('Shop not found');
@@ -274,7 +275,7 @@ let EmbeddedSignupService = EmbeddedSignupService_1 = class EmbeddedSignupServic
         });
         if (!account)
             throw new common_1.NotFoundException('WhatsApp Business Account not found');
-        const tokenData = await this.exchangeCodeForToken(code);
+        const tokenData = await this.exchangeCodeForToken(code, redirectUri);
         const encryptedToken = this.cryptoService.encrypt(tokenData.access_token);
         let tokenExpiry = null;
         try {
@@ -308,7 +309,7 @@ let EmbeddedSignupService = EmbeddedSignupService_1 = class EmbeddedSignupServic
         await this.logOnboardingEvent(shop.id, 'reconnected', { wabaAccountId });
         return { success: true, message: 'WhatsApp Business Account reconnected successfully' };
     }
-    async exchangeCodeForToken(code) {
+    async exchangeCodeForToken(code, redirectUri) {
         const appId = process.env.META_APP_ID;
         const appSecret = process.env.META_APP_SECRET;
         if (!appId || !appSecret) {
@@ -320,6 +321,7 @@ let EmbeddedSignupService = EmbeddedSignupService_1 = class EmbeddedSignupServic
                 client_id: appId,
                 client_secret: appSecret,
                 code: code,
+                redirect_uri: redirectUri || '',
             },
         }));
         if (!response.data?.access_token) {

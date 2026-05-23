@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { SequencesService } from '../sequences/sequences.service';
 import * as XLSX from 'xlsx';
 
 @Injectable()
 export class ContactsService {
     private readonly logger = new Logger(ContactsService.name);
 
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private sequencesService: SequencesService
+    ) { }
 
     async createContact(shopId: string, data: any) {
         const { name, phone, tags, city, notes } = data;
@@ -102,7 +106,7 @@ export class ContactsService {
             }
 
             try {
-                await this.prisma.contact.upsert({
+                const contact = await this.prisma.contact.upsert({
                     where: { shopId_phone: { shopId, phone } },
                     create: { shopId, name, phone, tags, city, notes },
                     update: {
@@ -113,6 +117,12 @@ export class ContactsService {
                         ...(notes ? { notes } : {}),
                     },
                 });
+                
+                // Trigger sequence logic if tags were updated
+                if (tags.length > 0) {
+                    await this.sequencesService.handleContactTagsUpdated(shopId, contact.id, tags);
+                }
+                
                 imported++;
             } catch (err: any) {
                 skipped++;
@@ -142,10 +152,16 @@ export class ContactsService {
 
     async updateContact(shopId: string, id: string, data: any) {
         const { name, phone, tags, city, notes } = data;
-        return this.prisma.contact.update({
+        const contact = await this.prisma.contact.update({
             where: { id, shopId },
             data: { name, phone, tags, city, notes },
         });
+
+        if (tags && tags.length > 0) {
+            await this.sequencesService.handleContactTagsUpdated(shopId, id, tags);
+        }
+
+        return contact;
     }
 
     async deleteContact(shopId: string, id: string) {

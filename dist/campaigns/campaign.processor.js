@@ -57,7 +57,8 @@ let CampaignProcessor = class CampaignProcessor extends bullmq_1.WorkerHost {
             data: { status: 'processing' }
         });
         let contacts = await this.prisma.contact.findMany({
-            where: { shopId: campaign.shopId }
+            where: { shopId: campaign.shopId },
+            include: { conversations: true }
         });
         const targetPhones = campaign.targetPhones;
         if (targetPhones && targetPhones.length > 0) {
@@ -68,6 +69,29 @@ let CampaignProcessor = class CampaignProcessor extends bullmq_1.WorkerHost {
             contacts = contacts.filter(c => {
                 const contactTags = c.tags || [];
                 return targetTags.some(tag => contactTags.includes(tag));
+            });
+        }
+        const targetFilters = campaign.targetFilters;
+        if (targetFilters) {
+            contacts = contacts.filter(c => {
+                if (targetFilters.city) {
+                    if (!c.city || c.city.toLowerCase().trim() !== targetFilters.city.toLowerCase().trim())
+                        return false;
+                }
+                if (targetFilters.hasTags && targetFilters.hasTags.length > 0) {
+                    const contactTags = c.tags || [];
+                    if (!targetFilters.hasTags.some((tag) => contactTags.includes(tag)))
+                        return false;
+                }
+                if (targetFilters.noMessagesInDays) {
+                    const convo = c.conversations?.[0];
+                    if (convo && convo.lastMessageAt) {
+                        const daysSinceLastMessage = (Date.now() - new Date(convo.lastMessageAt).getTime()) / (1000 * 60 * 60 * 24);
+                        if (daysSinceLastMessage < targetFilters.noMessagesInDays)
+                            return false;
+                    }
+                }
+                return true;
             });
         }
         const campaignMeta = campaign.stats || {};

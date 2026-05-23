@@ -14,6 +14,7 @@ const class_validator_1 = require("class-validator");
 class SignupCallbackDto {
     code;
     sessionInfo;
+    redirectUri;
 }
 exports.SignupCallbackDto = SignupCallbackDto;
 __decorate([
@@ -26,4 +27,9 @@ __decorate([
     (0, class_validator_1.IsObject)(),
     __metadata("design:type", Object)
 ], SignupCallbackDto.prototype, "sessionInfo", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], SignupCallbackDto.prototype, "redirectUri", void 0);
 //# sourceMappingURL=signup-callback.dto.js.map

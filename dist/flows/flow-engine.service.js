@@ -11,19 +11,27 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 var FlowEngineService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FlowEngineService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const whatsapp_service_1 = require("../whatsapp/whatsapp.service");
+const bullmq_1 = require("@nestjs/bullmq");
+const bullmq_2 = require("bullmq");
+const groq_sdk_1 = __importDefault(require("groq-sdk"));
 let FlowEngineService = FlowEngineService_1 = class FlowEngineService {
     prisma;
     whatsappService;
+    flowQueue;
     logger = new common_1.Logger(FlowEngineService_1.name);
-    constructor(prisma, whatsappService) {
+    constructor(prisma, whatsappService, flowQueue) {
         this.prisma = prisma;
         this.whatsappService = whatsappService;
+        this.flowQueue = flowQueue;
     }
     async processIncomingMessage(shopId, phone, input) {
         const incomingText = input?.trim() || '';
@@ -95,9 +103,14 @@ let FlowEngineService = FlowEngineService_1 = class FlowEngineService {
         const rootNodeId = this.findRootNodeId(definition);
         if (!rootNodeId)
             return;
-        const contact = await this.prisma.contact.findUnique({ where: { id: contactId }, select: { phone: true } });
+        const contact = await this.prisma.contact.findUnique({ where: { id: contactId }, include: { conversations: { where: { shopId: flow.shopId } } } });
         if (!contact)
             return;
+        const conversation = contact.conversations[0];
+        if (conversation?.aiPaused) {
+            this.logger.log(`Skipping flow start for ${contact.phone} because AI is paused (Human Handoff active)`);
+            return;
+        }
         const session = await this.prisma.flowSession.upsert({
             where: { contactId },
             update: {
@@ -127,9 +140,14 @@ let FlowEngineService = FlowEngineService_1 = class FlowEngineService {
             await this.prisma.flowSession.delete({ where: { id: session.id } });
             return;
         }
-        const contact = await this.prisma.contact.findUnique({ where: { id: session.contactId }, select: { phone: true } });
+        const contact = await this.prisma.contact.findUnique({ where: { id: session.contactId }, include: { conversations: { where: { shopId: flow.shopId } } } });
         if (!contact)
             return;
+        const conversation = contact.conversations[0];
+        if (conversation?.aiPaused) {
+            this.logger.log(`Skipping flow continue for ${contact.phone} because AI is paused`);
+            return;
+        }
         const variables = session.variables || {};
         variables._last_user_message = input;
         const type = currentNode.data.type;
@@ -169,6 +187,11 @@ let FlowEngineService = FlowEngineService_1 = class FlowEngineService {
         });
         const type = node.data.type;
         this.logger.log(`Native Executing [${depth}]: ${type} (${nodeId})`);
+        const conversation = await this.prisma.conversation.findUnique({ where: { shopId_contactId: { shopId, contactId: session.contactId } } });
+        if (conversation?.aiPaused && type !== 'AGENT_HANDOFF') {
+            this.logger.log(`Execution aborted at ${nodeId}: AI is paused.`);
+            return;
+        }
         switch (type) {
             case 'START':
                 return this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
@@ -221,11 +244,55 @@ let FlowEngineService = FlowEngineService_1 = class FlowEngineService {
                 break;
             case 'DELAY':
                 const delaySeconds = node.data.config?.delay || node.data.delay || 1;
-                this.logger.log(`Halted for ${delaySeconds}s delay...`);
-                setTimeout(() => {
-                    this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
-                }, delaySeconds * 1000);
+                this.logger.log(`Halted for ${delaySeconds}s delay... queueing job`);
+                await this.flowQueue.add('delay', {
+                    nodeId,
+                    sessionId: session.id,
+                    definition,
+                    shopId,
+                    toPhone
+                }, { delay: delaySeconds * 1000 });
                 return;
+            case 'AGENT_HANDOFF':
+                this.logger.log(`Human Handoff requested. Pausing AI for contact.`);
+                const convo = await this.prisma.conversation.findUnique({ where: { shopId_contactId: { shopId, contactId: session.contactId } } });
+                if (convo) {
+                    await this.prisma.conversation.update({
+                        where: { id: convo.id },
+                        data: { aiPaused: true }
+                    });
+                }
+                return this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
+            case 'AI_GENERATE':
+                try {
+                    const config = await this.prisma.chatbotConfig.findUnique({ where: { shopId } });
+                    if (!config || !config.apiKey) {
+                        this.logger.warn(`AI_GENERATE node failed: No Groq API Key found for shop ${shopId}`);
+                        await this.whatsappService.sendOutboundMessage(shopId, toPhone, 'text', 'AI is currently unavailable.');
+                        return this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
+                    }
+                    const groq = new groq_sdk_1.default({ apiKey: config.apiKey });
+                    const userMessage = session.variables._last_user_message || 'Hello';
+                    const customPrompt = node.data.config?.prompt || node.data.prompt || '';
+                    await this.whatsappService.sendOutboundMessage(shopId, toPhone, 'text', '...');
+                    const chatCompletion = await groq.chat.completions.create({
+                        messages: [
+                            { role: 'system', content: `${config.systemPrompt || ''}\n\n${config.businessInfo || ''}\n\n${customPrompt}` },
+                            { role: 'user', content: userMessage }
+                        ],
+                        model: config.model || 'llama3-8b-8192',
+                        temperature: config.temperature || 0.7,
+                        max_tokens: 200,
+                    });
+                    const reply = chatCompletion.choices[0]?.message?.content || 'Sorry, I could not process that.';
+                    await this.whatsappService.sendOutboundMessage(shopId, toPhone, 'text', reply);
+                    this.saveOutboundMessage(shopId, session.contactId, 'text', reply, session.flowId);
+                }
+                catch (e) {
+                    this.logger.error(`AI execution error: ${e.message}`);
+                    await this.whatsappService.sendOutboundMessage(shopId, toPhone, 'text', 'AI encountered an error.');
+                }
+                return this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
             default:
                 return this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
         }
@@ -309,14 +376,71 @@ let FlowEngineService = FlowEngineService_1 = class FlowEngineService {
     }
     async processSimulation(flowId, input, definition) {
         const responses = [];
-        const mockSession = { currentNodeId: null, variables: {} };
         const root = this.findRootNodeId(definition);
         if (!root)
             return { responses: [], currentNodeId: null, wait: false };
-        const node = definition.nodes.find(n => n.id === root);
-        if (node)
-            responses.push({ content: `Simulation: Active at ${node.data.type}`, type: 'text' });
-        return { responses, currentNodeId: root, wait: true };
+        let currentNodeId = root;
+        let depth = 0;
+        const mockVariables = { _last_user_message: input || 'Hello' };
+        while (currentNodeId && depth < 20) {
+            depth++;
+            const node = definition.nodes.find(n => n.id === currentNodeId);
+            if (!node)
+                break;
+            const type = node.data.type;
+            if (['TEXT', 'IMAGE', 'VIDEO', 'AUDIO', 'DOCUMENT'].includes(type)) {
+                const content = this.resolveContent(node.data.content || node.data.text || '', mockVariables);
+                responses.push({ content: content || `[${type} Media]`, type: type.toLowerCase() });
+                currentNodeId = this.findNextNodeId(currentNodeId, definition, null);
+            }
+            else if (['BUTTON', 'LIST', 'INTERACTIVE', 'QUESTION'].includes(type)) {
+                const prompt = this.resolveContent(node.data.content || node.data.text || '', mockVariables);
+                responses.push({ content: prompt, type: type.toLowerCase(), data: node.data.config });
+                return { responses, currentNodeId, wait: true };
+            }
+            else if (type === 'CONDITION') {
+                const config = node.data.config || {};
+                const variable = config.variable || 'user_response';
+                const actualValue = mockVariables[variable] || mockVariables._last_user_message || '';
+                const conditionType = config.conditionType || 'keyword';
+                const expected = config.expected || '';
+                let match = false;
+                if (conditionType === 'keyword' || conditionType === 'equals') {
+                    match = String(actualValue).toLowerCase().trim() === String(expected).toLowerCase().trim();
+                }
+                else if (conditionType === 'contains') {
+                    match = String(actualValue).toLowerCase().includes(String(expected).toLowerCase());
+                }
+                else if (conditionType === 'not_empty') {
+                    match = !!actualValue;
+                }
+                currentNodeId = this.findNextNodeId(currentNodeId, definition, match ? 'yes' : 'no');
+            }
+            else if (type === 'KEYWORD_ROUTER') {
+                const branch = this.evaluateRouter(node, mockVariables._last_user_message);
+                currentNodeId = this.findNextNodeId(currentNodeId, definition, branch);
+            }
+            else if (type === 'DELAY') {
+                responses.push({ content: `[Delay for ${node.data.config?.delay || node.data.delay || 1}s]`, type: 'system' });
+                currentNodeId = this.findNextNodeId(currentNodeId, definition, null);
+            }
+            else if (type === 'AI_GENERATE') {
+                responses.push({ content: `[AI Agent evaluates knowledge base and responds dynamically...]`, type: 'ai' });
+                currentNodeId = this.findNextNodeId(currentNodeId, definition, null);
+            }
+            else if (type === 'AGENT_HANDOFF') {
+                responses.push({ content: `[AI Paused. Human Agent Alerted.]`, type: 'system' });
+                currentNodeId = this.findNextNodeId(currentNodeId, definition, null);
+            }
+            else if (type === 'JUMP') {
+                responses.push({ content: `[Jump to Flow: ${node.data.config?.targetFlowId || node.data.targetFlowId}]`, type: 'system' });
+                break;
+            }
+            else {
+                currentNodeId = this.findNextNodeId(currentNodeId, definition, null);
+            }
+        }
+        return { responses, currentNodeId: null, wait: false };
     }
     evaluateCondition(node, session) {
         const config = node.data.config || {};
@@ -366,7 +490,9 @@ exports.FlowEngineService = FlowEngineService;
 exports.FlowEngineService = FlowEngineService = FlowEngineService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(1, (0, common_1.Inject)((0, common_1.forwardRef)(() => whatsapp_service_1.WhatsappService))),
+    __param(2, (0, bullmq_1.InjectQueue)('flow-execution')),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        whatsapp_service_1.WhatsappService])
+        whatsapp_service_1.WhatsappService,
+        bullmq_2.Queue])
 ], FlowEngineService);
 //# sourceMappingURL=flow-engine.service.js.map

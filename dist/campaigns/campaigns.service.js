@@ -25,7 +25,7 @@ let CampaignsService = class CampaignsService {
         this.campaignsQueue = campaignsQueue;
     }
     async createCampaign(shopId, data) {
-        const { name, templateId, targetTags, targetPhones, scheduledAt, templateParams, headerMediaUrl, sendDelay, excludeUnsubscribed, sendNow } = data;
+        const { name, templateId, targetTags, targetPhones, targetFilters, scheduledAt, templateParams, headerMediaUrl, sendDelay, excludeUnsubscribed, sendNow } = data;
         let resolvedScheduledAt;
         let queueDelay;
         if (sendNow) {
@@ -50,6 +50,7 @@ let CampaignsService = class CampaignsService {
                 templateId,
                 targetTags: targetTags || [],
                 targetPhones: targetPhones || [],
+                targetFilters: targetFilters || null,
                 templateParams: templateParams || {},
                 headerMediaUrl: headerMediaUrl || null,
                 scheduledAt: resolvedScheduledAt,

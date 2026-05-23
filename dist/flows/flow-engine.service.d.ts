@@ -1,5 +1,6 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
+import { Queue } from 'bullmq';
 export interface RFNode {
     id: string;
     type?: string;
@@ -35,13 +36,14 @@ export interface SimulationResult {
 export declare class FlowEngineService {
     private prisma;
     private whatsappService;
+    private flowQueue;
     private readonly logger;
-    constructor(prisma: PrismaService, whatsappService: WhatsappService);
+    constructor(prisma: PrismaService, whatsappService: WhatsappService, flowQueue: Queue);
     processIncomingMessage(shopId: string, phone: string, input: string): Promise<boolean>;
     private startFlow;
     private continueFlow;
     private executeNodeChainNative;
-    private moveToNextNative;
+    moveToNextNative(nodeId: string, session: any, definition: FlowDefinition, shopId: string, toPhone: string, depth: number): any;
     private evaluateRouter;
     private matchesInternalRouter;
     private findRootNodeId;

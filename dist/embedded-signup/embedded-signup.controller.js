@@ -29,7 +29,7 @@ let EmbeddedSignupController = EmbeddedSignupController_1 = class EmbeddedSignup
     }
     async processCallback(req, dto) {
         this.logger.log(`Processing embedded signup callback for user ${req.user.id}`);
-        return this.signupService.processCallback(req.user.id, dto.code, dto.sessionInfo);
+        return this.signupService.processCallback(req.user.id, dto.code, dto.sessionInfo, dto.redirectUri);
     }
     async getConnectionStatus(req) {
         return this.signupService.getConnectionStatus(req.user.id);
@@ -40,7 +40,7 @@ let EmbeddedSignupController = EmbeddedSignupController_1 = class EmbeddedSignup
     }
     async reconnectWaba(req, wabaAccountId, dto) {
         this.logger.log(`Reconnecting WABA ${wabaAccountId} for user ${req.user.id}`);
-        return this.signupService.reconnectWaba(req.user.id, wabaAccountId, dto.code);
+        return this.signupService.reconnectWaba(req.user.id, wabaAccountId, dto.code, dto.redirectUri);
     }
 };
 exports.EmbeddedSignupController = EmbeddedSignupController;

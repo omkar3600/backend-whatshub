@@ -13,7 +13,7 @@ export declare class EmbeddedSignupService {
         configId: string;
         scopes: string;
     };
-    processCallback(userId: string, code: string, sessionInfo?: Record<string, any>): Promise<{
+    processCallback(userId: string, code: string, sessionInfo?: Record<string, any>, redirectUri?: string): Promise<{
         success: boolean;
         message: string;
         wabaAccount: {
@@ -57,7 +57,7 @@ export declare class EmbeddedSignupService {
         success: boolean;
         message: string;
     }>;
-    reconnectWaba(userId: string, wabaAccountId: string, code: string): Promise<{
+    reconnectWaba(userId: string, wabaAccountId: string, code: string, redirectUri?: string): Promise<{
         success: boolean;
         message: string;
     }>;

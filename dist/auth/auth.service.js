@@ -131,7 +131,12 @@ let AuthService = AuthService_1 = class AuthService {
                 id: user.id,
                 username: user.username,
                 role: user.role,
-                shopId: user.shop?.id
+                shopId: user.shop?.id,
+                shop: user.shop ? {
+                    id: user.shop.id,
+                    shopName: user.shop.shopName,
+                    phone: user.shop.phone
+                } : null
             }
         };
     }

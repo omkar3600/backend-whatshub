@@ -17,6 +17,11 @@ export declare class AuthController {
             username: string;
             role: string;
             shopId: string | undefined;
+            shop: {
+                id: string;
+                shopName: string;
+                phone: string;
+            } | null;
         };
     }>;
     logout(res: Response): Promise<{

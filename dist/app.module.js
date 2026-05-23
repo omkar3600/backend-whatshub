@@ -33,6 +33,7 @@ const embedded_signup_module_1 = require("./embedded-signup/embedded-signup.modu
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const flows_module_1 = require("./flows/flows.module");
+const sequences_module_1 = require("./sequences/sequences.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -73,6 +74,7 @@ exports.AppModule = AppModule = __decorate([
             chatbot_module_1.ChatbotModule,
             embedded_signup_module_1.EmbeddedSignupModule,
             flows_module_1.FlowsModule,
+            sequences_module_1.SequencesModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [

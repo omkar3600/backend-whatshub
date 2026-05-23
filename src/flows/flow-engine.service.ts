@@ -1,6 +1,9 @@
 import { Injectable, Logger, forwardRef, Inject } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import Groq from 'groq-sdk';
 
 export interface RFNode {
     id: string;
@@ -46,7 +49,8 @@ export class FlowEngineService {
     constructor(
         private prisma: PrismaService,
         @Inject(forwardRef(() => WhatsappService))
-        private whatsappService: WhatsappService
+        private whatsappService: WhatsappService,
+        @InjectQueue('flow-execution') private flowQueue: Queue
     ) { }
 
     /**
@@ -141,9 +145,15 @@ export class FlowEngineService {
         const rootNodeId = this.findRootNodeId(definition);
         if (!rootNodeId) return;
 
-        // Fetch contact phone once for the whole chain
-        const contact = await this.prisma.contact.findUnique({ where: { id: contactId }, select: { phone: true } });
+        // Fetch contact phone and check if aiPaused
+        const contact = await this.prisma.contact.findUnique({ where: { id: contactId }, include: { conversations: { where: { shopId: flow.shopId } } } });
         if (!contact) return;
+        
+        const conversation = contact.conversations[0];
+        if (conversation?.aiPaused) {
+            this.logger.log(`Skipping flow start for ${contact.phone} because AI is paused (Human Handoff active)`);
+            return;
+        }
 
         // Upsert session
         const session = await this.prisma.flowSession.upsert({
@@ -178,9 +188,14 @@ export class FlowEngineService {
             return;
         }
 
-        // Fetch contact phone once
-        const contact = await this.prisma.contact.findUnique({ where: { id: session.contactId }, select: { phone: true } });
+        // Fetch contact phone and check aiPaused
+        const contact = await this.prisma.contact.findUnique({ where: { id: session.contactId }, include: { conversations: { where: { shopId: flow.shopId } } } });
         if (!contact) return;
+        const conversation = contact.conversations[0];
+        if (conversation?.aiPaused) {
+            this.logger.log(`Skipping flow continue for ${contact.phone} because AI is paused`);
+            return;
+        }
 
         const variables = (session.variables as any) || {};
         variables._last_user_message = input;
@@ -231,6 +246,13 @@ export class FlowEngineService {
 
         const type = node.data.type;
         this.logger.log(`Native Executing [${depth}]: ${type} (${nodeId})`);
+
+        // Check if aiPaused was just activated in this step
+        const conversation = await this.prisma.conversation.findUnique({ where: { shopId_contactId: { shopId, contactId: session.contactId } } });
+        if (conversation?.aiPaused && type !== 'AGENT_HANDOFF') {
+            this.logger.log(`Execution aborted at ${nodeId}: AI is paused.`);
+            return;
+        }
 
         switch (type) {
             case 'START':
@@ -293,11 +315,63 @@ export class FlowEngineService {
 
             case 'DELAY':
                 const delaySeconds = node.data.config?.delay || node.data.delay || 1;
-                this.logger.log(`Halted for ${delaySeconds}s delay...`);
-                setTimeout(() => {
-                    this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
-                }, delaySeconds * 1000);
+                this.logger.log(`Halted for ${delaySeconds}s delay... queueing job`);
+                await this.flowQueue.add('delay', {
+                    nodeId,
+                    sessionId: session.id,
+                    definition,
+                    shopId,
+                    toPhone
+                }, { delay: delaySeconds * 1000 });
                 return;
+
+            case 'AGENT_HANDOFF':
+                this.logger.log(`Human Handoff requested. Pausing AI for contact.`);
+                const convo = await this.prisma.conversation.findUnique({ where: { shopId_contactId: { shopId, contactId: session.contactId } } });
+                if (convo) {
+                    await this.prisma.conversation.update({
+                        where: { id: convo.id },
+                        data: { aiPaused: true }
+                    });
+                }
+                return this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
+
+            case 'AI_GENERATE':
+                try {
+                    const config = await this.prisma.chatbotConfig.findUnique({ where: { shopId } });
+                    if (!config || !config.apiKey) {
+                        this.logger.warn(`AI_GENERATE node failed: No Groq API Key found for shop ${shopId}`);
+                        await this.whatsappService.sendOutboundMessage(shopId, toPhone, 'text', 'AI is currently unavailable.');
+                        return this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
+                    }
+                    
+                    const groq = new Groq({ apiKey: config.apiKey });
+                    const userMessage = session.variables._last_user_message || 'Hello';
+                    const customPrompt = node.data.config?.prompt || node.data.prompt || '';
+                    
+                    // Add some typing delay effect
+                    await this.whatsappService.sendOutboundMessage(shopId, toPhone, 'text', '...'); // A simple trick or use WhatsApp typing indicator if supported
+                    
+                    const chatCompletion = await groq.chat.completions.create({
+                        messages: [
+                            { role: 'system', content: `${config.systemPrompt || ''}\n\n${config.businessInfo || ''}\n\n${customPrompt}` },
+                            { role: 'user', content: userMessage }
+                        ],
+                        model: config.model || 'llama3-8b-8192',
+                        temperature: config.temperature || 0.7,
+                        max_tokens: 200,
+                    });
+                    
+                    const reply = chatCompletion.choices[0]?.message?.content || 'Sorry, I could not process that.';
+                    
+                    await this.whatsappService.sendOutboundMessage(shopId, toPhone, 'text', reply);
+                    this.saveOutboundMessage(shopId, session.contactId, 'text', reply, session.flowId);
+                    
+                } catch (e) {
+                    this.logger.error(`AI execution error: ${e.message}`);
+                    await this.whatsappService.sendOutboundMessage(shopId, toPhone, 'text', 'AI encountered an error.');
+                }
+                return this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
 
             default:
                 return this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
@@ -307,7 +381,7 @@ export class FlowEngineService {
         await this.prisma.flowSession.delete({ where: { id: session.id } }).catch(() => { });
     }
 
-    private async moveToNextNative(nodeId: string, session: any, definition: FlowDefinition, shopId: string, toPhone: string, depth: number) {
+    public async moveToNextNative(nodeId: string, session: any, definition: FlowDefinition, shopId: string, toPhone: string, depth: number) {
         const nextId = this.findNextNodeId(nodeId, definition, null);
         if (nextId) {
             return this.executeNodeChainNative(nextId, session, definition, shopId, toPhone, depth);
@@ -386,17 +460,78 @@ export class FlowEngineService {
     // --- Original Simulation Logic (Preserved) ---
 
     async processSimulation(flowId: string, input: string | null, definition: FlowDefinition): Promise<SimulationResult> {
-        // Keeping it simple for the user's preview window
         const responses: SimulationResponse[] = [];
-        const mockSession = { currentNodeId: null, variables: {} };
         const root = this.findRootNodeId(definition);
         if (!root) return { responses: [], currentNodeId: null, wait: false };
         
-        // This is a simplified version of the native logic for quick previews
-        const node = definition.nodes.find(n => n.id === root);
-        if (node) responses.push({ content: `Simulation: Active at ${node.data.type}`, type: 'text' });
+        // We will traverse the graph synchronously until we hit a wait state or end
+        let currentNodeId: string | null = root;
+        let depth = 0;
+        const mockVariables: any = { _last_user_message: input || 'Hello' };
         
-        return { responses, currentNodeId: root, wait: true };
+        while (currentNodeId && depth < 20) {
+            depth++;
+            const node = definition.nodes.find(n => n.id === currentNodeId);
+            if (!node) break;
+            
+            const type = node.data.type;
+            
+            if (['TEXT', 'IMAGE', 'VIDEO', 'AUDIO', 'DOCUMENT'].includes(type)) {
+                const content = this.resolveContent(node.data.content || node.data.text || '', mockVariables);
+                responses.push({ content: content || `[${type} Media]`, type: type.toLowerCase() });
+                currentNodeId = this.findNextNodeId(currentNodeId, definition, null);
+            } 
+            else if (['BUTTON', 'LIST', 'INTERACTIVE', 'QUESTION'].includes(type)) {
+                const prompt = this.resolveContent(node.data.content || node.data.text || '', mockVariables);
+                responses.push({ content: prompt, type: type.toLowerCase(), data: node.data.config });
+                // Halt simulation for input
+                return { responses, currentNodeId, wait: true };
+            }
+            else if (type === 'CONDITION') {
+                const config = node.data.config || {};
+                const variable = config.variable || 'user_response';
+                const actualValue = mockVariables[variable] || mockVariables._last_user_message || '';
+                const conditionType = config.conditionType || 'keyword';
+                const expected = config.expected || '';
+                
+                let match = false;
+                if (conditionType === 'keyword' || conditionType === 'equals') {
+                    match = String(actualValue).toLowerCase().trim() === String(expected).toLowerCase().trim();
+                } else if (conditionType === 'contains') {
+                    match = String(actualValue).toLowerCase().includes(String(expected).toLowerCase());
+                } else if (conditionType === 'not_empty') {
+                    match = !!actualValue;
+                }
+                
+                currentNodeId = this.findNextNodeId(currentNodeId, definition, match ? 'yes' : 'no');
+            }
+            else if (type === 'KEYWORD_ROUTER') {
+                const branch = this.evaluateRouter(node, mockVariables._last_user_message);
+                currentNodeId = this.findNextNodeId(currentNodeId, definition, branch);
+            }
+            else if (type === 'DELAY') {
+                responses.push({ content: `[Delay for ${node.data.config?.delay || node.data.delay || 1}s]`, type: 'system' });
+                currentNodeId = this.findNextNodeId(currentNodeId, definition, null);
+            }
+            else if (type === 'AI_GENERATE') {
+                responses.push({ content: `[AI Agent evaluates knowledge base and responds dynamically...]`, type: 'ai' });
+                currentNodeId = this.findNextNodeId(currentNodeId, definition, null);
+            }
+            else if (type === 'AGENT_HANDOFF') {
+                responses.push({ content: `[AI Paused. Human Agent Alerted.]`, type: 'system' });
+                currentNodeId = this.findNextNodeId(currentNodeId, definition, null);
+            }
+            else if (type === 'JUMP') {
+                responses.push({ content: `[Jump to Flow: ${node.data.config?.targetFlowId || node.data.targetFlowId}]`, type: 'system' });
+                break; // End simulation at jump
+            }
+            else {
+                // START or unknown
+                currentNodeId = this.findNextNodeId(currentNodeId, definition, null);
+            }
+        }
+        
+        return { responses, currentNodeId: null, wait: false };
     }
 
     private evaluateCondition(node: RFNode, session: any): string {
