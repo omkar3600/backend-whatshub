@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Put, Body, UseGuards, Res } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetUser } from '../auth/decorators/get-user.decorator';
@@ -11,7 +11,11 @@ export class UsersController {
     constructor(private readonly usersService: UsersService) { }
 
     @Get('me')
-    async getProfile(@GetUser() user: any) {
+    @BypassShopStatus()
+    async getMe(@GetUser() user: any, @Res({ passthrough: true }) res: any) {
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
         return this.usersService.getProfile(user.id);
     }
 
