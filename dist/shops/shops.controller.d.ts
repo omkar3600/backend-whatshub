@@ -26,6 +26,8 @@ export declare class ShopsController {
                     verifiedName: string | null;
                     qualityRating: string | null;
                     messagingLimit: string | null;
+                    nameStatus: string | null;
+                    pendingName: string | null;
                     isDefault: boolean;
                 }[];
             } & {
@@ -89,6 +91,8 @@ export declare class ShopsController {
             verifiedName: string | null;
             qualityRating: string | null;
             messagingLimit: string | null;
+            nameStatus: string | null;
+            pendingName: string | null;
             isDefault: boolean;
         }[];
     } | null>;

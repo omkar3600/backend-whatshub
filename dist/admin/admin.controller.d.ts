@@ -50,6 +50,8 @@ export declare class AdminController {
                 verifiedName: string | null;
                 qualityRating: string | null;
                 messagingLimit: string | null;
+                nameStatus: string | null;
+                pendingName: string | null;
                 isDefault: boolean;
             }[];
         } & {

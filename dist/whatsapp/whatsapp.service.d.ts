@@ -26,6 +26,7 @@ export declare class WhatsappService {
     getShopByWabaId(wabaId: string): Promise<string | null>;
     verifyWebhook(mode: string, token: string, challenge: string): Promise<string | null>;
     processWebhookEvent(body: any): Promise<void>;
+    private handlePhoneNumberNameUpdate;
     private handleTemplateStatusUpdate;
     private handleIncomingMessage;
     private handleMessageStatus;

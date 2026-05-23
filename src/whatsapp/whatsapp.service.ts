@@ -172,6 +172,11 @@ export class WhatsappService {
                             await this.handleTemplateStatusUpdate(shopId, value);
                             await this.logWebhookAudit(shopId, phoneNumberId, 'template_status', null, value, 'processed');
                         }
+
+                        if (change.field === 'phone_number_name_update') {
+                            await this.handlePhoneNumberNameUpdate(shopId, wabaId, value);
+                            await this.logWebhookAudit(shopId, null, 'account_update', null, value, 'processed');
+                        }
                     } catch (error) {
                         this.logger.error(`Error processing webhook for shop ${shopId}: ${error.message}`);
                         await this.logWebhookAudit(shopId, phoneNumberId, 'error', null, value, 'failed', error.message);
@@ -188,6 +193,57 @@ export class WhatsappService {
                     }
                 }
             }
+        }
+    }
+
+    private async handlePhoneNumberNameUpdate(shopId: string, wabaAccountId: string, value: any) {
+        const { display_phone_number, decision, requested_verified_name, rejection_reason } = value;
+        this.logger.log(`[Webhook] Name update for ${display_phone_number}: ${decision}`);
+
+        // Note: Meta passes display_phone_number, which may not have the + sign.
+        const phone = await this.prisma.whatsAppPhoneNumber.findFirst({
+            where: { shopId, displayPhoneNumber: display_phone_number }
+        });
+
+        if (!phone) {
+             this.logger.warn(`Could not find phone number ${display_phone_number} to update name.`);
+             return;
+        }
+
+        if (decision === 'APPROVED') {
+            await this.prisma.whatsAppPhoneNumber.update({
+                where: { id: phone.id },
+                data: {
+                    nameStatus: 'APPROVED',
+                    verifiedName: requested_verified_name
+                }
+            });
+
+            // Re-register the phone number to apply the change
+            try {
+                const creds = await this.getCredentialsByPhoneNumberId(phone.phoneNumberId);
+                if (creds) {
+                    await firstValueFrom(
+                        this.httpService.post(`${this.graphApiBase}/${phone.phoneNumberId}/register`, {
+                            messaging_product: 'whatsapp',
+                            pin: '123456'
+                        }, {
+                            headers: { Authorization: `Bearer ${creds.accessToken}` }
+                        })
+                    );
+                    this.logger.log(`Successfully re-registered phone ${phone.phoneNumberId} with new name.`);
+                }
+            } catch (err: any) {
+                this.logger.error(`Failed to auto-register phone after name approval: ${err.message}`);
+            }
+        } else if (decision === 'REJECTED') {
+            await this.prisma.whatsAppPhoneNumber.update({
+                where: { id: phone.id },
+                data: {
+                    nameStatus: 'REJECTED'
+                }
+            });
+            this.logger.warn(`Name change rejected: ${rejection_reason}`);
         }
     }
 
@@ -601,7 +657,20 @@ export class WhatsappService {
                     headers: { Authorization: `Bearer ${creds.accessToken}` }
                 })
             );
-            return response.data.data?.[0] || {};
+
+            // Get the internal phone details for Name Tracking
+            const phoneDetails = await this.prisma.whatsAppPhoneNumber.findUnique({
+                where: { phoneNumberId: creds.phoneNumberId }
+            });
+
+            return {
+                ...(response.data.data?.[0] || {}),
+                phoneDetails: {
+                    nameStatus: phoneDetails?.nameStatus || 'NONE',
+                    pendingName: phoneDetails?.pendingName || null,
+                    verifiedName: phoneDetails?.verifiedName || null
+                }
+            };
         } catch (error: any) {
             this.logger.error(`Failed to fetch business profile: ${error.response?.data?.error?.message || error.message}`);
             throw error;
@@ -684,6 +753,16 @@ export class WhatsappService {
                     headers: { Authorization: `Bearer ${creds.accessToken}` }
                 })
             );
+
+            // Update database to track the pending state
+            await this.prisma.whatsAppPhoneNumber.update({
+                where: { phoneNumberId: creds.phoneNumberId },
+                data: {
+                    nameStatus: 'PENDING',
+                    pendingName: newName
+                }
+            });
+
             return response.data;
         } catch (error: any) {
             this.logger.error(`Failed to update display name: ${error.response?.data?.error?.message || error.message}`);

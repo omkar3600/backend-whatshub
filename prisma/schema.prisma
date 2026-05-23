@@ -97,6 +97,8 @@ model WhatsAppPhoneNumber {
   qualityRating      String?
   messagingLimit     String?
   status             String   @default("active")
+  nameStatus         String?  // PENDING, APPROVED, REJECTED
+  pendingName        String?  // The name that was requested
   isDefault          Boolean  @default(false)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
