@@ -10,6 +10,7 @@ exports.WhatsappModule = void 0;
 const common_1 = require("@nestjs/common");
 const whatsapp_service_1 = require("./whatsapp.service");
 const webhooks_controller_1 = require("./webhooks/webhooks.controller");
+const whatsapp_controller_1 = require("./whatsapp.controller");
 const axios_1 = require("@nestjs/axios");
 const chatbot_module_1 = require("../chatbot/chatbot.module");
 const flows_module_1 = require("../flows/flows.module");
@@ -21,7 +22,7 @@ exports.WhatsappModule = WhatsappModule = __decorate([
     (0, common_1.Module)({
         imports: [axios_1.HttpModule, chatbot_module_1.ChatbotModule, (0, common_1.forwardRef)(() => flows_module_1.FlowsModule), chat_module_1.ChatModule],
         providers: [whatsapp_service_1.WhatsappService],
-        controllers: [webhooks_controller_1.WebhooksController],
+        controllers: [webhooks_controller_1.WebhooksController, whatsapp_controller_1.WhatsappController],
         exports: [whatsapp_service_1.WhatsappService],
     })
 ], WhatsappModule);

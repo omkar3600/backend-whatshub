@@ -590,4 +590,104 @@ export class WhatsappService {
             this.logger.error(`Failed to log webhook audit: ${e.message}`);
         }
     }
+
+    // --- Business Profile Settings ---
+
+    async getBusinessProfile(shopId: string) {
+        const creds = await this.getCredentials(shopId);
+        try {
+            const response = await firstValueFrom(
+                this.httpService.get(`${this.graphApiBase}/${creds.phoneNumberId}/whatsapp_business_profile?fields=about,address,description,email,profile_picture_url,websites,vertical`, {
+                    headers: { Authorization: `Bearer ${creds.accessToken}` }
+                })
+            );
+            return response.data.data?.[0] || {};
+        } catch (error: any) {
+            this.logger.error(`Failed to fetch business profile: ${error.response?.data?.error?.message || error.message}`);
+            throw error;
+        }
+    }
+
+    async updateBusinessProfile(shopId: string, data: any) {
+        const creds = await this.getCredentials(shopId);
+        try {
+            const payload: any = {
+                messaging_product: 'whatsapp',
+                about: data.about,
+                address: data.address,
+                description: data.description,
+                email: data.email,
+                websites: data.websites,
+                vertical: data.vertical
+            };
+            
+            Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
+
+            const response = await firstValueFrom(
+                this.httpService.post(`${this.graphApiBase}/${creds.phoneNumberId}/whatsapp_business_profile`, payload, {
+                    headers: { Authorization: `Bearer ${creds.accessToken}` }
+                })
+            );
+            return response.data;
+        } catch (error: any) {
+            this.logger.error(`Failed to update business profile: ${error.response?.data?.error?.message || error.message}`);
+            throw error;
+        }
+    }
+
+    async uploadProfilePicture(shopId: string, file: any) {
+        const creds = await this.getCredentials(shopId);
+        try {
+            // Step 1: Create resumable upload session
+            const sessionRes = await firstValueFrom(
+                this.httpService.post(`${this.graphApiBase}/app/uploads?file_length=${file.size}&file_type=${file.mimetype}`, {}, {
+                    headers: { Authorization: `Bearer ${creds.accessToken}` }
+                })
+            );
+            const sessionId = sessionRes.data.id;
+
+            // Step 2: Upload file bytes
+            const uploadRes = await firstValueFrom(
+                this.httpService.post(`${this.graphApiBase}/${sessionId}`, file.buffer, {
+                    headers: {
+                        'Authorization': `OAuth ${creds.accessToken}`,
+                        'file_offset': '0',
+                        'Content-Type': 'application/octet-stream'
+                    }
+                })
+            );
+            const handle = uploadRes.data.h;
+
+            // Step 3: Update Profile
+            const profileRes = await firstValueFrom(
+                this.httpService.post(`${this.graphApiBase}/${creds.phoneNumberId}/whatsapp_business_profile`, {
+                    messaging_product: 'whatsapp',
+                    profile_picture_handle: handle
+                }, {
+                    headers: { Authorization: `Bearer ${creds.accessToken}` }
+                })
+            );
+            return profileRes.data;
+        } catch (error: any) {
+            this.logger.error(`Failed to upload profile picture: ${error.response?.data?.error?.message || error.message}`);
+            throw new Error(error.response?.data?.error?.message || 'Failed to upload profile picture');
+        }
+    }
+
+    async updateDisplayName(shopId: string, newName: string) {
+        const creds = await this.getCredentials(shopId);
+        try {
+            const response = await firstValueFrom(
+                this.httpService.post(`${this.graphApiBase}/${creds.phoneNumberId}`, {
+                    new_display_name: newName
+                }, {
+                    headers: { Authorization: `Bearer ${creds.accessToken}` }
+                })
+            );
+            return response.data;
+        } catch (error: any) {
+            this.logger.error(`Failed to update display name: ${error.response?.data?.error?.message || error.message}`);
+            throw new Error(error.response?.data?.error?.message || 'Failed to request display name change');
+        }
+    }
 }

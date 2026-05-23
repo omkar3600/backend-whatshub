@@ -31,5 +31,9 @@ export declare class WhatsappService {
     private handleMessageStatus;
     sendOutboundMessage(shopId: string, toPhone: string, type: string, content: any, mediaUrl?: string): Promise<any>;
     private logWebhookAudit;
+    getBusinessProfile(shopId: string): Promise<any>;
+    updateBusinessProfile(shopId: string, data: any): Promise<any>;
+    uploadProfilePicture(shopId: string, file: any): Promise<any>;
+    updateDisplayName(shopId: string, newName: string): Promise<any>;
 }
 export {};

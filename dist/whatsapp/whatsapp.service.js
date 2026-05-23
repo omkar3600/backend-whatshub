@@ -518,6 +518,85 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
             this.logger.error(`Failed to log webhook audit: ${e.message}`);
         }
     }
+    async getBusinessProfile(shopId) {
+        const creds = await this.getCredentials(shopId);
+        try {
+            const response = await (0, rxjs_1.firstValueFrom)(this.httpService.get(`${this.graphApiBase}/${creds.phoneNumberId}/whatsapp_business_profile?fields=about,address,description,email,profile_picture_url,websites,vertical`, {
+                headers: { Authorization: `Bearer ${creds.accessToken}` }
+            }));
+            return response.data.data?.[0] || {};
+        }
+        catch (error) {
+            this.logger.error(`Failed to fetch business profile: ${error.response?.data?.error?.message || error.message}`);
+            throw error;
+        }
+    }
+    async updateBusinessProfile(shopId, data) {
+        const creds = await this.getCredentials(shopId);
+        try {
+            const payload = {
+                messaging_product: 'whatsapp',
+                about: data.about,
+                address: data.address,
+                description: data.description,
+                email: data.email,
+                websites: data.websites,
+                vertical: data.vertical
+            };
+            Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
+            const response = await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${this.graphApiBase}/${creds.phoneNumberId}/whatsapp_business_profile`, payload, {
+                headers: { Authorization: `Bearer ${creds.accessToken}` }
+            }));
+            return response.data;
+        }
+        catch (error) {
+            this.logger.error(`Failed to update business profile: ${error.response?.data?.error?.message || error.message}`);
+            throw error;
+        }
+    }
+    async uploadProfilePicture(shopId, file) {
+        const creds = await this.getCredentials(shopId);
+        try {
+            const sessionRes = await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${this.graphApiBase}/app/uploads?file_length=${file.size}&file_type=${file.mimetype}`, {}, {
+                headers: { Authorization: `Bearer ${creds.accessToken}` }
+            }));
+            const sessionId = sessionRes.data.id;
+            const uploadRes = await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${this.graphApiBase}/${sessionId}`, file.buffer, {
+                headers: {
+                    'Authorization': `OAuth ${creds.accessToken}`,
+                    'file_offset': '0',
+                    'Content-Type': 'application/octet-stream'
+                }
+            }));
+            const handle = uploadRes.data.h;
+            const profileRes = await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${this.graphApiBase}/${creds.phoneNumberId}/whatsapp_business_profile`, {
+                messaging_product: 'whatsapp',
+                profile_picture_handle: handle
+            }, {
+                headers: { Authorization: `Bearer ${creds.accessToken}` }
+            }));
+            return profileRes.data;
+        }
+        catch (error) {
+            this.logger.error(`Failed to upload profile picture: ${error.response?.data?.error?.message || error.message}`);
+            throw new Error(error.response?.data?.error?.message || 'Failed to upload profile picture');
+        }
+    }
+    async updateDisplayName(shopId, newName) {
+        const creds = await this.getCredentials(shopId);
+        try {
+            const response = await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${this.graphApiBase}/${creds.phoneNumberId}`, {
+                new_display_name: newName
+            }, {
+                headers: { Authorization: `Bearer ${creds.accessToken}` }
+            }));
+            return response.data;
+        }
+        catch (error) {
+            this.logger.error(`Failed to update display name: ${error.response?.data?.error?.message || error.message}`);
+            throw new Error(error.response?.data?.error?.message || 'Failed to request display name change');
+        }
+    }
 };
 exports.WhatsappService = WhatsappService;
 exports.WhatsappService = WhatsappService = WhatsappService_1 = __decorate([
