@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
 const auth_service_1 = require("./auth.service");
+const bypass_shop_status_decorator_1 = require("./decorators/bypass-shop-status.decorator");
 let AuthController = class AuthController {
     authService;
     constructor(authService) {
@@ -73,6 +74,7 @@ __decorate([
 ], AuthController.prototype, "logout", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
+    (0, bypass_shop_status_decorator_1.BypassShopStatus)(),
     __metadata("design:paramtypes", [auth_service_1.AuthService])
 ], AuthController);
 //# sourceMappingURL=auth.controller.js.map

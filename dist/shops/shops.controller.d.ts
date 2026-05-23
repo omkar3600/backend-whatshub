@@ -9,9 +9,9 @@ export declare class ShopsController {
                 createdAt: Date;
                 updatedAt: Date;
                 status: string;
-                expiryDate: Date;
-                startDate: Date;
                 shopId: string;
+                startDate: Date;
+                expiryDate: Date;
             } | null;
             whatsappAccounts: ({
                 phoneNumbers: {

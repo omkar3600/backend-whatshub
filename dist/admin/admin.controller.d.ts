@@ -18,9 +18,9 @@ export declare class AdminController {
             createdAt: Date;
             updatedAt: Date;
             status: string;
-            expiryDate: Date;
-            startDate: Date;
             shopId: string;
+            startDate: Date;
+            expiryDate: Date;
         };
     }>;
     getShops(): Promise<({
@@ -29,9 +29,9 @@ export declare class AdminController {
             createdAt: Date;
             updatedAt: Date;
             status: string;
-            expiryDate: Date;
-            startDate: Date;
             shopId: string;
+            startDate: Date;
+            expiryDate: Date;
         } | null;
         owner: {
             username: string;
@@ -83,9 +83,9 @@ export declare class AdminController {
         createdAt: Date;
         updatedAt: Date;
         status: string;
-        expiryDate: Date;
-        startDate: Date;
         shopId: string;
+        startDate: Date;
+        expiryDate: Date;
     }>;
     updateShop(shopId: string, body: any): Promise<{
         subscription: {
@@ -93,9 +93,9 @@ export declare class AdminController {
             createdAt: Date;
             updatedAt: Date;
             status: string;
-            expiryDate: Date;
-            startDate: Date;
             shopId: string;
+            startDate: Date;
+            expiryDate: Date;
         } | null;
         owner: {
             username: string;
@@ -183,9 +183,9 @@ export declare class AdminController {
             createdAt: Date;
             updatedAt: Date;
             status: string;
-            expiryDate: Date;
-            startDate: Date;
             shopId: string;
+            startDate: Date;
+            expiryDate: Date;
         } | null;
         isConnected: boolean;
         accounts: {

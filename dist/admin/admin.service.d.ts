@@ -20,9 +20,9 @@ export declare class AdminService {
             createdAt: Date;
             updatedAt: Date;
             status: string;
-            expiryDate: Date;
-            startDate: Date;
             shopId: string;
+            startDate: Date;
+            expiryDate: Date;
         };
     }>;
     getShops(): Promise<({
@@ -31,9 +31,9 @@ export declare class AdminService {
             createdAt: Date;
             updatedAt: Date;
             status: string;
-            expiryDate: Date;
-            startDate: Date;
             shopId: string;
+            startDate: Date;
+            expiryDate: Date;
         } | null;
         owner: {
             username: string;
@@ -86,9 +86,9 @@ export declare class AdminService {
             createdAt: Date;
             updatedAt: Date;
             status: string;
-            expiryDate: Date;
-            startDate: Date;
             shopId: string;
+            startDate: Date;
+            expiryDate: Date;
         } | null;
         owner: {
             username: string;
@@ -108,9 +108,9 @@ export declare class AdminService {
         createdAt: Date;
         updatedAt: Date;
         status: string;
-        expiryDate: Date;
-        startDate: Date;
         shopId: string;
+        startDate: Date;
+        expiryDate: Date;
     }>;
     toggleShopStatus(shopId: string, status: string): Promise<{
         shopName: string;
@@ -185,9 +185,9 @@ export declare class AdminService {
             createdAt: Date;
             updatedAt: Date;
             status: string;
-            expiryDate: Date;
-            startDate: Date;
             shopId: string;
+            startDate: Date;
+            expiryDate: Date;
         } | null;
         isConnected: boolean;
         accounts: {

@@ -2,9 +2,11 @@ import { Controller, Get, Put, Body, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetUser } from '../auth/decorators/get-user.decorator';
+import { BypassShopStatus } from '../auth/decorators/bypass-shop-status.decorator';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
+@BypassShopStatus()
 export class UsersController {
     constructor(private readonly usersService: UsersService) { }
 

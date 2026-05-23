@@ -12,9 +12,9 @@ export declare class ShopsService {
                 createdAt: Date;
                 updatedAt: Date;
                 status: string;
-                expiryDate: Date;
-                startDate: Date;
                 shopId: string;
+                startDate: Date;
+                expiryDate: Date;
             } | null;
             whatsappAccounts: ({
                 phoneNumbers: {

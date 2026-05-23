@@ -1,4 +1,4 @@
-﻿import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -6,6 +6,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
 import { CommonModule } from './common/common.module';
 import { AuthModule } from './auth/auth.module';
+import { ActiveShopGuard } from './auth/guards/active-shop.guard';
 import { PrismaModule } from './prisma/prisma.module';
 import { AdminModule } from './admin/admin.module';
 import { ShopsModule } from './shops/shops.module';
@@ -71,6 +72,10 @@ import { SequencesModule } from './sequences/sequences.module';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ActiveShopGuard,
     },
   ],
 })

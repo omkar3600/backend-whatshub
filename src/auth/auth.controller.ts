@@ -1,8 +1,10 @@
-import { Controller, Post, Body, Res } from '@nestjs/common';
+import { Controller, Post, Body, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
+import { BypassShopStatus } from './decorators/bypass-shop-status.decorator';
 
 @Controller('auth')
+@BypassShopStatus()
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
 
