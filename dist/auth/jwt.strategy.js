@@ -37,6 +37,7 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
     async validate(payload) {
         const user = await this.prisma.user.findUnique({
             where: { id: payload.sub },
+            include: { shop: { include: { subscription: true } } }
         });
         if (!user) {
             throw new common_1.UnauthorizedException();
@@ -45,7 +46,9 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
             id: payload.sub,
             username: payload.username,
             role: payload.role,
-            shopId: payload.shopId
+            shopId: payload.shopId,
+            shopStatus: user.shop?.status,
+            subscriptionExpiry: user.shop?.subscription?.expiryDate
         };
     }
 };

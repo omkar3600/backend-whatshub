@@ -11,6 +11,8 @@ export declare class JwtStrategy extends JwtStrategy_base {
         username: any;
         role: any;
         shopId: any;
+        shopStatus: string | undefined;
+        subscriptionExpiry: Date | undefined;
     }>;
 }
 export {};

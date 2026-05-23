@@ -15,7 +15,7 @@ const schedule_1 = require("@nestjs/schedule");
 const core_1 = require("@nestjs/core");
 const common_module_1 = require("./common/common.module");
 const auth_module_1 = require("./auth/auth.module");
-const active_shop_guard_1 = require("./auth/guards/active-shop.guard");
+const active_shop_interceptor_1 = require("./auth/interceptors/active-shop.interceptor");
 const prisma_module_1 = require("./prisma/prisma.module");
 const admin_module_1 = require("./admin/admin.module");
 const shops_module_1 = require("./shops/shops.module");
@@ -85,8 +85,8 @@ exports.AppModule = AppModule = __decorate([
                 useClass: throttler_1.ThrottlerGuard,
             },
             {
-                provide: core_1.APP_GUARD,
-                useClass: active_shop_guard_1.ActiveShopGuard,
+                provide: core_1.APP_INTERCEPTOR,
+                useClass: active_shop_interceptor_1.ActiveShopInterceptor,
             },
         ],
     })

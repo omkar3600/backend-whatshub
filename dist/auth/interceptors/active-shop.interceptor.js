@@ -9,56 +9,45 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ActiveShopGuard = void 0;
+exports.ActiveShopInterceptor = void 0;
 const common_1 = require("@nestjs/common");
 const core_1 = require("@nestjs/core");
-const prisma_service_1 = require("../../prisma/prisma.service");
 const bypass_shop_status_decorator_1 = require("../decorators/bypass-shop-status.decorator");
-let ActiveShopGuard = class ActiveShopGuard {
+let ActiveShopInterceptor = class ActiveShopInterceptor {
     reflector;
-    prisma;
-    constructor(reflector, prisma) {
+    constructor(reflector) {
         this.reflector = reflector;
-        this.prisma = prisma;
     }
-    async canActivate(context) {
+    intercept(context, next) {
         const isBypassed = this.reflector.getAllAndOverride(bypass_shop_status_decorator_1.IS_PUBLIC_SHOP_STATUS_KEY, [
             context.getHandler(),
             context.getClass(),
         ]);
         if (isBypassed) {
-            return true;
+            return next.handle();
         }
         const req = context.switchToHttp().getRequest();
         const user = req.user;
-        if (!user || user.role === 'admin') {
-            return true;
-        }
-        const shop = await this.prisma.shop.findUnique({
-            where: { ownerId: user.id },
-            include: { subscription: true }
-        });
-        if (shop) {
-            if (shop.status !== 'active') {
+        if (user && user.role !== 'admin') {
+            if (user.shopStatus && user.shopStatus !== 'active') {
                 throw new common_1.ForbiddenException({
                     code: 'ACCOUNT_SUSPENDED',
                     message: 'Your account has been temporarily seized. Contact administrator for more.'
                 });
             }
-            if (shop.subscription && new Date(shop.subscription.expiryDate) < new Date()) {
+            if (user.subscriptionExpiry && new Date(user.subscriptionExpiry) < new Date()) {
                 throw new common_1.ForbiddenException({
                     code: 'SUBSCRIPTION_EXPIRED',
                     message: 'Your subscription date is over.'
                 });
             }
         }
-        return true;
+        return next.handle();
     }
 };
-exports.ActiveShopGuard = ActiveShopGuard;
-exports.ActiveShopGuard = ActiveShopGuard = __decorate([
+exports.ActiveShopInterceptor = ActiveShopInterceptor;
+exports.ActiveShopInterceptor = ActiveShopInterceptor = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [core_1.Reflector,
-        prisma_service_1.PrismaService])
-], ActiveShopGuard);
-//# sourceMappingURL=active-shop.guard.js.map
+    __metadata("design:paramtypes", [core_1.Reflector])
+], ActiveShopInterceptor);
+//# sourceMappingURL=active-shop.interceptor.js.map

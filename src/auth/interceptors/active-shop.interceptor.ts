@@ -1,48 +1,35 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { CallHandler, ExecutionContext, Injectable, NestInterceptor, ForbiddenException } from '@nestjs/common';
+import { Observable } from 'rxjs';
 import { Reflector } from '@nestjs/core';
-import { PrismaService } from '../../prisma/prisma.service';
 import { IS_PUBLIC_SHOP_STATUS_KEY } from '../decorators/bypass-shop-status.decorator';
 
 @Injectable()
-export class ActiveShopGuard implements CanActivate {
-    constructor(
-        private reflector: Reflector,
-        private prisma: PrismaService
-    ) {}
+export class ActiveShopInterceptor implements NestInterceptor {
+    constructor(private reflector: Reflector) {}
 
-    async canActivate(context: ExecutionContext): Promise<boolean> {
+    intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
         // Check if route has @BypassShopStatus()
         const isBypassed = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_SHOP_STATUS_KEY, [
             context.getHandler(),
             context.getClass(),
         ]);
         if (isBypassed) {
-            return true;
+            return next.handle();
         }
 
         const req = context.switchToHttp().getRequest();
         const user = req.user;
 
-        // If no user is attached yet (public route) or admin, allow it
-        if (!user || user.role === 'admin') {
-            return true;
-        }
-
-        // Fetch shop & subscription details
-        const shop = await this.prisma.shop.findUnique({
-            where: { ownerId: user.id },
-            include: { subscription: true }
-        });
-
-        if (shop) {
-            if (shop.status !== 'active') {
+        // User is populated here because interceptors run AFTER guards
+        if (user && user.role !== 'admin') {
+            if (user.shopStatus && user.shopStatus !== 'active') {
                 throw new ForbiddenException({
                     code: 'ACCOUNT_SUSPENDED',
                     message: 'Your account has been temporarily seized. Contact administrator for more.'
                 });
             }
 
-            if (shop.subscription && new Date(shop.subscription.expiryDate) < new Date()) {
+            if (user.subscriptionExpiry && new Date(user.subscriptionExpiry) < new Date()) {
                 throw new ForbiddenException({
                     code: 'SUBSCRIPTION_EXPIRED',
                     message: 'Your subscription date is over.'
@@ -50,6 +37,6 @@ export class ActiveShopGuard implements CanActivate {
             }
         }
 
-        return true;
+        return next.handle();
     }
 }

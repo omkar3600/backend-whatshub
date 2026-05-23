@@ -3,10 +3,10 @@ import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { CommonModule } from './common/common.module';
 import { AuthModule } from './auth/auth.module';
-import { ActiveShopGuard } from './auth/guards/active-shop.guard';
+import { ActiveShopInterceptor } from './auth/interceptors/active-shop.interceptor';
 import { PrismaModule } from './prisma/prisma.module';
 import { AdminModule } from './admin/admin.module';
 import { ShopsModule } from './shops/shops.module';
@@ -74,8 +74,8 @@ import { SequencesModule } from './sequences/sequences.module';
       useClass: ThrottlerGuard,
     },
     {
-      provide: APP_GUARD,
-      useClass: ActiveShopGuard,
+      provide: APP_INTERCEPTOR,
+      useClass: ActiveShopInterceptor,
     },
   ],
 })
