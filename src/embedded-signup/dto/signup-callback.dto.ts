@@ -8,4 +8,8 @@ export class SignupCallbackDto {
     @IsOptional()
     @IsObject()
     sessionInfo?: Record<string, any>;
+
+    @IsOptional()
+    @IsString()
+    redirectUri?: string;
 }

@@ -36,7 +36,7 @@ export class EmbeddedSignupService {
     /**
      * Main OAuth flow: exchange code → get token → fetch WABA details → store everything.
      */
-    async processCallback(userId: string, code: string, sessionInfo?: Record<string, any>) {
+    async processCallback(userId: string, code: string, sessionInfo?: Record<string, any>, redirectUri?: string) {
         const shop = await this.prisma.shop.findUnique({ where: { ownerId: userId } });
         if (!shop) throw new NotFoundException('Shop not found');
 
@@ -45,7 +45,7 @@ export class EmbeddedSignupService {
 
         try {
             // Step 1: Exchange authorization code for access token
-            const tokenData = await this.exchangeCodeForToken(code);
+            const tokenData = await this.exchangeCodeForToken(code, redirectUri);
             await this.logOnboardingEvent(shop.id, 'token_exchanged', {
                 tokenType: tokenData.token_type,
             });
@@ -312,7 +312,7 @@ export class EmbeddedSignupService {
     /**
      * Re-initiates OAuth for an existing WABA, updating the token.
      */
-    async reconnectWaba(userId: string, wabaAccountId: string, code: string) {
+    async reconnectWaba(userId: string, wabaAccountId: string, code: string, redirectUri?: string) {
         const shop = await this.prisma.shop.findUnique({ where: { ownerId: userId } });
         if (!shop) throw new NotFoundException('Shop not found');
 
@@ -322,7 +322,7 @@ export class EmbeddedSignupService {
         if (!account) throw new NotFoundException('WhatsApp Business Account not found');
 
         // Exchange new code for token
-        const tokenData = await this.exchangeCodeForToken(code);
+        const tokenData = await this.exchangeCodeForToken(code, redirectUri);
         const encryptedToken = this.cryptoService.encrypt(tokenData.access_token);
 
         // Debug token for expiry
@@ -367,7 +367,7 @@ export class EmbeddedSignupService {
 
     // ─── Private Helper Methods ────────────────────────────────────────────
 
-    private async exchangeCodeForToken(code: string): Promise<any> {
+    private async exchangeCodeForToken(code: string, redirectUri?: string): Promise<any> {
         const appId = process.env.META_APP_ID;
         const appSecret = process.env.META_APP_SECRET;
 
@@ -382,6 +382,7 @@ export class EmbeddedSignupService {
                     client_id: appId,
                     client_secret: appSecret,
                     code: code,
+                    redirect_uri: redirectUri || '',
                 },
             }),
         );

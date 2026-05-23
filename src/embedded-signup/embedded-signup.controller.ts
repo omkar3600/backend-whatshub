@@ -26,7 +26,7 @@ export class EmbeddedSignupController {
     @Post('callback')
     async processCallback(@Req() req: any, @Body() dto: SignupCallbackDto) {
         this.logger.log(`Processing embedded signup callback for user ${req.user.id}`);
-        return this.signupService.processCallback(req.user.id, dto.code, dto.sessionInfo);
+        return this.signupService.processCallback(req.user.id, dto.code, dto.sessionInfo, dto.redirectUri);
     }
 
     /**
@@ -56,6 +56,6 @@ export class EmbeddedSignupController {
         @Body() dto: SignupCallbackDto,
     ) {
         this.logger.log(`Reconnecting WABA ${wabaAccountId} for user ${req.user.id}`);
-        return this.signupService.reconnectWaba(req.user.id, wabaAccountId, dto.code);
+        return this.signupService.reconnectWaba(req.user.id, wabaAccountId, dto.code, dto.redirectUri);
     }
 }
