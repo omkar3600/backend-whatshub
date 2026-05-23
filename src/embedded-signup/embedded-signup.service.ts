@@ -210,17 +210,19 @@ export class EmbeddedSignupService {
                     qualityRating: p.quality_rating,
                 })),
             };
-        } catch (error) {
-            this.logger.error(`Embedded signup failed for shop ${shop.id}: ${error.message}`);
+        } catch (error: any) {
+            const metaApiError = error.response?.data || error.message;
+            this.logger.error(`Embedded signup failed for shop ${shop.id}:`, JSON.stringify(metaApiError));
+            
             await this.logOnboardingEvent(shop.id, 'failed', {
-                error: error.message,
+                error: metaApiError,
                 stack: error.stack,
             });
 
             if (error instanceof BadRequestException || error instanceof NotFoundException) {
                 throw error;
             }
-            throw new BadRequestException(`Failed to connect WhatsApp: ${error.message}`);
+            throw new BadRequestException(`Failed to connect WhatsApp. Meta API Error: ${JSON.stringify(metaApiError)}`);
         }
     }
 
