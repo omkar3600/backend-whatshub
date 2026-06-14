@@ -23,7 +23,10 @@ let UsersController = class UsersController {
     constructor(usersService) {
         this.usersService = usersService;
     }
-    async getProfile(user) {
+    async getMe(user, res) {
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
         return this.usersService.getProfile(user.id);
     }
     async updateProfile(user, body) {
@@ -36,11 +39,13 @@ let UsersController = class UsersController {
 exports.UsersController = UsersController;
 __decorate([
     (0, common_1.Get)('me'),
+    (0, bypass_shop_status_decorator_1.BypassShopStatus)(),
     __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
-], UsersController.prototype, "getProfile", null);
+], UsersController.prototype, "getMe", null);
 __decorate([
     (0, common_1.Put)('me'),
     __param(0, (0, get_user_decorator_1.GetUser)()),

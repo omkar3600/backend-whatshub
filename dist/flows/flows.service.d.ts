@@ -4,99 +4,16 @@ export declare class FlowsService {
     private prisma;
     private flowEngine;
     constructor(prisma: PrismaService, flowEngine: FlowEngineService);
-    createFlow(shopId: string, data: any): Promise<{
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        name: string;
-        status: string;
-        shopId: string;
-        isDefault: boolean;
-        description: string | null;
-        category: string;
-        nodeCount: number;
-        nodes: import("@prisma/client/runtime/library").JsonValue | null;
-        edges: import("@prisma/client/runtime/library").JsonValue | null;
-        triggerKeyword: string | null;
-    }>;
-    getFlows(shopId: string): Promise<{
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        name: string;
-        status: string;
-        shopId: string;
-        isDefault: boolean;
-        description: string | null;
-        category: string;
-        nodeCount: number;
-        nodes: import("@prisma/client/runtime/library").JsonValue | null;
-        edges: import("@prisma/client/runtime/library").JsonValue | null;
-        triggerKeyword: string | null;
-    }[]>;
-    getFlow(shopId: string, id: string): Promise<{
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        name: string;
-        status: string;
-        shopId: string;
-        isDefault: boolean;
-        description: string | null;
-        category: string;
-        nodeCount: number;
-        nodes: import("@prisma/client/runtime/library").JsonValue | null;
-        edges: import("@prisma/client/runtime/library").JsonValue | null;
-        triggerKeyword: string | null;
-    }>;
-    updateFlow(shopId: string, id: string, data: any): Promise<{
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        name: string;
-        status: string;
-        shopId: string;
-        isDefault: boolean;
-        description: string | null;
-        category: string;
-        nodeCount: number;
-        nodes: import("@prisma/client/runtime/library").JsonValue | null;
-        edges: import("@prisma/client/runtime/library").JsonValue | null;
-        triggerKeyword: string | null;
-    }>;
-    getFlowVersions(shopId: string, flowId: string): Promise<{
-        id: string;
-        createdAt: Date;
-        name: string;
-        versionNumber: number;
-    }[]>;
-    getFlowVersion(shopId: string, flowId: string, versionId: string): Promise<{
-        id: string;
-        createdAt: Date;
-        name: string;
-        nodes: import("@prisma/client/runtime/library").JsonValue | null;
-        edges: import("@prisma/client/runtime/library").JsonValue | null;
-        flowId: string;
-        versionNumber: number;
-    }>;
+    createFlow(shopId: string, data: any): Promise<any>;
+    getFlows(shopId: string): Promise<any>;
+    getFlow(shopId: string, id: string): Promise<any>;
+    updateFlow(shopId: string, id: string, data: any): Promise<any>;
+    getFlowVersions(shopId: string, flowId: string): Promise<any>;
+    getFlowVersion(shopId: string, flowId: string, versionId: string): Promise<any>;
     deleteFlow(shopId: string, id: string): Promise<{
         message: string;
     }>;
-    updateSettings(shopId: string, id: string, data: any): Promise<{
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        name: string;
-        status: string;
-        shopId: string;
-        isDefault: boolean;
-        description: string | null;
-        category: string;
-        nodeCount: number;
-        nodes: import("@prisma/client/runtime/library").JsonValue | null;
-        edges: import("@prisma/client/runtime/library").JsonValue | null;
-        triggerKeyword: string | null;
-    }>;
-    getFlowAnalytics(shopId: string, flowId: string): Promise<{}>;
+    updateSettings(shopId: string, id: string, data: any): Promise<any>;
+    getFlowAnalytics(shopId: string, flowId: string): Promise<any>;
     simulateFlow(id: string, data: any): Promise<import("./flow-engine.service").SimulationResult>;
 }

@@ -13,23 +13,7 @@ export declare class MediaService {
         fileSize: number;
         fileName: string | null;
     }>;
-    getMediaFiles(shopId: string): Promise<{
-        id: string;
-        createdAt: Date;
-        shopId: string;
-        fileName: string | null;
-        fileUrl: string;
-        fileType: string;
-        fileSize: number;
-    }[]>;
-    deleteMediaFile(shopId: string, id: string): Promise<{
-        id: string;
-        createdAt: Date;
-        shopId: string;
-        fileName: string | null;
-        fileUrl: string;
-        fileType: string;
-        fileSize: number;
-    }>;
-    deleteAllMediaFiles(shopId: string): Promise<import("@prisma/client").Prisma.BatchPayload>;
+    getMediaFiles(shopId: string): Promise<any>;
+    deleteMediaFile(shopId: string, id: string): Promise<any>;
+    deleteAllMediaFiles(shopId: string): Promise<any>;
 }

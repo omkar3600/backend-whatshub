@@ -17,7 +17,7 @@ export declare class EmbeddedSignupService {
         success: boolean;
         message: string;
         wabaAccount: {
-            id: string;
+            id: any;
             businessName: string | undefined;
             wabaId: string;
             status: string;
@@ -30,28 +30,9 @@ export declare class EmbeddedSignupService {
         }[];
     }>;
     getConnectionStatus(userId: string): Promise<{
-        shopId: string;
-        isConnected: boolean;
-        accounts: {
-            id: string;
-            wabaId: string;
-            businessName: string | null;
-            status: string;
-            tokenHealth: string;
-            tokenExpiry: Date | null;
-            onboardingSource: string;
-            createdAt: Date;
-            phoneNumbers: {
-                id: string;
-                phoneNumberId: string;
-                displayPhoneNumber: string | null;
-                verifiedName: string | null;
-                qualityRating: string | null;
-                messagingLimit: string | null;
-                status: string;
-                isDefault: boolean;
-            }[];
-        }[];
+        shopId: any;
+        isConnected: any;
+        accounts: any;
     }>;
     disconnectWaba(userId: string, wabaAccountId: string): Promise<{
         success: boolean;

@@ -63,7 +63,14 @@ let UsersService = class UsersService {
                     select: {
                         id: true,
                         shopName: true,
-                        phone: true
+                        phone: true,
+                        status: true,
+                        subscription: {
+                            select: {
+                                status: true,
+                                expiryDate: true
+                            }
+                        }
                     }
                 }
             },

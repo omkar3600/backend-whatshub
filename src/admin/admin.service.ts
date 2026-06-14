@@ -123,19 +123,44 @@ export class AdminService {
 
     async deleteShop(shopId: string) {
         return this.prisma.$transaction(async (prisma) => {
-            await prisma.message.deleteMany({ where: { shopId } });
+            // 1. Delete chatbot configurations
+            await prisma.chatbotConfig.deleteMany({ where: { shopId } });
+
+            // 2. Delete flows (this will cascade delete flow sessions, analytics, and versions)
+            await prisma.flow.deleteMany({ where: { shopId } });
+
+            // 3. Delete sequences (this will cascade delete sequence steps and subscribers)
+            await prisma.sequence.deleteMany({ where: { shopId } });
+
+            // 4. Delete campaigns (this will cascade delete campaign contacts)
             await prisma.campaign.deleteMany({ where: { shopId } });
+
+            // 5. Delete templates (safe to delete now that sequence steps and campaigns are gone)
             await prisma.template.deleteMany({ where: { shopId } });
+
+            // 6. Delete messages first (since conversations reference messages)
+            await prisma.message.deleteMany({ where: { shopId } });
+
+            // 7. Delete conversations (since messages are gone)
+            await prisma.conversation.deleteMany({ where: { shopId } });
+
+            // 8. Delete contacts (since conversations, flow sessions, and sequence subscribers are gone)
+            await prisma.contact.deleteMany({ where: { shopId } });
+
+            // 9. Delete other shop level entities
             await prisma.mediaFile.deleteMany({ where: { shopId } });
             await prisma.automation.deleteMany({ where: { shopId } });
             await prisma.onboardingEvent.deleteMany({ where: { shopId } });
             await prisma.whatsAppPhoneNumber.deleteMany({ where: { shopId } });
             await prisma.whatsAppBusinessAccount.deleteMany({ where: { shopId } });
-            await prisma.conversation.deleteMany({ where: { shopId } });
-            await prisma.contact.deleteMany({ where: { shopId } });
             await prisma.subscription.deleteMany({ where: { shopId } });
+
+            // 10. Delete the shop itself
             const shop = await prisma.shop.delete({ where: { id: shopId } });
+
+            // 11. Delete the user (owner of the shop)
             await prisma.user.delete({ where: { id: shop.ownerId } });
+
             return { message: 'Shop and all related data deleted completely' };
         });
     }

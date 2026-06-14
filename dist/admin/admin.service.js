@@ -152,16 +152,19 @@ let AdminService = class AdminService {
     }
     async deleteShop(shopId) {
         return this.prisma.$transaction(async (prisma) => {
-            await prisma.message.deleteMany({ where: { shopId } });
+            await prisma.chatbotConfig.deleteMany({ where: { shopId } });
+            await prisma.flow.deleteMany({ where: { shopId } });
+            await prisma.sequence.deleteMany({ where: { shopId } });
             await prisma.campaign.deleteMany({ where: { shopId } });
             await prisma.template.deleteMany({ where: { shopId } });
+            await prisma.message.deleteMany({ where: { shopId } });
+            await prisma.conversation.deleteMany({ where: { shopId } });
+            await prisma.contact.deleteMany({ where: { shopId } });
             await prisma.mediaFile.deleteMany({ where: { shopId } });
             await prisma.automation.deleteMany({ where: { shopId } });
             await prisma.onboardingEvent.deleteMany({ where: { shopId } });
             await prisma.whatsAppPhoneNumber.deleteMany({ where: { shopId } });
             await prisma.whatsAppBusinessAccount.deleteMany({ where: { shopId } });
-            await prisma.conversation.deleteMany({ where: { shopId } });
-            await prisma.contact.deleteMany({ where: { shopId } });
             await prisma.subscription.deleteMany({ where: { shopId } });
             const shop = await prisma.shop.delete({ where: { id: shopId } });
             await prisma.user.delete({ where: { id: shop.ownerId } });

@@ -2,24 +2,10 @@ import { PrismaService } from '../prisma/prisma.service';
 export declare class UsersService {
     private prisma;
     constructor(prisma: PrismaService);
-    getProfile(userId: string): Promise<{
-        shop: {
-            shopName: string;
-            phone: string;
-            id: string;
-        } | null;
-        username: string;
-        id: string;
-        role: string;
-        createdAt: Date;
-    }>;
+    getProfile(userId: string): Promise<any>;
     updateProfile(userId: string, data: {
         username?: string;
-    }): Promise<{
-        username: string;
-        id: string;
-        role: string;
-    }>;
+    }): Promise<any>;
     changePassword(userId: string, data: any): Promise<{
         message: string;
     }>;
