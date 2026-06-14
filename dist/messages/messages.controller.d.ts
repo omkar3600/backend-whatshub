@@ -2,8 +2,36 @@ import { MessagesService } from './messages.service';
 export declare class MessagesController {
     private readonly messagesService;
     constructor(messagesService: MessagesService);
-    getMessages(user: any, conversationId: string): Promise<any>;
-    sendMessage(user: any, conversationId: string, body: any): Promise<any>;
+    getMessages(user: any, conversationId: string): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        status: string;
+        shopId: string;
+        phoneNumberId: string | null;
+        conversationId: string;
+        direction: string;
+        type: string;
+        content: string | null;
+        mediaUrl: string | null;
+        templateData: import("@prisma/client/runtime/library").JsonValue | null;
+        timestamp: Date;
+    }[]>;
+    sendMessage(user: any, conversationId: string, body: any): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        status: string;
+        shopId: string;
+        phoneNumberId: string | null;
+        conversationId: string;
+        direction: string;
+        type: string;
+        content: string | null;
+        mediaUrl: string | null;
+        templateData: import("@prisma/client/runtime/library").JsonValue | null;
+        timestamp: Date;
+    }>;
     clearConversationMessages(user: any, conversationId: string): Promise<{
         message: string;
     }>;

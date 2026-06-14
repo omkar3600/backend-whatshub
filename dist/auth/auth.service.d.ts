@@ -10,19 +10,19 @@ export declare class AuthService {
     }>;
     registerShop(data: any): Promise<{
         message: string;
-        shopId: any;
+        shopId: string;
     }>;
     login(data: any): Promise<{
         access_token: string;
         user: {
-            id: any;
-            username: any;
-            role: any;
-            shopId: any;
+            id: string;
+            username: string;
+            role: string;
+            shopId: string | undefined;
             shop: {
-                id: any;
-                shopName: any;
-                phone: any;
+                id: string;
+                shopName: string;
+                phone: string;
             } | null;
         };
     }>;

@@ -5,14 +5,64 @@ export declare class ContactsService {
     private sequencesService;
     private readonly logger;
     constructor(prisma: PrismaService, sequencesService: SequencesService);
-    createContact(shopId: string, data: any): Promise<any>;
+    createContact(shopId: string, data: any): Promise<{
+        phone: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        shopId: string;
+        tags: import("@prisma/client/runtime/library").JsonValue | null;
+        city: string | null;
+        notes: string | null;
+    }>;
     importFromExcel(shopId: string, file: Express.Multer.File): Promise<{
         imported: number;
         skipped: number;
         errors: string[];
     }>;
-    getContacts(shopId: string, filters: any): Promise<any>;
-    getContact(shopId: string, id: string): Promise<any>;
-    updateContact(shopId: string, id: string, data: any): Promise<any>;
-    deleteContact(shopId: string, id: string): Promise<any>;
+    getContacts(shopId: string, filters: any): Promise<{
+        phone: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        shopId: string;
+        tags: import("@prisma/client/runtime/library").JsonValue | null;
+        city: string | null;
+        notes: string | null;
+    }[]>;
+    getContact(shopId: string, id: string): Promise<{
+        phone: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        shopId: string;
+        tags: import("@prisma/client/runtime/library").JsonValue | null;
+        city: string | null;
+        notes: string | null;
+    }>;
+    updateContact(shopId: string, id: string, data: any): Promise<{
+        phone: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        shopId: string;
+        tags: import("@prisma/client/runtime/library").JsonValue | null;
+        city: string | null;
+        notes: string | null;
+    }>;
+    deleteContact(shopId: string, id: string): Promise<{
+        phone: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        name: string;
+        shopId: string;
+        tags: import("@prisma/client/runtime/library").JsonValue | null;
+        city: string | null;
+        notes: string | null;
+    }>;
 }

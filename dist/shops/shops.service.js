@@ -24,6 +24,9 @@ let ShopsService = ShopsService_1 = class ShopsService {
     }
     async getShopOverview(shopId) {
         this.logger.log(`Fetching overview for shopId: ${shopId}`);
+        if (!shopId) {
+            throw new common_1.BadRequestException('Shop ID is required');
+        }
         const shop = await this.prisma.shop.findUnique({
             where: { id: shopId },
             include: {
@@ -48,6 +51,9 @@ let ShopsService = ShopsService_1 = class ShopsService {
         };
     }
     async updateShopDetails(shopId, data) {
+        if (!shopId) {
+            throw new common_1.BadRequestException('Shop ID is required');
+        }
         const { shopName, phone } = data;
         return this.prisma.shop.update({
             where: { id: shopId },
@@ -55,6 +61,10 @@ let ShopsService = ShopsService_1 = class ShopsService {
         });
     }
     async getWhatsAppCredentials(shopId) {
+        if (!shopId) {
+            this.logger.warn('getWhatsAppCredentials called without shopId');
+            return null;
+        }
         const account = await this.prisma.whatsAppBusinessAccount.findFirst({
             where: { shopId, status: 'active' },
             include: { phoneNumbers: true },
@@ -75,6 +85,9 @@ let ShopsService = ShopsService_1 = class ShopsService {
         };
     }
     async updateWhatsAppCredentials(shopId, data) {
+        if (!shopId) {
+            throw new common_1.BadRequestException('Shop ID is required');
+        }
         const { businessAccountId, phoneNumberId, accessToken } = data;
         const encryptedToken = this.cryptoService.encrypt(accessToken);
         const account = await this.prisma.whatsAppBusinessAccount.upsert({
@@ -112,6 +125,8 @@ let ShopsService = ShopsService_1 = class ShopsService {
         return account;
     }
     async getExistingAccountId(shopId) {
+        if (!shopId)
+            return null;
         const existing = await this.prisma.whatsAppBusinessAccount.findFirst({
             where: { shopId },
         });

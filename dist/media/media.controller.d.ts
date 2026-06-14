@@ -9,6 +9,22 @@ export declare class MediaController {
         fileSize: number;
         fileName: string | null;
     }>;
-    getMediaFiles(user: any): Promise<any>;
-    deleteMediaFile(user: any, id: string): Promise<any>;
+    getMediaFiles(user: any): Promise<{
+        id: string;
+        createdAt: Date;
+        shopId: string;
+        fileName: string | null;
+        fileUrl: string;
+        fileType: string;
+        fileSize: number;
+    }[]>;
+    deleteMediaFile(user: any, id: string): Promise<{
+        id: string;
+        createdAt: Date;
+        shopId: string;
+        fileName: string | null;
+        fileUrl: string;
+        fileType: string;
+        fileSize: number;
+    }>;
 }

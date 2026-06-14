@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CryptoService } from '../common/services/crypto.service';
 
@@ -12,6 +12,9 @@ export class ShopsService {
 
     async getShopOverview(shopId: string) {
         this.logger.log(`Fetching overview for shopId: ${shopId}`);
+        if (!shopId) {
+            throw new BadRequestException('Shop ID is required');
+        }
         const shop = await this.prisma.shop.findUnique({
             where: { id: shopId },
             include: {
@@ -39,6 +42,9 @@ export class ShopsService {
     }
 
     async updateShopDetails(shopId: string, data: any) {
+        if (!shopId) {
+            throw new BadRequestException('Shop ID is required');
+        }
         const { shopName, phone } = data;
         return this.prisma.shop.update({
             where: { id: shopId },
@@ -47,6 +53,10 @@ export class ShopsService {
     }
 
     async getWhatsAppCredentials(shopId: string) {
+        if (!shopId) {
+            this.logger.warn('getWhatsAppCredentials called without shopId');
+            return null;
+        }
         // Return from the new multi-tenant model
         const account = await this.prisma.whatsAppBusinessAccount.findFirst({
             where: { shopId, status: 'active' },
@@ -70,6 +80,9 @@ export class ShopsService {
     }
 
     async updateWhatsAppCredentials(shopId: string, data: any) {
+        if (!shopId) {
+            throw new BadRequestException('Shop ID is required');
+        }
         const { businessAccountId, phoneNumberId, accessToken } = data;
 
         // Encrypt the token before storing
@@ -115,6 +128,7 @@ export class ShopsService {
     }
 
     private async getExistingAccountId(shopId: string): Promise<string | null> {
+        if (!shopId) return null;
         const existing = await this.prisma.whatsAppBusinessAccount.findFirst({
             where: { shopId },
         });

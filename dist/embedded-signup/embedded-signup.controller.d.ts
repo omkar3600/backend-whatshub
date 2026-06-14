@@ -13,7 +13,7 @@ export declare class EmbeddedSignupController {
         success: boolean;
         message: string;
         wabaAccount: {
-            id: any;
+            id: string;
             businessName: string | undefined;
             wabaId: string;
             status: string;
@@ -26,9 +26,28 @@ export declare class EmbeddedSignupController {
         }[];
     }>;
     getConnectionStatus(req: any): Promise<{
-        shopId: any;
-        isConnected: any;
-        accounts: any;
+        shopId: string;
+        isConnected: boolean;
+        accounts: {
+            id: string;
+            wabaId: string;
+            businessName: string | null;
+            status: string;
+            tokenHealth: string;
+            tokenExpiry: Date | null;
+            onboardingSource: string;
+            createdAt: Date;
+            phoneNumbers: {
+                id: string;
+                phoneNumberId: string;
+                displayPhoneNumber: string | null;
+                verifiedName: string | null;
+                qualityRating: string | null;
+                messagingLimit: string | null;
+                status: string;
+                isDefault: boolean;
+            }[];
+        }[];
     }>;
     disconnectWaba(req: any, wabaAccountId: string): Promise<{
         success: boolean;

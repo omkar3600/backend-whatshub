@@ -3,7 +3,18 @@ export declare class ChatbotService {
     private prisma;
     private readonly logger;
     constructor(prisma: PrismaService);
-    getConfig(shopId: string): Promise<any>;
+    getConfig(shopId: string): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        shopId: string;
+        isActive: boolean;
+        apiKey: string | null;
+        model: string;
+        temperature: number;
+        systemPrompt: string | null;
+        businessInfo: string | null;
+    } | null>;
     upsertConfig(shopId: string, data: {
         isActive?: boolean;
         apiKey?: string;
@@ -11,11 +22,22 @@ export declare class ChatbotService {
         temperature?: number;
         systemPrompt?: string;
         businessInfo?: string;
-    }): Promise<any>;
+    }): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        shopId: string;
+        isActive: boolean;
+        apiKey: string | null;
+        model: string;
+        temperature: number;
+        systemPrompt: string | null;
+        businessInfo: string | null;
+    }>;
     generateResponse(shopId: string, contactName: string, userMessage: string, conversationId?: string): Promise<{
         text?: string;
         error?: string;
     }>;
     private buildSystemPrompt;
-    toggleAiPause(shopId: string, conversationId: string, paused: boolean): Promise<any>;
+    toggleAiPause(shopId: string, conversationId: string, paused: boolean): Promise<import("@prisma/client").Prisma.BatchPayload>;
 }

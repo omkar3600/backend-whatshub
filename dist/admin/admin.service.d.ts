@@ -6,38 +6,269 @@ export declare class AdminService {
     constructor(prisma: PrismaService, cryptoService: CryptoService);
     createShop(data: any): Promise<{
         message: string;
-        shop: any;
-        subscription: any;
+        shop: {
+            shopName: string;
+            phone: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            status: string;
+            ownerId: string;
+        };
+        subscription: {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            status: string;
+            shopId: string;
+            startDate: Date;
+            expiryDate: Date;
+        };
     }>;
-    getShops(): Promise<any>;
-    updateShop(shopId: string, data: any): Promise<any>;
-    updateSubscription(shopId: string, data: any): Promise<any>;
-    toggleShopStatus(shopId: string, status: string): Promise<any>;
-    deleteShop(shopId: string): Promise<any>;
-    getRegistrationRequests(): Promise<any>;
-    approveRegistrationRequest(requestId: string): Promise<any>;
-    rejectRegistrationRequest(requestId: string): Promise<any>;
+    getShops(): Promise<({
+        subscription: {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            status: string;
+            shopId: string;
+            startDate: Date;
+            expiryDate: Date;
+        } | null;
+        owner: {
+            username: string;
+            id: string;
+        };
+        whatsappAccounts: ({
+            phoneNumbers: {
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                status: string;
+                shopId: string;
+                wabaAccountId: string;
+                phoneNumberId: string;
+                displayPhoneNumber: string | null;
+                verifiedName: string | null;
+                qualityRating: string | null;
+                messagingLimit: string | null;
+                nameStatus: string | null;
+                pendingName: string | null;
+                isDefault: boolean;
+            }[];
+        } & {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            status: string;
+            shopId: string;
+            businessAccountId: string;
+            wabaId: string | null;
+            businessName: string | null;
+            accessToken: string;
+            tokenType: string;
+            tokenExpiry: Date | null;
+            webhookVerifyToken: string | null;
+            onboardingSource: string;
+        })[];
+    } & {
+        shopName: string;
+        phone: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        status: string;
+        ownerId: string;
+    })[]>;
+    updateShop(shopId: string, data: any): Promise<{
+        subscription: {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            status: string;
+            shopId: string;
+            startDate: Date;
+            expiryDate: Date;
+        } | null;
+        owner: {
+            username: string;
+            id: string;
+        };
+    } & {
+        shopName: string;
+        phone: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        status: string;
+        ownerId: string;
+    }>;
+    updateSubscription(shopId: string, data: any): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        status: string;
+        shopId: string;
+        startDate: Date;
+        expiryDate: Date;
+    }>;
+    toggleShopStatus(shopId: string, status: string): Promise<{
+        shopName: string;
+        phone: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        status: string;
+        ownerId: string;
+    }>;
+    deleteShop(shopId: string): Promise<{
+        message: string;
+    }>;
+    getRegistrationRequests(): Promise<{
+        username: string;
+        password: string;
+        shopName: string;
+        phone: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        status: string;
+    }[]>;
+    approveRegistrationRequest(requestId: string): Promise<{
+        message: string;
+        user: {
+            username: string;
+            id: string;
+            passwordHash: string;
+            role: string;
+            createdAt: Date;
+            updatedAt: Date;
+        };
+        shop: {
+            shopName: string;
+            phone: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            status: string;
+            ownerId: string;
+        };
+    }>;
+    rejectRegistrationRequest(requestId: string): Promise<{
+        username: string;
+        password: string;
+        shopName: string;
+        phone: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        status: string;
+    }>;
     getStats(): Promise<{
-        totalShops: any;
-        activeShops: any;
-        disabledShops: any;
-        expiredSubscriptions: any;
-        connectedWabas: any;
-        totalPhoneNumbers: any;
+        totalShops: number;
+        activeShops: number;
+        disabledShops: number;
+        expiredSubscriptions: number;
+        connectedWabas: number;
+        totalPhoneNumbers: number;
     }>;
-    getTenantConnections(): Promise<any>;
-    getWebhookFailures(shopId?: string): Promise<any>;
-    getDeadLetterEvents(status?: string): Promise<any>;
-    getTokenHealth(): Promise<any>;
+    getTenantConnections(): Promise<{
+        shopId: string;
+        shopName: string;
+        owner: {
+            username: string;
+            id: string;
+        };
+        status: string;
+        subscription: {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            status: string;
+            shopId: string;
+            startDate: Date;
+            expiryDate: Date;
+        } | null;
+        isConnected: boolean;
+        accounts: {
+            id: string;
+            wabaId: string;
+            businessName: string | null;
+            status: string;
+            tokenHealth: string;
+            tokenExpiry: Date | null;
+            onboardingSource: string;
+            phoneNumbers: {
+                phoneNumberId: string;
+                displayPhoneNumber: string | null;
+                verifiedName: string | null;
+                qualityRating: string | null;
+                messagingLimit: string | null;
+                status: string;
+            }[];
+        }[];
+    }[]>;
+    getWebhookFailures(shopId?: string): Promise<{
+        id: string;
+        createdAt: Date;
+        shopId: string | null;
+        phoneNumberId: string | null;
+        eventType: string;
+        waMessageId: string | null;
+        payload: import("@prisma/client/runtime/library").JsonValue;
+        processingStatus: string;
+        errorMessage: string | null;
+        retryCount: number;
+    }[]>;
+    getDeadLetterEvents(status?: string): Promise<{
+        id: string;
+        createdAt: Date;
+        status: string;
+        errorMessage: string | null;
+        retryCount: number;
+        sourceType: string;
+        originalPayload: import("@prisma/client/runtime/library").JsonValue;
+        maxRetries: number;
+        lastAttemptAt: Date | null;
+        resolvedAt: Date | null;
+    }[]>;
+    getTokenHealth(): Promise<{
+        shopName: string;
+        wabaId: string;
+        businessName: string | null;
+        status: string;
+        tokenHealth: string;
+        tokenExpiry: Date | null;
+    }[]>;
     suspendShop(shopId: string): Promise<{
         message: string;
     }>;
     getOnboardingStatus(shopId: string): Promise<{
         status: string;
-        events: any;
+        events: {
+            id: string;
+            createdAt: Date;
+            shopId: string;
+            eventType: string;
+            metadata: import("@prisma/client/runtime/library").JsonValue | null;
+        }[];
     }>;
     setWhatsAppCredentials(shopId: string, data: any): Promise<{
         message: string;
-        account: any;
+        account: {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            status: string;
+            shopId: string;
+            businessAccountId: string;
+            wabaId: string | null;
+            businessName: string | null;
+            accessToken: string;
+            tokenType: string;
+            tokenExpiry: Date | null;
+            webhookVerifyToken: string | null;
+            onboardingSource: string;
+        };
     }>;
 }
