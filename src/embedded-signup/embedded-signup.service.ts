@@ -121,9 +121,14 @@ export class EmbeddedSignupService {
             // Step 6: Encrypt and store
             const encryptedToken = this.cryptoService.encrypt(accessToken);
 
+            // Find existing account to get the UUID id for the upsert
+            const existingAccount = await this.prisma.whatsAppBusinessAccount.findFirst({
+                where: { wabaId: wabaId, shopId: shop.id }
+            });
+
             // Upsert the WhatsApp Business Account
             const wabaAccount = await this.prisma.whatsAppBusinessAccount.upsert({
-                where: { id: wabaId },  // Won't match an existing record by wabaId since id is UUID
+                where: { id: existingAccount?.id || 'new-record-uuid' },
                 create: {
                     shopId: shop.id,
                     businessAccountId: businessId || wabaId,
@@ -159,6 +164,8 @@ export class EmbeddedSignupService {
                         isDefault: phoneNumbers.indexOf(phone) === 0,
                     },
                     update: {
+                        wabaAccountId: wabaAccount.id,
+                        isDefault: phoneNumbers.indexOf(phone) === 0,
                         displayPhoneNumber: phone.display_phone_number,
                         verifiedName: phone.verified_name,
                         qualityRating: phone.quality_rating,

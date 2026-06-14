@@ -117,6 +117,7 @@ let ShopsService = ShopsService_1 = class ShopsService {
                     status: 'active',
                 },
                 update: {
+                    wabaAccountId: account.id,
                     isDefault: true,
                     status: 'active',
                 },

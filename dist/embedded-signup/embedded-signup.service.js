@@ -104,8 +104,11 @@ let EmbeddedSignupService = EmbeddedSignupService_1 = class EmbeddedSignupServic
                 numbers: phoneNumbers.map(p => p.display_phone_number),
             });
             const encryptedToken = this.cryptoService.encrypt(accessToken);
+            const existingAccount = await this.prisma.whatsAppBusinessAccount.findFirst({
+                where: { wabaId: wabaId, shopId: shop.id }
+            });
             const wabaAccount = await this.prisma.whatsAppBusinessAccount.upsert({
-                where: { id: wabaId },
+                where: { id: existingAccount?.id || 'new-record-uuid' },
                 create: {
                     shopId: shop.id,
                     businessAccountId: businessId || wabaId,
@@ -139,6 +142,8 @@ let EmbeddedSignupService = EmbeddedSignupService_1 = class EmbeddedSignupServic
                         isDefault: phoneNumbers.indexOf(phone) === 0,
                     },
                     update: {
+                        wabaAccountId: wabaAccount.id,
+                        isDefault: phoneNumbers.indexOf(phone) === 0,
                         displayPhoneNumber: phone.display_phone_number,
                         verifiedName: phone.verified_name,
                         qualityRating: phone.quality_rating,
