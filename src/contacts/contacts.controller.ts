@@ -7,6 +7,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { memoryStorage } from 'multer';
 import type { Express } from 'express';
+import { CreateContactDto, UpdateContactDto, GetContactsQueryDto } from './dto/contacts.dto';
 
 @Controller('contacts')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -15,7 +16,7 @@ export class ContactsController {
     constructor(private readonly contactsService: ContactsService) { }
 
     @Post()
-    async createContact(@GetUser() user: any, @Body() body: any) {
+    async createContact(@GetUser() user: any, @Body() body: CreateContactDto) {
         return this.contactsService.createContact(user.shopId, body);
     }
 
@@ -30,7 +31,7 @@ export class ContactsController {
     }
 
     @Get()
-    async getContacts(@GetUser() user: any, @Query() query: any) {
+    async getContacts(@GetUser() user: any, @Query() query: GetContactsQueryDto) {
         return this.contactsService.getContacts(user.shopId, query);
     }
 
@@ -40,7 +41,7 @@ export class ContactsController {
     }
 
     @Put(':id')
-    async updateContact(@GetUser() user: any, @Param('id') id: string, @Body() body: any) {
+    async updateContact(@GetUser() user: any, @Param('id') id: string, @Body() body: UpdateContactDto) {
         return this.contactsService.updateContact(user.shopId, id, body);
     }
 

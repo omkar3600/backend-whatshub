@@ -6,6 +6,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import * as path from 'path';
 import * as fs from 'fs';
 import cookieParser from 'cookie-parser';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -42,6 +43,9 @@ async function bootstrap() {
     forbidNonWhitelisted: false,
     transform: true,
   }));
+
+  // Global exception filter
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   // CORS — allow frontend origins
   const allowedOrigins = process.env.CORS_ORIGINS

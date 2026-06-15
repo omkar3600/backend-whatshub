@@ -2,6 +2,7 @@ import { Controller, Post, Body, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { BypassShopStatus } from './decorators/bypass-shop-status.decorator';
+import { RegisterInterestDto, RegisterShopDto, LoginDto } from './dto/auth.dto';
 
 @Controller('auth')
 @BypassShopStatus()
@@ -9,17 +10,17 @@ export class AuthController {
     constructor(private readonly authService: AuthService) { }
 
     @Post('register-interest')
-    async registerInterest(@Body() body: any) {
+    async registerInterest(@Body() body: RegisterInterestDto) {
         return this.authService.registerInterest(body);
     }
 
     @Post('register')
-    async register(@Body() body: any) {
+    async register(@Body() body: RegisterShopDto) {
         return this.authService.registerShop(body);
     }
 
     @Post('login')
-    async login(@Body() body: any, @Res({ passthrough: true }) res: Response) {
+    async login(@Body() body: LoginDto, @Res({ passthrough: true }) res: Response) {
         const result = await this.authService.login(body);
         res.cookie('token', result.access_token, {
             httpOnly: true,
@@ -27,7 +28,8 @@ export class AuthController {
             sameSite: 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
-        return result;
+        const { access_token, ...safeResult } = result;
+        return safeResult;
     }
 
     @Post('logout')

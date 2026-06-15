@@ -74,13 +74,23 @@ export class CampaignsService {
             orderBy: { createdAt: 'desc' },
         });
 
-        // Compute live stats from CampaignContact records so delivered/read/failed stay up-to-date
         return campaigns.map(c => {
+            const configMeta = (c.stats as any) || {};
+            
+            // If completed or aborted, use the stored stats directly to avoid N+1 and massive memory usage
+            if (c.status === 'completed' || c.status === 'aborted') {
+                return {
+                    ...c,
+                    contacts: undefined,
+                    stats: configMeta,
+                };
+            }
+
             const statusCounts = c.contacts.reduce((acc: Record<string, number>, contact) => {
                 acc[contact.status] = (acc[contact.status] || 0) + 1;
                 return acc;
             }, {});
-            const configMeta = (c.stats as any) || {};
+            
             return {
                 ...c,
                 contacts: undefined, // don't send all contacts to list view
@@ -250,7 +260,7 @@ export class CampaignsService {
                 templateId: original.templateId,
                 status: 'processing',
                 scheduledAt: new Date(),
-                targetTags: original.targetTags as any,
+                templateParams: original.templateParams as any,
                 targetPhones: (failedList.map(f => f.phone)) as any
             }
         });

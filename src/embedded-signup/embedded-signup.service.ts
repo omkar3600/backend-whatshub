@@ -126,27 +126,32 @@ export class EmbeddedSignupService {
                 where: { wabaId: wabaId, shopId: shop.id }
             });
 
-            // Upsert the WhatsApp Business Account
-            const wabaAccount = await this.prisma.whatsAppBusinessAccount.upsert({
-                where: { id: existingAccount?.id || 'new-record-uuid' },
-                create: {
-                    shopId: shop.id,
-                    businessAccountId: businessId || wabaId,
-                    wabaId: wabaId,
-                    businessName: businessName,
-                    accessToken: encryptedToken,
-                    tokenType: 'long_lived',
-                    tokenExpiry: tokenExpiry,
-                    status: 'active',
-                    onboardingSource: 'embedded_signup',
-                },
-                update: {
-                    accessToken: encryptedToken,
-                    tokenExpiry: tokenExpiry,
-                    status: 'active',
-                    businessName: businessName,
-                },
-            });
+            let wabaAccount;
+            if (existingAccount) {
+                wabaAccount = await this.prisma.whatsAppBusinessAccount.update({
+                    where: { id: existingAccount.id },
+                    data: {
+                        accessToken: encryptedToken,
+                        tokenExpiry: tokenExpiry,
+                        status: 'active',
+                        businessName: businessName,
+                    },
+                });
+            } else {
+                wabaAccount = await this.prisma.whatsAppBusinessAccount.create({
+                    data: {
+                        shopId: shop.id,
+                        businessAccountId: businessId || wabaId,
+                        wabaId: wabaId,
+                        businessName: businessName,
+                        accessToken: encryptedToken,
+                        tokenType: 'long_lived',
+                        tokenExpiry: tokenExpiry,
+                        status: 'active',
+                        onboardingSource: 'embedded_signup',
+                    },
+                });
+            }
 
             // Upsert phone numbers
             for (const phone of phoneNumbers) {
@@ -484,7 +489,7 @@ export class EmbeddedSignupService {
         await firstValueFrom(
             this.httpService.post(
                 `${this.graphApiBase}/${phoneNumberId}/register`,
-                { messaging_product: 'whatsapp', pin: '123456' },
+                { messaging_product: 'whatsapp', pin: require('crypto').randomInt(100000, 999999).toString() },
                 {
                     headers: {
                         Authorization: `Bearer ${accessToken}`,

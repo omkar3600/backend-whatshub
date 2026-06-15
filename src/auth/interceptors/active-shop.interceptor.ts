@@ -20,13 +20,7 @@ export class ActiveShopInterceptor implements NestInterceptor {
         const req = context.switchToHttp().getRequest();
         const user = req.user;
 
-        // DEBUG LOGGING
-        const fs = require('fs');
-        fs.appendFileSync('interceptor-debug.log', JSON.stringify({ 
-            time: new Date(), 
-            url: req.url, 
-            user: user 
-        }) + '\n');
+
 
         // User is populated here because interceptors run AFTER guards
         if (user && user.role !== 'admin') {

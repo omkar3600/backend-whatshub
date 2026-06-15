@@ -207,6 +207,8 @@ model Message {
   updatedAt      DateTime     @updatedAt
   conversation   Conversation @relation(fields: [conversationId], references: [id])
   shop           Shop         @relation(fields: [shopId], references: [id])
+
+  @@index([conversationId])
 }
 
 model Template {
@@ -260,6 +262,7 @@ model CampaignContact {
   contact    Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
 
   @@unique([campaignId, phone])
+  @@index([campaignId])
 }
 
 model MediaFile {

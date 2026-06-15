@@ -55,90 +55,97 @@ export class CampaignProcessor extends WorkerHost {
             data: { status: 'processing' }
         });
 
-        let contacts = await this.prisma.contact.findMany({
-            where: { shopId: campaign.shopId },
-            include: { conversations: true }
-        });
-
-        // Filter by targetPhones if specified in the campaign
+        // Filter definitions
         const targetPhones = campaign.targetPhones as string[] | null;
-        if (targetPhones && targetPhones.length > 0) {
-            contacts = contacts.filter(c => targetPhones.includes(c.phone));
-        }
-
-        // Filter by targetTags if specified
         const targetTags = campaign.targetTags as string[] | null;
-        if (targetTags && targetTags.length > 0) {
-            contacts = contacts.filter(c => {
-                const contactTags = (c.tags as string[]) || [];
-                return targetTags.some(tag => contactTags.includes(tag));
-            });
-        }
-
-        // Filter by targetFilters if specified
         const targetFilters = campaign.targetFilters as any;
-        if (targetFilters) {
-            contacts = contacts.filter(c => {
-                if (targetFilters.city) {
-                    if (!c.city || c.city.toLowerCase().trim() !== targetFilters.city.toLowerCase().trim()) return false;
-                }
-                if (targetFilters.hasTags && targetFilters.hasTags.length > 0) {
-                    const contactTags = (c.tags as string[]) || [];
-                    if (!targetFilters.hasTags.some((tag: string) => contactTags.includes(tag))) return false;
-                }
-                if (targetFilters.noMessagesInDays) {
-                    const convo = c.conversations?.[0];
-                    if (convo && convo.lastMessageAt) {
-                        const daysSinceLastMessage = (Date.now() - new Date(convo.lastMessageAt).getTime()) / (1000 * 60 * 60 * 24);
-                        if (daysSinceLastMessage < targetFilters.noMessagesInDays) return false;
-                    }
-                }
-                return true;
-            });
-        }
-
-        // Exclude unsubscribed contacts if requested
-        // sendDelay and excludeUnsubscribed are stored inside the stats JSON field during campaign creation
         const campaignMeta = (campaign.stats as any) || {};
         const excludeUnsubscribed = campaignMeta.excludeUnsubscribed ?? false;
-        if (excludeUnsubscribed) {
-            contacts = contacts.filter(c => {
-                const tags = (c.tags as string[]) || [];
-                return !tags.includes('unsubscribed');
-            });
-        }
-
-        // Configurable send delay (ms) — default 300ms = ~3 msgs/sec, safe for all Meta tiers
         const sendDelay: number = campaignMeta.sendDelay ?? 300;
 
         let sent = 0, failed = 0;
         const failureHistory: { phone: string; name: string; reason: string; timestamp: Date }[] = [];
-
-        // Pending DB writes — flushed every 50 records for efficiency
-        const pendingWrites: Parameters<typeof this.prisma.campaignContact.upsert>[0][] = [];
-
-        const flushWrites = async () => {
-            if (pendingWrites.length === 0) return;
-            const batch = pendingWrites.splice(0, pendingWrites.length);
-            await this.prisma.$transaction(batch.map(args => this.prisma.campaignContact.upsert(args)));
-        };
-
         let aborted = false;
 
-        for (let i = 0; i < contacts.length; i++) {
-            const c = contacts[i];
+        let cursor: string | undefined = undefined;
+        let hasMore = true;
+        let messagesProcessed = 0;
 
-            // Check abort status every 20 messages to reduce DB load
-            if (i % 20 === 0) {
-                const currentCampaign = await this.prisma.campaign.findUnique({
-                    where: { id: campaignId },
-                    select: { status: true }
-                });
-                if (currentCampaign?.status === 'aborted') {
-                    aborted = true;
-                    break;
-                }
+        while (hasMore) {
+            // Check abort status periodically
+            const currentCampaign = await this.prisma.campaign.findUnique({
+                where: { id: campaignId },
+                select: { status: true }
+            });
+            if (currentCampaign?.status === 'aborted') {
+                aborted = true;
+                break;
             }
+
+            // Push basic filtering to DB where possible
+            const baseWhere: any = { shopId: campaign.shopId };
+            if (targetPhones && targetPhones.length > 0) {
+                baseWhere.phone = { in: targetPhones };
+            }
+
+            const batch = await this.prisma.contact.findMany({
+                take: 1000,
+                skip: cursor ? 1 : 0,
+                cursor: cursor ? { id: cursor } : undefined,
+                where: baseWhere,
+                include: { conversations: true },
+                orderBy: { id: 'asc' }
+            });
+
+            if (batch.length === 0) {
+                hasMore = false;
+                break;
+            }
+            cursor = batch[batch.length - 1].id;
+
+            // Apply in-memory filters to the batch
+            let contactsToProcess = batch;
+            
+            if (targetTags && targetTags.length > 0) {
+                contactsToProcess = contactsToProcess.filter(c => {
+                    const contactTags = (c.tags as string[]) || [];
+                    return targetTags.some(tag => contactTags.includes(tag));
+                });
+            }
+
+            if (targetFilters) {
+                contactsToProcess = contactsToProcess.filter(c => {
+                    if (targetFilters.city) {
+                        if (!c.city || c.city.toLowerCase().trim() !== targetFilters.city.toLowerCase().trim()) return false;
+                    }
+                    if (targetFilters.hasTags && targetFilters.hasTags.length > 0) {
+                        const contactTags = (c.tags as string[]) || [];
+                        if (!targetFilters.hasTags.some((tag: string) => contactTags.includes(tag))) return false;
+                    }
+                    if (targetFilters.noMessagesInDays) {
+                        const convo = c.conversations?.[0];
+                        if (convo && convo.lastMessageAt) {
+                            const daysSinceLastMessage = (Date.now() - new Date(convo.lastMessageAt).getTime()) / (1000 * 60 * 60 * 24);
+                            if (daysSinceLastMessage < targetFilters.noMessagesInDays) return false;
+                        }
+                    }
+                    return true;
+                });
+            }
+
+            if (excludeUnsubscribed) {
+                contactsToProcess = contactsToProcess.filter(c => {
+                    const tags = (c.tags as string[]) || [];
+                    return !tags.includes('unsubscribed');
+                });
+            }
+
+            // Process filtered contacts in this batch
+            const pendingWrites: Parameters<typeof this.prisma.campaignContact.upsert>[0][] = [];
+
+            for (let i = 0; i < contactsToProcess.length; i++) {
+                const c = contactsToProcess[i];
+                messagesProcessed++;
 
             try {
                 const templateParamsObj = campaign.templateParams as any;
@@ -216,19 +223,20 @@ export class CampaignProcessor extends WorkerHost {
                 });
             }
 
-            // Flush writes every 50 contacts
-            if (pendingWrites.length >= 50) {
-                await flushWrites();
+            // Flush writes every 50 contacts or at the end of the loop
+            if (pendingWrites.length >= 50 || i === contactsToProcess.length - 1) {
+                if (pendingWrites.length > 0) {
+                    await this.prisma.$transaction(pendingWrites.map(args => this.prisma.campaignContact.upsert(args)));
+                    pendingWrites.length = 0; // clear the array
+                }
             }
 
             // Rate limiting — pause between messages
-            if (i < contacts.length - 1) {
+            if (i < contactsToProcess.length - 1) {
                 await sleep(sendDelay);
             }
-        }
-
-        // Flush any remaining writes
-        await flushWrites();
+        } // end for loop
+    } // end while loop
 
         await this.prisma.campaign.update({
             where: { id: campaignId },

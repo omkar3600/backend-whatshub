@@ -135,9 +135,41 @@ export class ContactsService {
     }
 
     async getContacts(shopId: string, filters: any) {
-        // Basic filter by tags or search
+        const { page, limit, search } = filters || {};
+        
+        const where: any = { shopId };
+        if (search) {
+            where.OR = [
+                { name: { contains: search, mode: 'insensitive' } },
+                { phone: { contains: search } }
+            ];
+        }
+
+        if (page && limit) {
+            const pageNumber = parseInt(page as string, 10) || 1;
+            const limitNumber = parseInt(limit as string, 10) || 50;
+            
+            const [data, total] = await Promise.all([
+                this.prisma.contact.findMany({
+                    where,
+                    orderBy: { createdAt: 'desc' },
+                    skip: (pageNumber - 1) * limitNumber,
+                    take: limitNumber,
+                }),
+                this.prisma.contact.count({ where })
+            ]);
+            
+            return {
+                data,
+                total,
+                page: pageNumber,
+                totalPages: Math.ceil(total / limitNumber),
+            };
+        }
+
+        // Backward compatible: return just the array if no pagination requested
         return this.prisma.contact.findMany({
-            where: { shopId },
+            where,
             orderBy: { createdAt: 'desc' },
         });
     }
