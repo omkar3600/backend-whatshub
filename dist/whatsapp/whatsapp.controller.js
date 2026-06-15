@@ -38,8 +38,8 @@ let WhatsappController = class WhatsappController {
             throw new common_1.BadRequestException('Name is required');
         return this.whatsappService.updateDisplayName(req.user.shopId, newName);
     }
-    async registerNumber(req) {
-        return this.whatsappService.registerActiveNumber(req.user.shopId);
+    async registerNumber(req, pin) {
+        return this.whatsappService.registerActiveNumber(req.user.shopId, pin);
     }
 };
 exports.WhatsappController = WhatsappController;
@@ -78,8 +78,9 @@ __decorate([
 __decorate([
     (0, common_1.Post)('register'),
     __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)('pin')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], WhatsappController.prototype, "registerNumber", null);
 exports.WhatsappController = WhatsappController = __decorate([

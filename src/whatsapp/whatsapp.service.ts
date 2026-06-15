@@ -770,15 +770,16 @@ export class WhatsappService {
         }
     }
 
-    async registerActiveNumber(shopId: string) {
+    async registerActiveNumber(shopId: string, customPin?: string) {
         const creds = await this.getCredentials(shopId);
         const url = `${this.graphApiBase}/${creds.phoneNumberId}/register`;
+        const pin = customPin || '123456';
 
         try {
             const response = await firstValueFrom(
                 this.httpService.post(url, {
                     messaging_product: 'whatsapp',
-                    pin: '123456'
+                    pin: pin
                 }, {
                     headers: {
                         Authorization: `Bearer ${creds.accessToken}`,

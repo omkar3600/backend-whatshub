@@ -32,7 +32,7 @@ export class WhatsappController {
     }
 
     @Post('register')
-    async registerNumber(@Request() req) {
-        return this.whatsappService.registerActiveNumber(req.user.shopId);
+    async registerNumber(@Request() req, @Body('pin') pin?: string) {
+        return this.whatsappService.registerActiveNumber(req.user.shopId, pin);
     }
 }

@@ -662,13 +662,14 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
             throw new Error(error.response?.data?.error?.message || 'Failed to request display name change');
         }
     }
-    async registerActiveNumber(shopId) {
+    async registerActiveNumber(shopId, customPin) {
         const creds = await this.getCredentials(shopId);
         const url = `${this.graphApiBase}/${creds.phoneNumberId}/register`;
+        const pin = customPin || '123456';
         try {
             const response = await (0, rxjs_1.firstValueFrom)(this.httpService.post(url, {
                 messaging_product: 'whatsapp',
-                pin: '123456'
+                pin: pin
             }, {
                 headers: {
                     Authorization: `Bearer ${creds.accessToken}`,
