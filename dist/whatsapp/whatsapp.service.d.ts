@@ -36,5 +36,10 @@ export declare class WhatsappService {
     updateBusinessProfile(shopId: string, data: any): Promise<any>;
     uploadProfilePicture(shopId: string, file: any): Promise<any>;
     updateDisplayName(shopId: string, newName: string): Promise<any>;
+    registerActiveNumber(shopId: string): Promise<{
+        success: boolean;
+        message: string;
+        data: any;
+    }>;
 }
 export {};

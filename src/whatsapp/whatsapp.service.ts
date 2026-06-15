@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
 import { CryptoService } from '../common/services/crypto.service';
@@ -767,6 +767,36 @@ export class WhatsappService {
         } catch (error: any) {
             this.logger.error(`Failed to update display name: ${error.response?.data?.error?.message || error.message}`);
             throw new Error(error.response?.data?.error?.message || 'Failed to request display name change');
+        }
+    }
+
+    async registerActiveNumber(shopId: string) {
+        const creds = await this.getCredentials(shopId);
+        const url = `${this.graphApiBase}/${creds.phoneNumberId}/register`;
+
+        try {
+            const response = await firstValueFrom(
+                this.httpService.post(url, {
+                    messaging_product: 'whatsapp',
+                    pin: '123456'
+                }, {
+                    headers: {
+                        Authorization: `Bearer ${creds.accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                })
+            );
+
+            await this.prisma.whatsAppPhoneNumber.update({
+                where: { phoneNumberId: creds.phoneNumberId },
+                data: { status: 'active' }
+            });
+
+            return { success: true, message: 'Phone number registered successfully', data: response.data };
+        } catch (error: any) {
+            const detail = error.response?.data || error.message;
+            this.logger.error(`Manual registration failed for phone ${creds.phoneNumberId}:`, JSON.stringify(detail));
+            throw new BadRequestException(`Meta registration failed: ${JSON.stringify(detail)}`);
         }
     }
 }

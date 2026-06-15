@@ -30,4 +30,9 @@ export class WhatsappController {
         if (!newName) throw new BadRequestException('Name is required');
         return this.whatsappService.updateDisplayName(req.user.shopId, newName);
     }
+
+    @Post('register')
+    async registerNumber(@Request() req) {
+        return this.whatsappService.registerActiveNumber(req.user.shopId);
+    }
 }

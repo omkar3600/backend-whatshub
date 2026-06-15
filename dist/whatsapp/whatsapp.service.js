@@ -662,6 +662,31 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
             throw new Error(error.response?.data?.error?.message || 'Failed to request display name change');
         }
     }
+    async registerActiveNumber(shopId) {
+        const creds = await this.getCredentials(shopId);
+        const url = `${this.graphApiBase}/${creds.phoneNumberId}/register`;
+        try {
+            const response = await (0, rxjs_1.firstValueFrom)(this.httpService.post(url, {
+                messaging_product: 'whatsapp',
+                pin: '123456'
+            }, {
+                headers: {
+                    Authorization: `Bearer ${creds.accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+            }));
+            await this.prisma.whatsAppPhoneNumber.update({
+                where: { phoneNumberId: creds.phoneNumberId },
+                data: { status: 'active' }
+            });
+            return { success: true, message: 'Phone number registered successfully', data: response.data };
+        }
+        catch (error) {
+            const detail = error.response?.data || error.message;
+            this.logger.error(`Manual registration failed for phone ${creds.phoneNumberId}:`, JSON.stringify(detail));
+            throw new common_1.BadRequestException(`Meta registration failed: ${JSON.stringify(detail)}`);
+        }
+    }
 };
 exports.WhatsappService = WhatsappService;
 exports.WhatsappService = WhatsappService = WhatsappService_1 = __decorate([
