@@ -25,7 +25,7 @@ export class AuthController {
         res.cookie('token', result.access_token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
         const { access_token, ...safeResult } = result;
@@ -34,7 +34,11 @@ export class AuthController {
 
     @Post('logout')
     async logout(@Res({ passthrough: true }) res: Response) {
-        res.clearCookie('token');
+        res.clearCookie('token', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        });
         return { message: 'Logged out successfully' };
     }
 }
