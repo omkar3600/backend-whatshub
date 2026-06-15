@@ -505,4 +505,14 @@ export class EmbeddedSignupService {
             this.logger.error(`Failed to log onboarding event: ${e.message}`);
         }
     }
+
+    async getOnboardingLogs(userId: string) {
+        const shop = await this.prisma.shop.findUnique({ where: { ownerId: userId } });
+        if (!shop) throw new NotFoundException('Shop not found');
+        return this.prisma.onboardingEvent.findMany({
+            where: { shopId: shop.id },
+            orderBy: { createdAt: 'desc' },
+            take: 20
+        });
+    }
 }

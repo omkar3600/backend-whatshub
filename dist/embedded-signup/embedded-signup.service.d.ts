@@ -69,4 +69,11 @@ export declare class EmbeddedSignupService {
     private subscribeToWebhooks;
     private registerPhoneNumber;
     private logOnboardingEvent;
+    getOnboardingLogs(userId: string): Promise<{
+        id: string;
+        createdAt: Date;
+        shopId: string;
+        eventType: string;
+        metadata: import("@prisma/client/runtime/library").JsonValue | null;
+    }[]>;
 }

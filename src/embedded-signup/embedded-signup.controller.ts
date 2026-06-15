@@ -58,4 +58,10 @@ export class EmbeddedSignupController {
         this.logger.log(`Reconnecting WABA ${wabaAccountId} for user ${req.user.id}`);
         return this.signupService.reconnectWaba(req.user.id, wabaAccountId, dto.code, dto.redirectUri);
     }
+
+    @Get('onboarding-logs')
+    async getOnboardingLogs(@Req() req: any) {
+        this.logger.log(`Fetching onboarding logs for user ${req.user.id}`);
+        return this.signupService.getOnboardingLogs(req.user.id);
+    }
 }

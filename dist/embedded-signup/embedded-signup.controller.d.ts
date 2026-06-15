@@ -57,4 +57,11 @@ export declare class EmbeddedSignupController {
         success: boolean;
         message: string;
     }>;
+    getOnboardingLogs(req: any): Promise<{
+        id: string;
+        createdAt: Date;
+        shopId: string;
+        eventType: string;
+        metadata: import("@prisma/client/runtime/library").JsonValue | null;
+    }[]>;
 }

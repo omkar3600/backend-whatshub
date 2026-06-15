@@ -42,6 +42,10 @@ let EmbeddedSignupController = EmbeddedSignupController_1 = class EmbeddedSignup
         this.logger.log(`Reconnecting WABA ${wabaAccountId} for user ${req.user.id}`);
         return this.signupService.reconnectWaba(req.user.id, wabaAccountId, dto.code, dto.redirectUri);
     }
+    async getOnboardingLogs(req) {
+        this.logger.log(`Fetching onboarding logs for user ${req.user.id}`);
+        return this.signupService.getOnboardingLogs(req.user.id);
+    }
 };
 exports.EmbeddedSignupController = EmbeddedSignupController;
 __decorate([
@@ -82,6 +86,13 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, signup_callback_dto_1.SignupCallbackDto]),
     __metadata("design:returntype", Promise)
 ], EmbeddedSignupController.prototype, "reconnectWaba", null);
+__decorate([
+    (0, common_1.Get)('onboarding-logs'),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], EmbeddedSignupController.prototype, "getOnboardingLogs", null);
 exports.EmbeddedSignupController = EmbeddedSignupController = EmbeddedSignupController_1 = __decorate([
     (0, common_1.Controller)('embedded-signup'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

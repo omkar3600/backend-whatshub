@@ -406,6 +406,16 @@ let EmbeddedSignupService = EmbeddedSignupService_1 = class EmbeddedSignupServic
             this.logger.error(`Failed to log onboarding event: ${e.message}`);
         }
     }
+    async getOnboardingLogs(userId) {
+        const shop = await this.prisma.shop.findUnique({ where: { ownerId: userId } });
+        if (!shop)
+            throw new common_1.NotFoundException('Shop not found');
+        return this.prisma.onboardingEvent.findMany({
+            where: { shopId: shop.id },
+            orderBy: { createdAt: 'desc' },
+            take: 20
+        });
+    }
 };
 exports.EmbeddedSignupService = EmbeddedSignupService;
 exports.EmbeddedSignupService = EmbeddedSignupService = EmbeddedSignupService_1 = __decorate([
