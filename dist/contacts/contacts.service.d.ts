@@ -31,7 +31,22 @@ export declare class ContactsService {
         tags: import("@prisma/client/runtime/library").JsonValue | null;
         city: string | null;
         notes: string | null;
-    }[]>;
+    }[] | {
+        data: {
+            phone: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            name: string;
+            shopId: string;
+            tags: import("@prisma/client/runtime/library").JsonValue | null;
+            city: string | null;
+            notes: string | null;
+        }[];
+        total: number;
+        page: number;
+        totalPages: number;
+    }>;
     getContact(shopId: string, id: string): Promise<{
         phone: string;
         id: string;

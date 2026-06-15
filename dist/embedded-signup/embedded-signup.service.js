@@ -107,26 +107,33 @@ let EmbeddedSignupService = EmbeddedSignupService_1 = class EmbeddedSignupServic
             const existingAccount = await this.prisma.whatsAppBusinessAccount.findFirst({
                 where: { wabaId: wabaId, shopId: shop.id }
             });
-            const wabaAccount = await this.prisma.whatsAppBusinessAccount.upsert({
-                where: { id: existingAccount?.id || 'new-record-uuid' },
-                create: {
-                    shopId: shop.id,
-                    businessAccountId: businessId || wabaId,
-                    wabaId: wabaId,
-                    businessName: businessName,
-                    accessToken: encryptedToken,
-                    tokenType: 'long_lived',
-                    tokenExpiry: tokenExpiry,
-                    status: 'active',
-                    onboardingSource: 'embedded_signup',
-                },
-                update: {
-                    accessToken: encryptedToken,
-                    tokenExpiry: tokenExpiry,
-                    status: 'active',
-                    businessName: businessName,
-                },
-            });
+            let wabaAccount;
+            if (existingAccount) {
+                wabaAccount = await this.prisma.whatsAppBusinessAccount.update({
+                    where: { id: existingAccount.id },
+                    data: {
+                        accessToken: encryptedToken,
+                        tokenExpiry: tokenExpiry,
+                        status: 'active',
+                        businessName: businessName,
+                    },
+                });
+            }
+            else {
+                wabaAccount = await this.prisma.whatsAppBusinessAccount.create({
+                    data: {
+                        shopId: shop.id,
+                        businessAccountId: businessId || wabaId,
+                        wabaId: wabaId,
+                        businessName: businessName,
+                        accessToken: encryptedToken,
+                        tokenType: 'long_lived',
+                        tokenExpiry: tokenExpiry,
+                        status: 'active',
+                        onboardingSource: 'embedded_signup',
+                    },
+                });
+            }
             for (const phone of phoneNumbers) {
                 await this.prisma.whatsAppPhoneNumber.upsert({
                     where: { phoneNumberId: String(phone.id) },
@@ -388,7 +395,7 @@ let EmbeddedSignupService = EmbeddedSignupService_1 = class EmbeddedSignupServic
         this.logger.log(`Subscribed WABA ${wabaId} to webhooks`);
     }
     async registerPhoneNumber(phoneNumberId, accessToken) {
-        await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${this.graphApiBase}/${phoneNumberId}/register`, { messaging_product: 'whatsapp', pin: '123456' }, {
+        await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${this.graphApiBase}/${phoneNumberId}/register`, { messaging_product: 'whatsapp', pin: require('crypto').randomInt(100000, 999999).toString() }, {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',

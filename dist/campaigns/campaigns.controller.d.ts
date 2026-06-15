@@ -21,17 +21,7 @@ export declare class CampaignsController {
     }>;
     getCampaigns(user: any): Promise<{
         contacts: undefined;
-        stats: {
-            sendDelay: any;
-            excludeUnsubscribed: any;
-            total: number;
-            sent: number;
-            delivered: number;
-            read: number;
-            clicked: number;
-            failed: number;
-            pending: number;
-        };
+        stats: any;
         template: {
             id: string;
             createdAt: Date;

@@ -17,7 +17,7 @@ export declare class EmbeddedSignupService {
         success: boolean;
         message: string;
         wabaAccount: {
-            id: string;
+            id: any;
             businessName: string | undefined;
             wabaId: string;
             status: string;

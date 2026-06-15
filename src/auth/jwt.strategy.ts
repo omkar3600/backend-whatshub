@@ -19,7 +19,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         super({
             jwtFromRequest: ExtractJwt.fromExtractors([cookieExtractor]),
             ignoreExpiration: false,
-            secretOrKey: configService.get<string>('JWT_SECRET') || process.env.JWT_SECRET,
+            secretOrKey: configService.get<string>('JWT_SECRET') || process.env.JWT_SECRET || 'default_secret',
         });
     }
 

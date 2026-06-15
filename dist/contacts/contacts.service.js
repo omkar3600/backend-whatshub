@@ -163,8 +163,35 @@ let ContactsService = ContactsService_1 = class ContactsService {
         return { imported, skipped, errors: errors.slice(0, 20) };
     }
     async getContacts(shopId, filters) {
+        const { page, limit, search } = filters || {};
+        const where = { shopId };
+        if (search) {
+            where.OR = [
+                { name: { contains: search, mode: 'insensitive' } },
+                { phone: { contains: search } }
+            ];
+        }
+        if (page && limit) {
+            const pageNumber = parseInt(page, 10) || 1;
+            const limitNumber = parseInt(limit, 10) || 50;
+            const [data, total] = await Promise.all([
+                this.prisma.contact.findMany({
+                    where,
+                    orderBy: { createdAt: 'desc' },
+                    skip: (pageNumber - 1) * limitNumber,
+                    take: limitNumber,
+                }),
+                this.prisma.contact.count({ where })
+            ]);
+            return {
+                data,
+                total,
+                page: pageNumber,
+                totalPages: Math.ceil(total / limitNumber),
+            };
+        }
         return this.prisma.contact.findMany({
-            where: { shopId },
+            where,
             orderBy: { createdAt: 'desc' },
         });
     }

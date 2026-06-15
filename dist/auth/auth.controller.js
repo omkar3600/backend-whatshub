@@ -16,6 +16,7 @@ exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
 const auth_service_1 = require("./auth.service");
 const bypass_shop_status_decorator_1 = require("./decorators/bypass-shop-status.decorator");
+const auth_dto_1 = require("./dto/auth.dto");
 let AuthController = class AuthController {
     authService;
     constructor(authService) {
@@ -35,7 +36,8 @@ let AuthController = class AuthController {
             sameSite: 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
-        return result;
+        const { access_token, ...safeResult } = result;
+        return safeResult;
     }
     async logout(res) {
         res.clearCookie('token');
@@ -47,14 +49,14 @@ __decorate([
     (0, common_1.Post)('register-interest'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [auth_dto_1.RegisterInterestDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "registerInterest", null);
 __decorate([
     (0, common_1.Post)('register'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [auth_dto_1.RegisterShopDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "register", null);
 __decorate([
@@ -62,7 +64,7 @@ __decorate([
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [auth_dto_1.LoginDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
 __decorate([

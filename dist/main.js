@@ -43,6 +43,7 @@ const helmet_1 = __importDefault(require("helmet"));
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
+const global_exception_filter_1 = require("./common/filters/global-exception.filter");
 async function bootstrap() {
     const logger = new common_1.Logger('Bootstrap');
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
@@ -70,6 +71,7 @@ async function bootstrap() {
         forbidNonWhitelisted: false,
         transform: true,
     }));
+    app.useGlobalFilters(new global_exception_filter_1.GlobalExceptionFilter());
     const allowedOrigins = process.env.CORS_ORIGINS
         ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
         : ['http://localhost:3000'];

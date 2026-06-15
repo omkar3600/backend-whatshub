@@ -19,7 +19,7 @@ import { JwtStrategy } from './jwt.strategy';
         }
         return {
           secret: secret,
-          signOptions: { expiresIn: configService.get<string>('JWT_EXPIRATION') || '7d' },
+          signOptions: { expiresIn: configService.get<string>('JWT_EXPIRATION') || '7d' } as any,
         };
       },
     }),

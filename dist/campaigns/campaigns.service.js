@@ -78,11 +78,18 @@ let CampaignsService = class CampaignsService {
             orderBy: { createdAt: 'desc' },
         });
         return campaigns.map(c => {
+            const configMeta = c.stats || {};
+            if (c.status === 'completed' || c.status === 'aborted') {
+                return {
+                    ...c,
+                    contacts: undefined,
+                    stats: configMeta,
+                };
+            }
             const statusCounts = c.contacts.reduce((acc, contact) => {
                 acc[contact.status] = (acc[contact.status] || 0) + 1;
                 return acc;
             }, {});
-            const configMeta = c.stats || {};
             return {
                 ...c,
                 contacts: undefined,
@@ -224,7 +231,7 @@ let CampaignsService = class CampaignsService {
                 templateId: original.templateId,
                 status: 'processing',
                 scheduledAt: new Date(),
-                targetTags: original.targetTags,
+                templateParams: original.templateParams,
                 targetPhones: (failedList.map(f => f.phone))
             }
         });

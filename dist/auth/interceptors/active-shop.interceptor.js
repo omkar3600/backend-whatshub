@@ -28,12 +28,6 @@ let ActiveShopInterceptor = class ActiveShopInterceptor {
         }
         const req = context.switchToHttp().getRequest();
         const user = req.user;
-        const fs = require('fs');
-        fs.appendFileSync('interceptor-debug.log', JSON.stringify({
-            time: new Date(),
-            url: req.url,
-            user: user
-        }) + '\n');
         if (user && user.role !== 'admin') {
             if (user.shopStatus && user.shopStatus !== 'active') {
                 throw new common_1.ForbiddenException({

@@ -56,138 +56,149 @@ let CampaignProcessor = class CampaignProcessor extends bullmq_1.WorkerHost {
             where: { id: campaignId },
             data: { status: 'processing' }
         });
-        let contacts = await this.prisma.contact.findMany({
-            where: { shopId: campaign.shopId },
-            include: { conversations: true }
-        });
         const targetPhones = campaign.targetPhones;
-        if (targetPhones && targetPhones.length > 0) {
-            contacts = contacts.filter(c => targetPhones.includes(c.phone));
-        }
         const targetTags = campaign.targetTags;
-        if (targetTags && targetTags.length > 0) {
-            contacts = contacts.filter(c => {
-                const contactTags = c.tags || [];
-                return targetTags.some(tag => contactTags.includes(tag));
-            });
-        }
         const targetFilters = campaign.targetFilters;
-        if (targetFilters) {
-            contacts = contacts.filter(c => {
-                if (targetFilters.city) {
-                    if (!c.city || c.city.toLowerCase().trim() !== targetFilters.city.toLowerCase().trim())
-                        return false;
-                }
-                if (targetFilters.hasTags && targetFilters.hasTags.length > 0) {
-                    const contactTags = c.tags || [];
-                    if (!targetFilters.hasTags.some((tag) => contactTags.includes(tag)))
-                        return false;
-                }
-                if (targetFilters.noMessagesInDays) {
-                    const convo = c.conversations?.[0];
-                    if (convo && convo.lastMessageAt) {
-                        const daysSinceLastMessage = (Date.now() - new Date(convo.lastMessageAt).getTime()) / (1000 * 60 * 60 * 24);
-                        if (daysSinceLastMessage < targetFilters.noMessagesInDays)
-                            return false;
-                    }
-                }
-                return true;
-            });
-        }
         const campaignMeta = campaign.stats || {};
         const excludeUnsubscribed = campaignMeta.excludeUnsubscribed ?? false;
-        if (excludeUnsubscribed) {
-            contacts = contacts.filter(c => {
-                const tags = c.tags || [];
-                return !tags.includes('unsubscribed');
-            });
-        }
         const sendDelay = campaignMeta.sendDelay ?? 300;
         let sent = 0, failed = 0;
         const failureHistory = [];
-        const pendingWrites = [];
-        const flushWrites = async () => {
-            if (pendingWrites.length === 0)
-                return;
-            const batch = pendingWrites.splice(0, pendingWrites.length);
-            await this.prisma.$transaction(batch.map(args => this.prisma.campaignContact.upsert(args)));
-        };
         let aborted = false;
-        for (let i = 0; i < contacts.length; i++) {
-            const c = contacts[i];
-            if (i % 20 === 0) {
-                const currentCampaign = await this.prisma.campaign.findUnique({
-                    where: { id: campaignId },
-                    select: { status: true }
-                });
-                if (currentCampaign?.status === 'aborted') {
-                    aborted = true;
-                    break;
-                }
+        let cursor = undefined;
+        let hasMore = true;
+        let messagesProcessed = 0;
+        while (hasMore) {
+            const currentCampaign = await this.prisma.campaign.findUnique({
+                where: { id: campaignId },
+                select: { status: true }
+            });
+            if (currentCampaign?.status === 'aborted') {
+                aborted = true;
+                break;
             }
-            try {
-                const templateParamsObj = campaign.templateParams;
-                const templateContent = templateParamsObj && Array.isArray(templateParamsObj) && templateParamsObj.length > 0
-                    ? { name: campaign.template.templateName, language: campaign.template.language, components: templateParamsObj }
-                    : { name: campaign.template.templateName, language: campaign.template.language };
-                const headerMediaUrl = campaign.headerMediaUrl ?? undefined;
-                const result = await this.whatsappService.sendOutboundMessage(campaign.shopId, c.phone, 'template', templateContent, headerMediaUrl);
-                const wamid = result?.messages?.[0]?.id;
-                sent++;
-                pendingWrites.push({
-                    where: { campaignId_phone: { campaignId, phone: c.phone } },
-                    create: { campaignId, contactId: c.id, phone: c.phone, name: c.name, status: 'sent', wamid: wamid ?? null },
-                    update: { status: 'sent', failReason: null, wamid: wamid ?? null },
+            const baseWhere = { shopId: campaign.shopId };
+            if (targetPhones && targetPhones.length > 0) {
+                baseWhere.phone = { in: targetPhones };
+            }
+            const batch = await this.prisma.contact.findMany({
+                take: 1000,
+                skip: cursor ? 1 : 0,
+                cursor: cursor ? { id: cursor } : undefined,
+                where: baseWhere,
+                include: { conversations: true },
+                orderBy: { id: 'asc' }
+            });
+            if (batch.length === 0) {
+                hasMore = false;
+                break;
+            }
+            cursor = batch[batch.length - 1].id;
+            let contactsToProcess = batch;
+            if (targetTags && targetTags.length > 0) {
+                contactsToProcess = contactsToProcess.filter(c => {
+                    const contactTags = c.tags || [];
+                    return targetTags.some(tag => contactTags.includes(tag));
                 });
+            }
+            if (targetFilters) {
+                contactsToProcess = contactsToProcess.filter(c => {
+                    if (targetFilters.city) {
+                        if (!c.city || c.city.toLowerCase().trim() !== targetFilters.city.toLowerCase().trim())
+                            return false;
+                    }
+                    if (targetFilters.hasTags && targetFilters.hasTags.length > 0) {
+                        const contactTags = c.tags || [];
+                        if (!targetFilters.hasTags.some((tag) => contactTags.includes(tag)))
+                            return false;
+                    }
+                    if (targetFilters.noMessagesInDays) {
+                        const convo = c.conversations?.[0];
+                        if (convo && convo.lastMessageAt) {
+                            const daysSinceLastMessage = (Date.now() - new Date(convo.lastMessageAt).getTime()) / (1000 * 60 * 60 * 24);
+                            if (daysSinceLastMessage < targetFilters.noMessagesInDays)
+                                return false;
+                        }
+                    }
+                    return true;
+                });
+            }
+            if (excludeUnsubscribed) {
+                contactsToProcess = contactsToProcess.filter(c => {
+                    const tags = c.tags || [];
+                    return !tags.includes('unsubscribed');
+                });
+            }
+            const pendingWrites = [];
+            for (let i = 0; i < contactsToProcess.length; i++) {
+                const c = contactsToProcess[i];
+                messagesProcessed++;
                 try {
-                    const conversation = await this.prisma.conversation.upsert({
-                        where: { shopId_contactId: { shopId: campaign.shopId, contactId: c.id } },
-                        create: { shopId: campaign.shopId, contactId: c.id, lastMessageAt: new Date() },
-                        update: { lastMessageAt: new Date() },
+                    const templateParamsObj = campaign.templateParams;
+                    const templateContent = templateParamsObj && Array.isArray(templateParamsObj) && templateParamsObj.length > 0
+                        ? { name: campaign.template.templateName, language: campaign.template.language, components: templateParamsObj }
+                        : { name: campaign.template.templateName, language: campaign.template.language };
+                    const headerMediaUrl = campaign.headerMediaUrl ?? undefined;
+                    const result = await this.whatsappService.sendOutboundMessage(campaign.shopId, c.phone, 'template', templateContent, headerMediaUrl);
+                    const wamid = result?.messages?.[0]?.id;
+                    sent++;
+                    pendingWrites.push({
+                        where: { campaignId_phone: { campaignId, phone: c.phone } },
+                        create: { campaignId, contactId: c.id, phone: c.phone, name: c.name, status: 'sent', wamid: wamid ?? null },
+                        update: { status: 'sent', failReason: null, wamid: wamid ?? null },
                     });
-                    await this.prisma.message.create({
-                        data: {
-                            shopId: campaign.shopId,
-                            conversationId: conversation.id,
-                            direction: 'outbound',
-                            type: 'template',
-                            content: resolvedBody,
-                            mediaUrl: headerImageUrl,
-                            status: 'sent',
-                            templateData: {
-                                templateName: campaign.template.templateName,
-                                campaignName: campaign.name,
-                                campaignId,
-                                wamid: wamid ?? null,
-                                components: campaign.template.components,
+                    try {
+                        const conversation = await this.prisma.conversation.upsert({
+                            where: { shopId_contactId: { shopId: campaign.shopId, contactId: c.id } },
+                            create: { shopId: campaign.shopId, contactId: c.id, lastMessageAt: new Date() },
+                            update: { lastMessageAt: new Date() },
+                        });
+                        await this.prisma.message.create({
+                            data: {
+                                shopId: campaign.shopId,
+                                conversationId: conversation.id,
+                                direction: 'outbound',
+                                type: 'template',
+                                content: resolvedBody,
+                                mediaUrl: headerImageUrl,
+                                status: 'sent',
+                                templateData: {
+                                    templateName: campaign.template.templateName,
+                                    campaignName: campaign.name,
+                                    campaignId,
+                                    wamid: wamid ?? null,
+                                    components: campaign.template.components,
+                                },
                             },
-                        },
+                        });
+                    }
+                    catch (msgErr) {
+                        console.error(`[Campaign] Failed to save message record for ${c.phone}:`, msgErr);
+                    }
+                }
+                catch (e) {
+                    failed++;
+                    const axiosErr = e;
+                    const metaError = axiosErr?.response?.data?.error?.message;
+                    const reason = metaError || (e instanceof Error ? e.message : typeof e === 'string' ? e : 'Unknown error');
+                    failureHistory.push({ phone: c.phone, name: c.name, reason, timestamp: new Date() });
+                    pendingWrites.push({
+                        where: { campaignId_phone: { campaignId, phone: c.phone } },
+                        create: { campaignId, contactId: c.id, phone: c.phone, name: c.name, status: 'failed', failReason: reason },
+                        update: { status: 'failed', failReason: reason },
                     });
                 }
-                catch (msgErr) {
-                    console.error(`[Campaign] Failed to save message record for ${c.phone}:`, msgErr);
+                if (pendingWrites.length >= 50 || i === contactsToProcess.length - 1) {
+                    if (pendingWrites.length > 0) {
+                        await this.prisma.$transaction(pendingWrites.map(args => this.prisma.campaignContact.upsert(args)));
+                        pendingWrites.length = 0;
+                    }
                 }
-            }
-            catch (e) {
-                failed++;
-                const axiosErr = e;
-                const metaError = axiosErr?.response?.data?.error?.message;
-                const reason = metaError || (e instanceof Error ? e.message : typeof e === 'string' ? e : 'Unknown error');
-                failureHistory.push({ phone: c.phone, name: c.name, reason, timestamp: new Date() });
-                pendingWrites.push({
-                    where: { campaignId_phone: { campaignId, phone: c.phone } },
-                    create: { campaignId, contactId: c.id, phone: c.phone, name: c.name, status: 'failed', failReason: reason },
-                    update: { status: 'failed', failReason: reason },
-                });
-            }
-            if (pendingWrites.length >= 50) {
-                await flushWrites();
-            }
-            if (i < contacts.length - 1) {
-                await sleep(sendDelay);
+                if (i < contactsToProcess.length - 1) {
+                    await sleep(sendDelay);
+                }
             }
         }
-        await flushWrites();
         await this.prisma.campaign.update({
             where: { id: campaignId },
             data: {

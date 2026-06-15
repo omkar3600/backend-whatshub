@@ -21,6 +21,7 @@ const roles_guard_1 = require("../auth/guards/roles.guard");
 const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 const get_user_decorator_1 = require("../auth/decorators/get-user.decorator");
 const multer_1 = require("multer");
+const contacts_dto_1 = require("./dto/contacts.dto");
 let ContactsController = class ContactsController {
     contactsService;
     constructor(contactsService) {
@@ -53,7 +54,7 @@ __decorate([
     __param(0, (0, get_user_decorator_1.GetUser)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [Object, contacts_dto_1.CreateContactDto]),
     __metadata("design:returntype", Promise)
 ], ContactsController.prototype, "createContact", null);
 __decorate([
@@ -73,7 +74,7 @@ __decorate([
     __param(0, (0, get_user_decorator_1.GetUser)()),
     __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [Object, contacts_dto_1.GetContactsQueryDto]),
     __metadata("design:returntype", Promise)
 ], ContactsController.prototype, "getContacts", null);
 __decorate([
@@ -90,7 +91,7 @@ __decorate([
     __param(1, (0, common_1.Param)('id')),
     __param(2, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, Object]),
+    __metadata("design:paramtypes", [Object, String, contacts_dto_1.UpdateContactDto]),
     __metadata("design:returntype", Promise)
 ], ContactsController.prototype, "updateContact", null);
 __decorate([

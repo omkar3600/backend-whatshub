@@ -191,7 +191,7 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
                 if (creds) {
                     await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${this.graphApiBase}/${phone.phoneNumberId}/register`, {
                         messaging_product: 'whatsapp',
-                        pin: '123456'
+                        pin: require('crypto').randomInt(100000, 999999).toString()
                     }, {
                         headers: { Authorization: `Bearer ${creds.accessToken}` }
                     }));
@@ -324,6 +324,13 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
         }
         else {
             content = JSON.stringify(messageData);
+        }
+        const existingMsg = await this.prisma.message.findUnique({
+            where: { id: messageData.id }
+        });
+        if (existingMsg) {
+            this.logger.log(`[Webhook] Duplicate message received: ${messageData.id}. Skipping.`);
+            return;
         }
         const savedMsg = await this.prisma.message.create({
             data: {
@@ -665,7 +672,7 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
     async registerActiveNumber(shopId, customPin) {
         const creds = await this.getCredentials(shopId);
         const url = `${this.graphApiBase}/${creds.phoneNumberId}/register`;
-        const pin = customPin || '123456';
+        const pin = customPin || require('crypto').randomInt(100000, 999999).toString();
         try {
             const response = await (0, rxjs_1.firstValueFrom)(this.httpService.post(url, {
                 messaging_product: 'whatsapp',

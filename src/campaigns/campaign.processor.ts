@@ -141,7 +141,7 @@ export class CampaignProcessor extends WorkerHost {
             }
 
             // Process filtered contacts in this batch
-            const pendingWrites: Parameters<typeof this.prisma.campaignContact.upsert>[0][] = [];
+            const pendingWrites: any[] = [];
 
             for (let i = 0; i < contactsToProcess.length; i++) {
                 const c = contactsToProcess[i];
