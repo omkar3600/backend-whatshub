@@ -424,11 +424,13 @@ export class WhatsappService {
                 if (incomingText.includes(keyword) || keyword === incomingText) {
                     this.logger.log(`[Automation] MATCH! Keyword="${keyword}" → sending reply to ${contactData.wa_id}`);
                     try {
-                        await this.sendOutboundMessage(shopId, contactData.wa_id, 'text', auto.replyText);
+                        const metaRes = await this.sendOutboundMessage(shopId, contactData.wa_id, 'text', auto.replyText);
+                        const wamid = metaRes?.messages?.[0]?.id;
                         this.logger.log(`[Automation] Reply sent successfully to ${contactData.wa_id}`);
 
                         const savedAutoMsg = await this.prisma.message.create({
                             data: {
+                                id: wamid || undefined,
                                 shopId,
                                 conversationId: conversation.id,
                                 phoneNumberId: phoneNumberId || undefined,
@@ -485,10 +487,12 @@ export class WhatsappService {
                 );
                 if (aiReply.text) {
                     this.logger.log(`[Chatbot] Sending AI reply to ${contactData.wa_id}`);
-                    await this.sendOutboundMessage(shopId, contactData.wa_id, 'text', aiReply.text);
+                    const metaRes = await this.sendOutboundMessage(shopId, contactData.wa_id, 'text', aiReply.text);
+                    const wamid = metaRes?.messages?.[0]?.id;
 
                     const savedAiMsg = await this.prisma.message.create({
                         data: {
+                            id: wamid || undefined,
                             shopId,
                             conversationId: conversation.id,
                             phoneNumberId: phoneNumberId || undefined,
@@ -559,6 +563,24 @@ export class WhatsappService {
             } catch (e) {
                 this.logger.warn(`Failed to update CampaignContact for wamid ${messageId}: ${e}`);
             }
+        }
+    }
+
+    async markMessageAsRead(shopId: string, messageId: string) {
+        const creds = await this.getCredentials(shopId);
+        const payload = {
+            messaging_product: 'whatsapp',
+            status: 'read',
+            message_id: messageId
+        };
+        try {
+            await firstValueFrom(
+                this.httpService.post(`${this.graphApiBase}/${creds.phoneNumberId}/messages`, payload, {
+                    headers: { Authorization: `Bearer ${creds.accessToken}`, 'Content-Type': 'application/json' }
+                })
+            );
+        } catch (error: any) {
+            this.logger.error(`Failed to mark message as read: ${messageId}`, error.response?.data || error.message);
         }
     }
 

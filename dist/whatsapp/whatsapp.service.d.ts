@@ -30,6 +30,7 @@ export declare class WhatsappService {
     private handleTemplateStatusUpdate;
     private handleIncomingMessage;
     private handleMessageStatus;
+    markMessageAsRead(shopId: string, messageId: string): Promise<void>;
     sendOutboundMessage(shopId: string, toPhone: string, type: string, content: any, mediaUrl?: string): Promise<any>;
     private logWebhookAudit;
     getBusinessProfile(shopId: string): Promise<any>;

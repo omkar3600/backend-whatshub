@@ -1,12 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, forwardRef, Inject } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChatGateway } from '../chat/chat.gateway';
+import { WhatsappService } from '../whatsapp/whatsapp.service';
 
 @Injectable()
 export class ConversationsService {
     constructor(
         private prisma: PrismaService,
         private chatGateway: ChatGateway,
+        @Inject(forwardRef(() => WhatsappService)) private whatsappService: WhatsappService,
     ) { }
 
     async getConversations(shopId: string) {
@@ -52,6 +54,24 @@ export class ConversationsService {
             data: { unreadCount: 0 },
         });
         this.chatGateway.notifyRead(shopId, id);
+
+        const unreadMessages = await this.prisma.message.findMany({
+            where: { conversationId: id, direction: 'inbound', status: { not: 'read' } }
+        });
+
+        if (unreadMessages.length > 0) {
+            await this.prisma.message.updateMany({
+                where: { id: { in: unreadMessages.map(m => m.id) } },
+                data: { status: 'read' }
+            });
+
+            for (const msg of unreadMessages) {
+                if (msg.id.startsWith('wamid.')) {
+                    await this.whatsappService.markMessageAsRead(shopId, msg.id);
+                }
+            }
+        }
+
         return updated;
     }
 }

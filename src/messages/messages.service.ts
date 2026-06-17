@@ -19,10 +19,6 @@ export class MessagesService {
     async sendMessage(shopId: string, conversationId: string, data: any) {
         const { type, content, mediaUrl } = data;
 
-        const message = await this.prisma.message.create({
-            data: { shopId, conversationId, direction: 'outbound', type, content, mediaUrl, status: 'sent' },
-        });
-
         await this.prisma.conversation.update({
             where: { id: conversationId },
             data: { lastMessageAt: new Date() },
@@ -33,13 +29,32 @@ export class MessagesService {
             include: { contact: true }
         });
 
+        let wamid = null;
+        let status = 'sent';
+
         try {
             if (conversation?.contact?.phone) {
-                await this.whatsappService.sendOutboundMessage(shopId, conversation.contact.phone, type, content, mediaUrl);
+                const metaRes = await this.whatsappService.sendOutboundMessage(shopId, conversation.contact.phone, type, content, mediaUrl);
+                wamid = metaRes?.messages?.[0]?.id;
+            } else {
+                status = 'failed';
             }
         } catch (e) {
-            await this.prisma.message.update({ where: { id: message.id }, data: { status: 'failed' } });
+            status = 'failed';
         }
+
+        const message = await this.prisma.message.create({
+            data: { 
+                id: wamid || undefined,
+                shopId, 
+                conversationId, 
+                direction: 'outbound', 
+                type, 
+                content, 
+                mediaUrl, 
+                status 
+            },
+        });
 
         return message;
     }

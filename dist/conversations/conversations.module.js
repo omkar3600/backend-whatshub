@@ -10,11 +10,13 @@ exports.ConversationsModule = void 0;
 const common_1 = require("@nestjs/common");
 const conversations_controller_1 = require("./conversations.controller");
 const conversations_service_1 = require("./conversations.service");
+const whatsapp_module_1 = require("../whatsapp/whatsapp.module");
 let ConversationsModule = class ConversationsModule {
 };
 exports.ConversationsModule = ConversationsModule;
 exports.ConversationsModule = ConversationsModule = __decorate([
     (0, common_1.Module)({
+        imports: [(0, common_1.forwardRef)(() => whatsapp_module_1.WhatsappModule)],
         controllers: [conversations_controller_1.ConversationsController],
         providers: [conversations_service_1.ConversationsService]
     })

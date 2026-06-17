@@ -8,17 +8,23 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ConversationsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const chat_gateway_1 = require("../chat/chat.gateway");
+const whatsapp_service_1 = require("../whatsapp/whatsapp.service");
 let ConversationsService = class ConversationsService {
     prisma;
     chatGateway;
-    constructor(prisma, chatGateway) {
+    whatsappService;
+    constructor(prisma, chatGateway, whatsappService) {
         this.prisma = prisma;
         this.chatGateway = chatGateway;
+        this.whatsappService = whatsappService;
     }
     async getConversations(shopId) {
         return this.prisma.conversation.findMany({
@@ -59,13 +65,29 @@ let ConversationsService = class ConversationsService {
             data: { unreadCount: 0 },
         });
         this.chatGateway.notifyRead(shopId, id);
+        const unreadMessages = await this.prisma.message.findMany({
+            where: { conversationId: id, direction: 'inbound', status: { not: 'read' } }
+        });
+        if (unreadMessages.length > 0) {
+            await this.prisma.message.updateMany({
+                where: { id: { in: unreadMessages.map(m => m.id) } },
+                data: { status: 'read' }
+            });
+            for (const msg of unreadMessages) {
+                if (msg.id.startsWith('wamid.')) {
+                    await this.whatsappService.markMessageAsRead(shopId, msg.id);
+                }
+            }
+        }
         return updated;
     }
 };
 exports.ConversationsService = ConversationsService;
 exports.ConversationsService = ConversationsService = __decorate([
     (0, common_1.Injectable)(),
+    __param(2, (0, common_1.Inject)((0, common_1.forwardRef)(() => whatsapp_service_1.WhatsappService))),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        chat_gateway_1.ChatGateway])
+        chat_gateway_1.ChatGateway,
+        whatsapp_service_1.WhatsappService])
 ], ConversationsService);
 //# sourceMappingURL=conversations.service.js.map
