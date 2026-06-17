@@ -251,6 +251,7 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
             },
             update: {
                 lastMessageAt: new Date(),
+                lastContactMessageAt: new Date(),
                 unreadCount: { increment: 1 },
                 phoneNumberId: phoneNumberId || undefined,
             },
@@ -259,6 +260,7 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
                 contactId: contact.id,
                 phoneNumberId: phoneNumberId || undefined,
                 lastMessageAt: new Date(),
+                lastContactMessageAt: new Date(),
                 unreadCount: 1,
             },
         });
@@ -450,11 +452,19 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
     }
     async handleMessageStatus(shopId, statusData) {
         const { id: messageId, status, recipient_id: recipientPhone } = statusData;
+        let message = null;
         try {
-            await this.prisma.message.update({
+            message = await this.prisma.message.update({
                 where: { id: messageId },
                 data: { status },
             });
+            if (message) {
+                this.chatGateway.notifyMessageStatus(shopId, {
+                    conversationId: message.conversationId,
+                    messageId: messageId,
+                    status: status,
+                });
+            }
         }
         catch (e) {
             this.logger.warn(`Status update failed for message ${messageId}. It might not exist.`);

@@ -23,6 +23,7 @@ export declare class ConversationsService {
         shopId: string;
         phoneNumberId: string | null;
         lastMessageAt: Date;
+        lastContactMessageAt: Date | null;
         unreadCount: number;
         aiPaused: boolean;
         contactId: string;
@@ -46,6 +47,7 @@ export declare class ConversationsService {
         shopId: string;
         phoneNumberId: string | null;
         lastMessageAt: Date;
+        lastContactMessageAt: Date | null;
         unreadCount: number;
         aiPaused: boolean;
         contactId: string;
@@ -69,6 +71,7 @@ export declare class ConversationsService {
         shopId: string;
         phoneNumberId: string | null;
         lastMessageAt: Date;
+        lastContactMessageAt: Date | null;
         unreadCount: number;
         aiPaused: boolean;
         contactId: string;
@@ -80,6 +83,7 @@ export declare class ConversationsService {
         shopId: string;
         phoneNumberId: string | null;
         lastMessageAt: Date;
+        lastContactMessageAt: Date | null;
         unreadCount: number;
         aiPaused: boolean;
         contactId: string;

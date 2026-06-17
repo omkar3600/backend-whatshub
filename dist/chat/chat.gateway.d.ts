@@ -4,4 +4,9 @@ export declare class ChatGateway {
     handleJoin(shopId: string, client: Socket): void;
     notifyNewMessage(shopId: string, message: any): void;
     notifyRead(shopId: string, conversationId: string): void;
+    notifyMessageStatus(shopId: string, data: {
+        conversationId: string;
+        messageId: string;
+        status: string;
+    }): void;
 }

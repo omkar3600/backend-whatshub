@@ -177,18 +177,19 @@ model Contact {
 }
 
 model Conversation {
-  id            String    @id @default(uuid())
-  shopId        String
-  contactId     String
-  phoneNumberId String?
-  lastMessageAt DateTime  @default(now())
-  unreadCount   Int       @default(0)
-  aiPaused      Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  contact       Contact   @relation(fields: [contactId], references: [id])
-  shop          Shop      @relation(fields: [shopId], references: [id])
-  messages      Message[]
+  id                   String    @id @default(uuid())
+  shopId               String
+  contactId            String
+  phoneNumberId        String?
+  lastMessageAt        DateTime  @default(now())
+  lastContactMessageAt DateTime?
+  unreadCount          Int       @default(0)
+  aiPaused             Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  contact              Contact   @relation(fields: [contactId], references: [id])
+  shop                 Shop      @relation(fields: [shopId], references: [id])
+  messages             Message[]
 
   @@unique([shopId, contactId])
 }

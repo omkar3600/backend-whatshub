@@ -26,4 +26,8 @@ export class ChatGateway {
   notifyRead(shopId: string, conversationId: string) {
     this.server.to(shopId).emit('read', { conversationId });
   }
+
+  notifyMessageStatus(shopId: string, data: { conversationId: string, messageId: string, status: string }) {
+    this.server.to(shopId).emit('messageStatusUpdate', data);
+  }
 }

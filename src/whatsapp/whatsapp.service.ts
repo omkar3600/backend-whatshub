@@ -289,6 +289,7 @@ export class WhatsappService {
             },
             update: {
                 lastMessageAt: new Date(),
+                lastContactMessageAt: new Date(),
                 unreadCount: { increment: 1 },
                 phoneNumberId: phoneNumberId || undefined,
             },
@@ -297,6 +298,7 @@ export class WhatsappService {
                 contactId: contact.id,
                 phoneNumberId: phoneNumberId || undefined,
                 lastMessageAt: new Date(),
+                lastContactMessageAt: new Date(),
                 unreadCount: 1,
             },
         });
@@ -518,11 +520,19 @@ export class WhatsappService {
     private async handleMessageStatus(shopId: string, statusData: any) {
         const { id: messageId, status, recipient_id: recipientPhone } = statusData;
 
+        let message: any = null;
         try {
-            await this.prisma.message.update({
+            message = await this.prisma.message.update({
                 where: { id: messageId },
                 data: { status },
             });
+            if (message) {
+                this.chatGateway.notifyMessageStatus(shopId, {
+                    conversationId: message.conversationId,
+                    messageId: messageId,
+                    status: status,
+                });
+            }
         } catch (e) {
             this.logger.warn(`Status update failed for message ${messageId}. It might not exist.`);
         }

@@ -27,6 +27,9 @@ let ChatGateway = class ChatGateway {
     notifyRead(shopId, conversationId) {
         this.server.to(shopId).emit('read', { conversationId });
     }
+    notifyMessageStatus(shopId, data) {
+        this.server.to(shopId).emit('messageStatusUpdate', data);
+    }
 };
 exports.ChatGateway = ChatGateway;
 __decorate([
