@@ -44,14 +44,14 @@ let AdminController = class AdminController {
     async getStats() {
         return this.adminService.getStats();
     }
-    async getRegistrationRequests() {
-        return this.adminService.getRegistrationRequests();
+    async getDemoRequests() {
+        return this.adminService.getDemoRequests();
     }
-    async approveRequest(id) {
-        return this.adminService.approveRegistrationRequest(id);
+    async resolveRequest(id) {
+        return this.adminService.resolveDemoRequest(id);
     }
     async rejectRequest(id) {
-        return this.adminService.rejectRegistrationRequest(id);
+        return this.adminService.rejectDemoRequest(id);
     }
     async getTenantConnections() {
         return this.adminService.getTenantConnections();
@@ -127,20 +127,20 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "getStats", null);
 __decorate([
-    (0, common_1.Get)('requests'),
+    (0, common_1.Get)('demo-requests'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
-], AdminController.prototype, "getRegistrationRequests", null);
+], AdminController.prototype, "getDemoRequests", null);
 __decorate([
-    (0, common_1.Post)('requests/:id/approve'),
+    (0, common_1.Post)('demo-requests/:id/resolve'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
-], AdminController.prototype, "approveRequest", null);
+], AdminController.prototype, "resolveRequest", null);
 __decorate([
-    (0, common_1.Post)('requests/:id/reject'),
+    (0, common_1.Post)('demo-requests/:id/reject'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),

@@ -3,11 +3,11 @@ export declare class CampaignsController {
     private readonly campaignsService;
     constructor(campaignsService: CampaignsService);
     createCampaign(user: any, body: any): Promise<{
+        name: string;
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
-        status: string;
         shopId: string;
         stats: import("@prisma/client/runtime/library").JsonValue | null;
         templateParams: import("@prisma/client/runtime/library").JsonValue | null;
@@ -24,20 +24,20 @@ export declare class CampaignsController {
         stats: any;
         template: {
             id: string;
+            status: string;
             createdAt: Date;
             updatedAt: Date;
-            status: string;
             shopId: string;
             category: string;
             templateName: string;
             language: string;
             components: import("@prisma/client/runtime/library").JsonValue;
         };
+        name: string;
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
-        status: string;
         shopId: string;
         templateParams: import("@prisma/client/runtime/library").JsonValue | null;
         templateId: string;
@@ -52,9 +52,9 @@ export declare class CampaignsController {
         campaign: {
             template: {
                 id: string;
+                status: string;
                 createdAt: Date;
                 updatedAt: Date;
-                status: string;
                 shopId: string;
                 category: string;
                 templateName: string;
@@ -62,11 +62,11 @@ export declare class CampaignsController {
                 components: import("@prisma/client/runtime/library").JsonValue;
             };
             contacts: {
+                name: string;
                 phone: string;
                 id: string;
-                updatedAt: Date;
-                name: string;
                 status: string;
+                updatedAt: Date;
                 contactId: string | null;
                 campaignId: string;
                 wamid: string | null;
@@ -74,11 +74,11 @@ export declare class CampaignsController {
                 sentAt: Date;
             }[];
         } & {
+            name: string;
             id: string;
+            status: string;
             createdAt: Date;
             updatedAt: Date;
-            name: string;
-            status: string;
             shopId: string;
             stats: import("@prisma/client/runtime/library").JsonValue | null;
             templateParams: import("@prisma/client/runtime/library").JsonValue | null;
@@ -101,11 +101,11 @@ export declare class CampaignsController {
         };
         contacts: {
             sent: {
+                name: string;
                 phone: string;
                 id: string;
-                updatedAt: Date;
-                name: string;
                 status: string;
+                updatedAt: Date;
                 contactId: string | null;
                 campaignId: string;
                 wamid: string | null;
@@ -113,11 +113,11 @@ export declare class CampaignsController {
                 sentAt: Date;
             }[];
             delivered: {
+                name: string;
                 phone: string;
                 id: string;
-                updatedAt: Date;
-                name: string;
                 status: string;
+                updatedAt: Date;
                 contactId: string | null;
                 campaignId: string;
                 wamid: string | null;
@@ -125,11 +125,11 @@ export declare class CampaignsController {
                 sentAt: Date;
             }[];
             read: {
+                name: string;
                 phone: string;
                 id: string;
-                updatedAt: Date;
-                name: string;
                 status: string;
+                updatedAt: Date;
                 contactId: string | null;
                 campaignId: string;
                 wamid: string | null;
@@ -137,11 +137,11 @@ export declare class CampaignsController {
                 sentAt: Date;
             }[];
             clicked: {
+                name: string;
                 phone: string;
                 id: string;
-                updatedAt: Date;
-                name: string;
                 status: string;
+                updatedAt: Date;
                 contactId: string | null;
                 campaignId: string;
                 wamid: string | null;
@@ -149,11 +149,11 @@ export declare class CampaignsController {
                 sentAt: Date;
             }[];
             failed: {
+                name: string;
                 phone: string;
                 id: string;
-                updatedAt: Date;
-                name: string;
                 status: string;
+                updatedAt: Date;
                 contactId: string | null;
                 campaignId: string;
                 wamid: string | null;
@@ -161,11 +161,11 @@ export declare class CampaignsController {
                 sentAt: Date;
             }[];
             unread: {
+                name: string;
                 phone: string;
                 id: string;
-                updatedAt: Date;
-                name: string;
                 status: string;
+                updatedAt: Date;
                 contactId: string | null;
                 campaignId: string;
                 wamid: string | null;
@@ -179,11 +179,11 @@ export declare class CampaignsController {
         message: string;
     }>;
     resendFailed(user: any, id: string): Promise<{
+        name: string;
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
-        status: string;
         shopId: string;
         stats: import("@prisma/client/runtime/library").JsonValue | null;
         templateParams: import("@prisma/client/runtime/library").JsonValue | null;
@@ -198,11 +198,11 @@ export declare class CampaignsController {
         message: string;
     }>;
     abortCampaign(user: any, id: string): Promise<{
+        name: string;
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
-        status: string;
         shopId: string;
         stats: import("@prisma/client/runtime/library").JsonValue | null;
         templateParams: import("@prisma/client/runtime/library").JsonValue | null;
@@ -215,11 +215,11 @@ export declare class CampaignsController {
         failureHistory: import("@prisma/client/runtime/library").JsonValue | null;
     }>;
     launchRetarget(user: any, id: string, body: any): Promise<{
+        name: string;
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
-        status: string;
         shopId: string;
         stats: import("@prisma/client/runtime/library").JsonValue | null;
         templateParams: import("@prisma/client/runtime/library").JsonValue | null;
@@ -232,11 +232,11 @@ export declare class CampaignsController {
         failureHistory: import("@prisma/client/runtime/library").JsonValue | null;
     }>;
     deleteCampaign(user: any, id: string): Promise<{
+        name: string;
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
-        status: string;
         shopId: string;
         stats: import("@prisma/client/runtime/library").JsonValue | null;
         templateParams: import("@prisma/client/runtime/library").JsonValue | null;

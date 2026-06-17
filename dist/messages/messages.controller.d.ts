@@ -4,9 +4,9 @@ export declare class MessagesController {
     constructor(messagesService: MessagesService);
     getMessages(user: any, conversationId: string): Promise<{
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
         shopId: string;
         phoneNumberId: string | null;
         conversationId: string;
@@ -19,9 +19,9 @@ export declare class MessagesController {
     }[]>;
     sendMessage(user: any, conversationId: string, body: any): Promise<{
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
         shopId: string;
         phoneNumberId: string | null;
         conversationId: string;

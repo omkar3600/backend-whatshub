@@ -8,21 +8,21 @@ export declare class UsersService {
                 status: string;
                 expiryDate: Date;
             } | null;
-            shopName: string;
             phone: string;
             id: string;
             status: string;
+            shopName: string;
         } | null;
-        username: string;
         id: string;
-        role: string;
         createdAt: Date;
+        username: string;
+        role: string;
     }>;
     updateProfile(userId: string, data: {
         username?: string;
     }): Promise<{
-        username: string;
         id: string;
+        username: string;
         role: string;
     }>;
     changePassword(userId: string, data: any): Promise<{

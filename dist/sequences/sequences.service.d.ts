@@ -20,10 +20,10 @@ export declare class SequencesService {
             sequenceId: string;
         }[];
     } & {
+        name: string;
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         shopId: string;
         isActive: boolean;
         triggerTag: string | null;
@@ -35,9 +35,9 @@ export declare class SequencesService {
         steps: ({
             template: {
                 id: string;
+                status: string;
                 createdAt: Date;
                 updatedAt: Date;
-                status: string;
                 shopId: string;
                 category: string;
                 templateName: string;
@@ -55,28 +55,28 @@ export declare class SequencesService {
             sequenceId: string;
         })[];
     } & {
+        name: string;
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         shopId: string;
         isActive: boolean;
         triggerTag: string | null;
     })[]>;
     toggleSequence(shopId: string, id: string, isActive: boolean): Promise<{
+        name: string;
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         shopId: string;
         isActive: boolean;
         triggerTag: string | null;
     }>;
     deleteSequence(shopId: string, id: string): Promise<{
+        name: string;
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         shopId: string;
         isActive: boolean;
         triggerTag: string | null;

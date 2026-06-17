@@ -8,19 +8,19 @@ export declare class UsersController {
                 status: string;
                 expiryDate: Date;
             } | null;
-            shopName: string;
             phone: string;
             id: string;
             status: string;
+            shopName: string;
         } | null;
-        username: string;
         id: string;
-        role: string;
         createdAt: Date;
+        username: string;
+        role: string;
     }>;
     updateProfile(user: any, body: any): Promise<{
-        username: string;
         id: string;
+        username: string;
         role: string;
     }>;
     changePassword(user: any, body: any): Promise<{

@@ -6,9 +6,9 @@ export declare class MessagesService {
     constructor(prisma: PrismaService, whatsappService: WhatsappService);
     getMessages(shopId: string, conversationId: string): Promise<{
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
         shopId: string;
         phoneNumberId: string | null;
         conversationId: string;
@@ -21,9 +21,9 @@ export declare class MessagesService {
     }[]>;
     sendMessage(shopId: string, conversationId: string, data: any): Promise<{
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
         shopId: string;
         phoneNumberId: string | null;
         conversationId: string;

@@ -6,14 +6,14 @@ export declare class ContactsService {
     private readonly logger;
     constructor(prisma: PrismaService, sequencesService: SequencesService);
     createContact(shopId: string, data: any): Promise<{
+        name: string;
         phone: string;
+        city: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         shopId: string;
         tags: import("@prisma/client/runtime/library").JsonValue | null;
-        city: string | null;
         notes: string | null;
     }>;
     importFromExcel(shopId: string, file: Express.Multer.File): Promise<{
@@ -22,25 +22,25 @@ export declare class ContactsService {
         errors: string[];
     }>;
     getContacts(shopId: string, filters: any): Promise<{
+        name: string;
         phone: string;
+        city: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         shopId: string;
         tags: import("@prisma/client/runtime/library").JsonValue | null;
-        city: string | null;
         notes: string | null;
     }[] | {
         data: {
+            name: string;
             phone: string;
+            city: string | null;
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            name: string;
             shopId: string;
             tags: import("@prisma/client/runtime/library").JsonValue | null;
-            city: string | null;
             notes: string | null;
         }[];
         total: number;
@@ -48,36 +48,36 @@ export declare class ContactsService {
         totalPages: number;
     }>;
     getContact(shopId: string, id: string): Promise<{
+        name: string;
         phone: string;
+        city: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         shopId: string;
         tags: import("@prisma/client/runtime/library").JsonValue | null;
-        city: string | null;
         notes: string | null;
     }>;
     updateContact(shopId: string, id: string, data: any): Promise<{
+        name: string;
         phone: string;
+        city: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         shopId: string;
         tags: import("@prisma/client/runtime/library").JsonValue | null;
-        city: string | null;
         notes: string | null;
     }>;
     deleteContact(shopId: string, id: string): Promise<{
+        name: string;
         phone: string;
+        city: string | null;
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        name: string;
         shopId: string;
         tags: import("@prisma/client/runtime/library").JsonValue | null;
-        city: string | null;
         notes: string | null;
     }>;
 }

@@ -165,63 +165,36 @@ export class AdminService {
         });
     }
 
-    async getRegistrationRequests() {
-        return this.prisma.registrationInterest.findMany({
+    async getDemoRequests() {
+        return this.prisma.demoRequest.findMany({
             orderBy: { createdAt: 'desc' }
         });
     }
 
-    async approveRegistrationRequest(requestId: string) {
-        const request = await this.prisma.registrationInterest.findUnique({
+    async resolveDemoRequest(requestId: string) {
+        const request = await this.prisma.demoRequest.findUnique({
             where: { id: requestId }
         });
 
-        if (!request) throw new NotFoundException('Registration request not found');
+        if (!request) throw new NotFoundException('Demo request not found');
         if (request.status !== 'pending') throw new Error('Request already processed');
 
-        return this.prisma.$transaction(async (tx) => {
-            const user = await tx.user.create({
-                data: {
-                    username: request.username,
-                    passwordHash: request.password,
-                    role: 'user',
-                },
-            });
-
-            const shop = await tx.shop.create({
-                data: {
-                    ownerId: user.id,
-                    shopName: request.shopName,
-                    phone: request.phone,
-                },
-            });
-
-            await tx.subscription.create({
-                data: {
-                    shopId: shop.id,
-                    startDate: new Date(),
-                    expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-                    status: 'active',
-                },
-            });
-
-            await tx.registrationInterest.update({
-                where: { id: requestId },
-                data: { status: 'approved' }
-            });
-
-            return { message: 'User approved and created successfully', user, shop };
+        await this.prisma.demoRequest.update({
+            where: { id: requestId },
+            data: { status: 'resolved' }
         });
+
+        return { message: 'Demo request marked as resolved.' };
     }
 
-    async rejectRegistrationRequest(requestId: string) {
-        const request = await this.prisma.registrationInterest.findUnique({
+    async rejectDemoRequest(requestId: string) {
+        const request = await this.prisma.demoRequest.findUnique({
             where: { id: requestId }
         });
 
-        if (!request) throw new NotFoundException('Registration request not found');
+        if (!request) throw new NotFoundException('Demo request not found');
 
-        return this.prisma.registrationInterest.update({
+        return this.prisma.demoRequest.update({
             where: { id: requestId },
             data: { status: 'rejected' }
         });

@@ -45,19 +45,19 @@ export class AdminController {
         return this.adminService.getStats();
     }
 
-    @Get('requests')
-    async getRegistrationRequests() {
-        return this.adminService.getRegistrationRequests();
+    @Get('demo-requests')
+    async getDemoRequests() {
+        return this.adminService.getDemoRequests();
     }
 
-    @Post('requests/:id/approve')
-    async approveRequest(@Param('id') id: string) {
-        return this.adminService.approveRegistrationRequest(id);
+    @Post('demo-requests/:id/resolve')
+    async resolveRequest(@Param('id') id: string) {
+        return this.adminService.resolveDemoRequest(id);
     }
 
-    @Post('requests/:id/reject')
+    @Post('demo-requests/:id/reject')
     async rejectRequest(@Param('id') id: string) {
-        return this.adminService.rejectRegistrationRequest(id);
+        return this.adminService.rejectDemoRequest(id);
     }
 
     // ─── New Multi-Tenant Admin Endpoints ────────────────────────────────

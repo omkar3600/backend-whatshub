@@ -6,14 +6,14 @@ export declare class ConversationsService {
     constructor(prisma: PrismaService, chatGateway: ChatGateway);
     getConversations(shopId: string): Promise<({
         contact: {
+            name: string;
             phone: string;
+            city: string | null;
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            name: string;
             shopId: string;
             tags: import("@prisma/client/runtime/library").JsonValue | null;
-            city: string | null;
             notes: string | null;
         };
     } & {
@@ -29,14 +29,14 @@ export declare class ConversationsService {
     })[]>;
     getConversation(shopId: string, id: string): Promise<{
         contact: {
+            name: string;
             phone: string;
+            city: string | null;
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            name: string;
             shopId: string;
             tags: import("@prisma/client/runtime/library").JsonValue | null;
-            city: string | null;
             notes: string | null;
         };
     } & {
@@ -52,14 +52,14 @@ export declare class ConversationsService {
     }>;
     findOrCreate(shopId: string, contactId: string): Promise<{
         contact: {
+            name: string;
             phone: string;
+            city: string | null;
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            name: string;
             shopId: string;
             tags: import("@prisma/client/runtime/library").JsonValue | null;
-            city: string | null;
             notes: string | null;
         };
     } & {

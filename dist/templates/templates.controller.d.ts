@@ -4,9 +4,9 @@ export declare class TemplatesController {
     constructor(templatesService: TemplatesService);
     createTemplate(user: any, body: any): Promise<{
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
         shopId: string;
         category: string;
         templateName: string;
@@ -15,9 +15,9 @@ export declare class TemplatesController {
     }>;
     getTemplates(user: any): Promise<{
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
         shopId: string;
         category: string;
         templateName: string;

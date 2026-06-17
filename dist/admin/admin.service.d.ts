@@ -7,19 +7,19 @@ export declare class AdminService {
     createShop(data: any): Promise<{
         message: string;
         shop: {
-            shopName: string;
             phone: string;
             id: string;
+            status: string;
             createdAt: Date;
             updatedAt: Date;
-            status: string;
+            shopName: string;
             ownerId: string;
         };
         subscription: {
             id: string;
+            status: string;
             createdAt: Date;
             updatedAt: Date;
-            status: string;
             shopId: string;
             startDate: Date;
             expiryDate: Date;
@@ -28,23 +28,23 @@ export declare class AdminService {
     getShops(): Promise<({
         subscription: {
             id: string;
+            status: string;
             createdAt: Date;
             updatedAt: Date;
-            status: string;
             shopId: string;
             startDate: Date;
             expiryDate: Date;
         } | null;
         owner: {
-            username: string;
             id: string;
+            username: string;
         };
         whatsappAccounts: ({
             phoneNumbers: {
                 id: string;
+                status: string;
                 createdAt: Date;
                 updatedAt: Date;
-                status: string;
                 shopId: string;
                 wabaAccountId: string;
                 phoneNumberId: string;
@@ -57,14 +57,14 @@ export declare class AdminService {
                 isDefault: boolean;
             }[];
         } & {
+            businessName: string | null;
             id: string;
+            status: string;
             createdAt: Date;
             updatedAt: Date;
-            status: string;
             shopId: string;
             businessAccountId: string;
             wabaId: string | null;
-            businessName: string | null;
             accessToken: string;
             tokenType: string;
             tokenExpiry: Date | null;
@@ -72,97 +72,84 @@ export declare class AdminService {
             onboardingSource: string;
         })[];
     } & {
-        shopName: string;
         phone: string;
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
+        shopName: string;
         ownerId: string;
     })[]>;
     updateShop(shopId: string, data: any): Promise<{
         subscription: {
             id: string;
+            status: string;
             createdAt: Date;
             updatedAt: Date;
-            status: string;
             shopId: string;
             startDate: Date;
             expiryDate: Date;
         } | null;
         owner: {
-            username: string;
             id: string;
+            username: string;
         };
     } & {
-        shopName: string;
         phone: string;
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
+        shopName: string;
         ownerId: string;
     }>;
     updateSubscription(shopId: string, data: any): Promise<{
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
         shopId: string;
         startDate: Date;
         expiryDate: Date;
     }>;
     toggleShopStatus(shopId: string, status: string): Promise<{
-        shopName: string;
         phone: string;
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
+        shopName: string;
         ownerId: string;
     }>;
     deleteShop(shopId: string): Promise<{
         message: string;
     }>;
-    getRegistrationRequests(): Promise<{
-        username: string;
-        password: string;
-        shopName: string;
+    getDemoRequests(): Promise<{
+        name: string;
         phone: string;
+        businessName: string;
+        businessType: string;
+        city: string;
+        state: string;
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
     }[]>;
-    approveRegistrationRequest(requestId: string): Promise<{
+    resolveDemoRequest(requestId: string): Promise<{
         message: string;
-        user: {
-            username: string;
-            id: string;
-            passwordHash: string;
-            role: string;
-            createdAt: Date;
-            updatedAt: Date;
-        };
-        shop: {
-            shopName: string;
-            phone: string;
-            id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            status: string;
-            ownerId: string;
-        };
     }>;
-    rejectRegistrationRequest(requestId: string): Promise<{
-        username: string;
-        password: string;
-        shopName: string;
+    rejectDemoRequest(requestId: string): Promise<{
+        name: string;
         phone: string;
+        businessName: string;
+        businessType: string;
+        city: string;
+        state: string;
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
     }>;
     getStats(): Promise<{
         totalShops: number;
@@ -176,15 +163,15 @@ export declare class AdminService {
         shopId: string;
         shopName: string;
         owner: {
-            username: string;
             id: string;
+            username: string;
         };
         status: string;
         subscription: {
             id: string;
+            status: string;
             createdAt: Date;
             updatedAt: Date;
-            status: string;
             shopId: string;
             startDate: Date;
             expiryDate: Date;
@@ -222,8 +209,8 @@ export declare class AdminService {
     }[]>;
     getDeadLetterEvents(status?: string): Promise<{
         id: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
         errorMessage: string | null;
         retryCount: number;
         sourceType: string;
@@ -256,14 +243,14 @@ export declare class AdminService {
     setWhatsAppCredentials(shopId: string, data: any): Promise<{
         message: string;
         account: {
+            businessName: string | null;
             id: string;
+            status: string;
             createdAt: Date;
             updatedAt: Date;
-            status: string;
             shopId: string;
             businessAccountId: string;
             wabaId: string | null;
-            businessName: string | null;
             accessToken: string;
             tokenType: string;
             tokenExpiry: Date | null;

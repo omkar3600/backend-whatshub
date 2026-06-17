@@ -5,7 +5,7 @@ export declare class AuthService {
     private readonly jwtService;
     private readonly logger;
     constructor(prisma: PrismaService, jwtService: JwtService);
-    registerInterest(data: any): Promise<{
+    submitDemoRequest(data: any): Promise<{
         message: string;
     }>;
     registerShop(data: any): Promise<{

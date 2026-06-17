@@ -18,15 +18,17 @@ model User {
   shop         Shop?
 }
 
-model RegistrationInterest {
-  id        String   @id @default(uuid())
-  username  String
-  password  String // Hashed
-  shopName  String
-  phone     String
-  status    String   @default("pending") // pending, approved, rejected
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model DemoRequest {
+  id           String   @id @default(uuid())
+  name         String
+  phone        String
+  businessName String
+  businessType String
+  city         String
+  state        String
+  status       String   @default("pending") // pending, resolved, rejected
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Shop {

@@ -4,14 +4,14 @@ export declare class ConversationsController {
     constructor(conversationsService: ConversationsService);
     getConversations(user: any): Promise<({
         contact: {
+            name: string;
             phone: string;
+            city: string | null;
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            name: string;
             shopId: string;
             tags: import("@prisma/client/runtime/library").JsonValue | null;
-            city: string | null;
             notes: string | null;
         };
     } & {
@@ -27,14 +27,14 @@ export declare class ConversationsController {
     })[]>;
     getConversation(user: any, id: string): Promise<{
         contact: {
+            name: string;
             phone: string;
+            city: string | null;
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            name: string;
             shopId: string;
             tags: import("@prisma/client/runtime/library").JsonValue | null;
-            city: string | null;
             notes: string | null;
         };
     } & {
@@ -50,14 +50,14 @@ export declare class ConversationsController {
     }>;
     findOrCreate(user: any, contactId: string): Promise<{
         contact: {
+            name: string;
             phone: string;
+            city: string | null;
             id: string;
             createdAt: Date;
             updatedAt: Date;
-            name: string;
             shopId: string;
             tags: import("@prisma/client/runtime/library").JsonValue | null;
-            city: string | null;
             notes: string | null;
         };
     } & {

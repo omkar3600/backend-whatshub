@@ -11,32 +11,22 @@ export class AuthService {
         private readonly jwtService: JwtService,
     ) { }
 
-    async registerInterest(data: any) {
-        const { username, password, shopName, phone } = data;
+    async submitDemoRequest(data: any) {
+        const { name, phone, businessName, businessType, city, state } = data;
 
-        const existingUser = await this.prisma.user.findUnique({ where: { username } });
-        const existingRequest = await this.prisma.registrationInterest.findFirst({
-            where: { username }
-        });
-
-        if (existingUser || (existingRequest && existingRequest.status === 'pending')) {
-            throw new ConflictException('Username already in use or pending approval');
-        }
-
-        const salt = await bcrypt.genSalt();
-        const passwordHash = await bcrypt.hash(password, salt);
-
-        await this.prisma.registrationInterest.create({
+        await this.prisma.demoRequest.create({
             data: {
-                username,
-                password: passwordHash,
-                shopName,
+                name,
                 phone,
+                businessName,
+                businessType,
+                city,
+                state,
                 status: 'pending'
             },
         });
 
-        return { message: 'Registration interest submitted. Please wait for admin approval.' };
+        return { message: 'Demo request submitted successfully. We will contact you soon.' };
     }
 
     async registerShop(data: any) {

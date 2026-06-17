@@ -9,9 +9,9 @@ export declare class ShopsService {
         shop: {
             subscription: {
                 id: string;
+                status: string;
                 createdAt: Date;
                 updatedAt: Date;
-                status: string;
                 shopId: string;
                 startDate: Date;
                 expiryDate: Date;
@@ -19,9 +19,9 @@ export declare class ShopsService {
             whatsappAccounts: ({
                 phoneNumbers: {
                     id: string;
+                    status: string;
                     createdAt: Date;
                     updatedAt: Date;
-                    status: string;
                     shopId: string;
                     wabaAccountId: string;
                     phoneNumberId: string;
@@ -34,14 +34,14 @@ export declare class ShopsService {
                     isDefault: boolean;
                 }[];
             } & {
+                businessName: string | null;
                 id: string;
+                status: string;
                 createdAt: Date;
                 updatedAt: Date;
-                status: string;
                 shopId: string;
                 businessAccountId: string;
                 wabaId: string | null;
-                businessName: string | null;
                 accessToken: string;
                 tokenType: string;
                 tokenExpiry: Date | null;
@@ -49,12 +49,12 @@ export declare class ShopsService {
                 onboardingSource: string;
             })[];
         } & {
-            shopName: string;
             phone: string;
             id: string;
+            status: string;
             createdAt: Date;
             updatedAt: Date;
-            status: string;
+            shopName: string;
             ownerId: string;
         };
         stats: {
@@ -64,12 +64,12 @@ export declare class ShopsService {
         };
     }>;
     updateShopDetails(shopId: string, data: any): Promise<{
-        shopName: string;
         phone: string;
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
+        shopName: string;
         ownerId: string;
     }>;
     getWhatsAppCredentials(shopId: string): Promise<{
@@ -84,9 +84,9 @@ export declare class ShopsService {
         onboardingSource: string;
         phoneNumbers: {
             id: string;
+            status: string;
             createdAt: Date;
             updatedAt: Date;
-            status: string;
             shopId: string;
             wabaAccountId: string;
             phoneNumberId: string;
@@ -100,14 +100,14 @@ export declare class ShopsService {
         }[];
     } | null>;
     updateWhatsAppCredentials(shopId: string, data: any): Promise<{
+        businessName: string | null;
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
         shopId: string;
         businessAccountId: string;
         wabaId: string | null;
-        businessName: string | null;
         accessToken: string;
         tokenType: string;
         tokenExpiry: Date | null;

@@ -5,19 +5,19 @@ export declare class AdminController {
     createShop(body: any): Promise<{
         message: string;
         shop: {
-            shopName: string;
             phone: string;
             id: string;
+            status: string;
             createdAt: Date;
             updatedAt: Date;
-            status: string;
+            shopName: string;
             ownerId: string;
         };
         subscription: {
             id: string;
+            status: string;
             createdAt: Date;
             updatedAt: Date;
-            status: string;
             shopId: string;
             startDate: Date;
             expiryDate: Date;
@@ -26,23 +26,23 @@ export declare class AdminController {
     getShops(): Promise<({
         subscription: {
             id: string;
+            status: string;
             createdAt: Date;
             updatedAt: Date;
-            status: string;
             shopId: string;
             startDate: Date;
             expiryDate: Date;
         } | null;
         owner: {
-            username: string;
             id: string;
+            username: string;
         };
         whatsappAccounts: ({
             phoneNumbers: {
                 id: string;
+                status: string;
                 createdAt: Date;
                 updatedAt: Date;
-                status: string;
                 shopId: string;
                 wabaAccountId: string;
                 phoneNumberId: string;
@@ -55,14 +55,14 @@ export declare class AdminController {
                 isDefault: boolean;
             }[];
         } & {
+            businessName: string | null;
             id: string;
+            status: string;
             createdAt: Date;
             updatedAt: Date;
-            status: string;
             shopId: string;
             businessAccountId: string;
             wabaId: string | null;
-            businessName: string | null;
             accessToken: string;
             tokenType: string;
             tokenExpiry: Date | null;
@@ -70,19 +70,19 @@ export declare class AdminController {
             onboardingSource: string;
         })[];
     } & {
-        shopName: string;
         phone: string;
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
+        shopName: string;
         ownerId: string;
     })[]>;
     updateSubscription(shopId: string, body: any): Promise<{
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
         shopId: string;
         startDate: Date;
         expiryDate: Date;
@@ -90,33 +90,33 @@ export declare class AdminController {
     updateShop(shopId: string, body: any): Promise<{
         subscription: {
             id: string;
+            status: string;
             createdAt: Date;
             updatedAt: Date;
-            status: string;
             shopId: string;
             startDate: Date;
             expiryDate: Date;
         } | null;
         owner: {
-            username: string;
             id: string;
+            username: string;
         };
     } & {
-        shopName: string;
         phone: string;
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
+        shopName: string;
         ownerId: string;
     }>;
     toggleShopStatus(shopId: string, body: any): Promise<{
-        shopName: string;
         phone: string;
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
+        shopName: string;
         ownerId: string;
     }>;
     deleteShop(shopId: string): Promise<{
@@ -130,59 +130,46 @@ export declare class AdminController {
         connectedWabas: number;
         totalPhoneNumbers: number;
     }>;
-    getRegistrationRequests(): Promise<{
-        username: string;
-        password: string;
-        shopName: string;
+    getDemoRequests(): Promise<{
+        name: string;
         phone: string;
+        businessName: string;
+        businessType: string;
+        city: string;
+        state: string;
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
     }[]>;
-    approveRequest(id: string): Promise<{
+    resolveRequest(id: string): Promise<{
         message: string;
-        user: {
-            username: string;
-            id: string;
-            passwordHash: string;
-            role: string;
-            createdAt: Date;
-            updatedAt: Date;
-        };
-        shop: {
-            shopName: string;
-            phone: string;
-            id: string;
-            createdAt: Date;
-            updatedAt: Date;
-            status: string;
-            ownerId: string;
-        };
     }>;
     rejectRequest(id: string): Promise<{
-        username: string;
-        password: string;
-        shopName: string;
+        name: string;
         phone: string;
+        businessName: string;
+        businessType: string;
+        city: string;
+        state: string;
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
     }>;
     getTenantConnections(): Promise<{
         shopId: string;
         shopName: string;
         owner: {
-            username: string;
             id: string;
+            username: string;
         };
         status: string;
         subscription: {
             id: string;
+            status: string;
             createdAt: Date;
             updatedAt: Date;
-            status: string;
             shopId: string;
             startDate: Date;
             expiryDate: Date;
@@ -220,8 +207,8 @@ export declare class AdminController {
     }[]>;
     getDeadLetterEvents(status?: string): Promise<{
         id: string;
-        createdAt: Date;
         status: string;
+        createdAt: Date;
         errorMessage: string | null;
         retryCount: number;
         sourceType: string;
@@ -254,14 +241,14 @@ export declare class AdminController {
     setWhatsAppCredentials(shopId: string, body: any): Promise<{
         message: string;
         account: {
+            businessName: string | null;
             id: string;
+            status: string;
             createdAt: Date;
             updatedAt: Date;
-            status: string;
             shopId: string;
             businessAccountId: string;
             wabaId: string | null;
-            businessName: string | null;
             accessToken: string;
             tokenType: string;
             tokenExpiry: Date | null;

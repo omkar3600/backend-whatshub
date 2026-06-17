@@ -9,14 +9,9 @@ import { RegisterInterestDto, RegisterShopDto, LoginDto } from './dto/auth.dto';
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
 
-    @Post('register-interest')
-    async registerInterest(@Body() body: RegisterInterestDto) {
-        return this.authService.registerInterest(body);
-    }
-
-    @Post('register')
-    async register(@Body() body: RegisterShopDto) {
-        return this.authService.registerShop(body);
+    @Post('demo')
+    async submitDemoRequest(@Body() body: any) {
+        return this.authService.submitDemoRequest(body);
     }
 
     @Post('login')

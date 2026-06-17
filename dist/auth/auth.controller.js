@@ -22,43 +22,37 @@ let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
     }
-    async registerInterest(body) {
-        return this.authService.registerInterest(body);
-    }
-    async register(body) {
-        return this.authService.registerShop(body);
+    async submitDemoRequest(body) {
+        return this.authService.submitDemoRequest(body);
     }
     async login(body, res) {
         const result = await this.authService.login(body);
         res.cookie('token', result.access_token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
         const { access_token, ...safeResult } = result;
         return safeResult;
     }
     async logout(res) {
-        res.clearCookie('token');
+        res.clearCookie('token', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        });
         return { message: 'Logged out successfully' };
     }
 };
 exports.AuthController = AuthController;
 __decorate([
-    (0, common_1.Post)('register-interest'),
+    (0, common_1.Post)('demo'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [auth_dto_1.RegisterInterestDto]),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
-], AuthController.prototype, "registerInterest", null);
-__decorate([
-    (0, common_1.Post)('register'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [auth_dto_1.RegisterShopDto]),
-    __metadata("design:returntype", Promise)
-], AuthController.prototype, "register", null);
+], AuthController.prototype, "submitDemoRequest", null);
 __decorate([
     (0, common_1.Post)('login'),
     __param(0, (0, common_1.Body)()),

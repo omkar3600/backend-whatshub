@@ -11,9 +11,9 @@ export declare class TemplatesService {
     private getCredentials;
     createTemplate(shopId: string, data: any): Promise<{
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
         shopId: string;
         category: string;
         templateName: string;
@@ -27,9 +27,9 @@ export declare class TemplatesService {
     }>;
     getTemplates(shopId: string): Promise<{
         id: string;
+        status: string;
         createdAt: Date;
         updatedAt: Date;
-        status: string;
         shopId: string;
         category: string;
         templateName: string;
