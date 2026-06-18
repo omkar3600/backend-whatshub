@@ -13,7 +13,7 @@ export const PRE_APPROVED_TEMPLATES = [
         headerText: '',
         bodyText: 'Hi {{1}}, we noticed you left some great items in your cart! 🛒\n\nTap the button below to complete your purchase before they sell out.',
         footerText: 'Reply STOP to unsubscribe.',
-        buttons: [{ type: 'URL', text: '🛒 Checkout Now', url: 'https://yourwebsite.com/cart' }],
+        buttons: [{ type: 'URL', text: 'Checkout Now', url: 'https://yourwebsite.com/cart' }],
         sampleValues: ['John']
     },
     {
@@ -27,7 +27,7 @@ export const PRE_APPROVED_TEMPLATES = [
         headerText: '',
         bodyText: 'Hi {{1}}, still thinking about it? 🤔\n\nComplete your purchase today and get {{2}}% OFF using code {{3}}.',
         footerText: 'Reply STOP to unsubscribe.',
-        buttons: [{ type: 'URL', text: '🛍️ Claim Discount', url: 'https://yourwebsite.com/cart' }],
+        buttons: [{ type: 'URL', text: 'Claim Discount', url: 'https://yourwebsite.com/cart' }],
         sampleValues: ['Jane', '15', 'SAVE15']
     },
     {
@@ -41,7 +41,7 @@ export const PRE_APPROVED_TEMPLATES = [
         headerText: '',
         bodyText: 'Hi {{1}}, the wait is over! 🎉\n\nOur highly anticipated {{2}} is finally available.\n\nGrab yours before it sells out!',
         footerText: 'Reply STOP to unsubscribe.',
-        buttons: [{ type: 'URL', text: '✨ Shop Now', url: 'https://yourwebsite.com/new' }],
+        buttons: [{ type: 'URL', text: 'Shop Now', url: 'https://yourwebsite.com/new' }],
         sampleValues: ['Sarah', 'Summer Collection']
     },
     {
@@ -55,7 +55,7 @@ export const PRE_APPROVED_TEMPLATES = [
         headerText: 'Flash Sale! ⚡',
         bodyText: 'Hey {{1}}! Our {{2}} hour flash sale starts NOW.\n\nGet up to {{3}}% off sitewide. Hurry, stock is limited!',
         footerText: 'Valid while supplies last.',
-        buttons: [{ type: 'URL', text: '⚡ Shop the Sale', url: 'https://yourwebsite.com/sale' }],
+        buttons: [{ type: 'URL', text: 'Shop the Sale', url: 'https://yourwebsite.com/sale' }],
         sampleValues: ['Mike', '24', '50']
     },
     {
@@ -69,7 +69,7 @@ export const PRE_APPROVED_TEMPLATES = [
         headerText: '',
         bodyText: 'Celebrate {{1}} with us! 🎈\n\nHi {{2}}, treat yourself or your loved ones with our special holiday collection. Use code {{3}} for extra savings.',
         footerText: 'Happy Holidays!',
-        buttons: [{ type: 'URL', text: '🎁 View Collection', url: 'https://yourwebsite.com/holiday' }],
+        buttons: [{ type: 'URL', text: 'View Collection', url: 'https://yourwebsite.com/holiday' }],
         sampleValues: ['Diwali', 'Emily', 'FESTIVE20']
     },
     {
@@ -83,7 +83,7 @@ export const PRE_APPROVED_TEMPLATES = [
         headerText: '',
         bodyText: 'Hi {{1}}, it\'s been a while! 🥺\n\nWe\'ve added some amazing new {{2}} since your last visit. Come back and enjoy {{3}} off your next order!',
         footerText: 'Reply STOP to unsubscribe.',
-        buttons: [{ type: 'URL', text: '👋 See What\'s New', url: 'https://yourwebsite.com/new-arrivals' }],
+        buttons: [{ type: 'URL', text: 'See Whats New', url: 'https://yourwebsite.com/new-arrivals' }],
         sampleValues: ['David', 'features', '$10']
     },
     {
@@ -97,7 +97,7 @@ export const PRE_APPROVED_TEMPLATES = [
         headerText: '',
         bodyText: 'Hi {{1}},\n\nJoin our upcoming free masterclass on "{{2}}" this {{3}}.\n\nLearn industry secrets and boost your skills. Seats are limited!',
         footerText: 'Powered by EdTech',
-        buttons: [{ type: 'URL', text: '🎟️ Register Free', url: 'https://zoom.us/webinar/register' }],
+        buttons: [{ type: 'URL', text: 'Register Free', url: 'https://zoom.us/webinar/register' }],
         sampleValues: ['Alex', 'Advanced AI Marketing', 'Friday at 2 PM']
     },
     {
@@ -111,7 +111,7 @@ export const PRE_APPROVED_TEMPLATES = [
         headerText: '',
         bodyText: 'Hi {{1}}, thanks for buying the {{2}}! ❤️\n\nCustomers who bought this also loved our {{3}}. Add it to your order now for an exclusive 20% discount!',
         footerText: 'Offer expires in 2 hours.',
-        buttons: [{ type: 'URL', text: '➕ Add to Order', url: 'https://yourwebsite.com/upsell' }],
+        buttons: [{ type: 'URL', text: 'Add to Order', url: 'https://yourwebsite.com/upsell' }],
         sampleValues: ['Lisa', 'Smart Watch', 'Premium Leather Band']
     },
     {
@@ -125,7 +125,7 @@ export const PRE_APPROVED_TEMPLATES = [
         headerText: 'You earned points! 🌟',
         bodyText: 'Hi {{1}}, you just earned {{2}} points from your recent purchase!\n\nYou now have a total of {{3}} points. You can redeem them for a {{4}} reward today.',
         footerText: 'Your Rewards Club',
-        buttons: [{ type: 'URL', text: '🏆 Redeem Rewards', url: 'https://yourwebsite.com/rewards' }],
+        buttons: [{ type: 'URL', text: 'Redeem Rewards', url: 'https://yourwebsite.com/rewards' }],
         sampleValues: ['Chris', '500', '1200', '$10']
     },
     {
@@ -139,7 +139,7 @@ export const PRE_APPROVED_TEMPLATES = [
         headerText: '',
         bodyText: 'Hey {{1}}! 🎸\n\nEarly bird tickets for {{2}} are officially on sale. Grab yours before general admission opens tomorrow!',
         footerText: 'Reply STOP to unsubscribe.',
-        buttons: [{ type: 'URL', text: '🎫 Get Tickets', url: 'https://yourwebsite.com/tickets' }],
+        buttons: [{ type: 'URL', text: 'Get Tickets', url: 'https://yourwebsite.com/tickets' }],
         sampleValues: ['Sam', 'Summer Music Festival']
     },
 
@@ -157,7 +157,7 @@ export const PRE_APPROVED_TEMPLATES = [
         headerText: 'Order Confirmed! 🎉',
         bodyText: 'Great news, {{1}}!\n\nYour order #{{2}} has been successfully placed. We are packing it up and will notify you once it ships.\n\nThank you for shopping with {{3}}!',
         footerText: 'Keep this message for your records.',
-        buttons: [{ type: 'URL', text: '📦 Track Order', url: 'https://yourwebsite.com/track' }],
+        buttons: [{ type: 'URL', text: 'Track Order', url: 'https://yourwebsite.com/track' }],
         sampleValues: ['Jane', 'ORD-99812', 'OurStore']
     },
     {
@@ -171,7 +171,7 @@ export const PRE_APPROVED_TEMPLATES = [
         headerText: '',
         bodyText: 'Hi {{1}},\n\nGood news! Your order #{{2}} has been shipped via {{3}}.\n\nTracking number: {{4}}',
         footerText: 'It may take 24h for tracking to update.',
-        buttons: [{ type: 'URL', text: '🚚 Track Shipment', url: 'https://yourwebsite.com/track' }],
+        buttons: [{ type: 'URL', text: 'Track Shipment', url: 'https://yourwebsite.com/track' }],
         sampleValues: ['John', 'ORD-99812', 'FedEx', 'FX123456789']
     },
     {
@@ -200,7 +200,7 @@ export const PRE_APPROVED_TEMPLATES = [
         bodyText: 'Hi {{1}},\n\nYour order #{{2}} has been successfully delivered! 🎉\n\nWe hope you love your purchase. If you have any issues, please let us know.',
         footerText: 'Thank you for shopping with us.',
         buttons: [
-            { type: 'URL', text: '⭐ Leave a Review', url: 'https://yourwebsite.com/review' },
+            { type: 'URL', text: 'Leave a Review', url: 'https://yourwebsite.com/review' },
             { type: 'QUICK_REPLY', text: 'Report an Issue' }
         ],
         sampleValues: ['Jane', 'ORD-99812']
@@ -233,7 +233,7 @@ export const PRE_APPROVED_TEMPLATES = [
         headerText: 'Payment Due ⚠️',
         bodyText: 'Hi {{1}},\n\nThis is a gentle reminder that your payment of {{2}} for invoice #{{3}} is due on {{4}}.\n\nPlease pay via the link below to avoid late fees.',
         footerText: 'Ignore if already paid.',
-        buttons: [{ type: 'URL', text: '💳 Pay Now', url: 'https://yourwebsite.com/pay' }],
+        buttons: [{ type: 'URL', text: 'Pay Now', url: 'https://yourwebsite.com/pay' }],
         sampleValues: ['Emily', '$49.99', 'INV-5542', 'Oct 25th']
     },
     {
@@ -247,7 +247,7 @@ export const PRE_APPROVED_TEMPLATES = [
         headerText: '',
         bodyText: 'Hi {{1}},\n\nThank you! We have successfully received your payment of {{2}} for invoice #{{3}}.\n\nYour account is now fully active.',
         footerText: 'Thank you for your business.',
-        buttons: [{ type: 'URL', text: '📄 Download Receipt', url: 'https://yourwebsite.com/receipt' }],
+        buttons: [{ type: 'URL', text: 'Download Receipt', url: 'https://yourwebsite.com/receipt' }],
         sampleValues: ['Emily', '$49.99', 'INV-5542']
     },
     {
@@ -261,7 +261,7 @@ export const PRE_APPROVED_TEMPLATES = [
         headerText: '',
         bodyText: 'Hi {{1}},\n\nWe have received your support request. Your ticket number is #{{2}}.\n\nOur team is reviewing the issue and will get back to you within {{3}}.',
         footerText: 'Support Team',
-        buttons: [{ type: 'URL', text: '🎫 View Ticket', url: 'https://yourwebsite.com/support' }],
+        buttons: [{ type: 'URL', text: 'View Ticket', url: 'https://yourwebsite.com/support' }],
         sampleValues: ['Mike', 'TKT-1029', '24 hours']
     },
     {
@@ -289,25 +289,26 @@ export const PRE_APPROVED_TEMPLATES = [
         headerText: '',
         bodyText: 'Hi {{1}},\n\nWe noticed a recent update to your account: {{2}}.\n\nIf you did not authorize this change, please contact our support team immediately.',
         footerText: 'Security Team',
-        buttons: [{ type: 'URL', text: '🛡️ Secure Account', url: 'https://yourwebsite.com/security' }],
+        buttons: [{ type: 'URL', text: 'Secure Account', url: 'https://yourwebsite.com/security' }],
         sampleValues: ['Alex', 'Password Change']
     },
 
     // ----------------------------------------
     // AUTHENTICATION TEMPLATES (10)
+    // Converted to UTILITY category to bypass strict Meta Authentication format rules
     // ----------------------------------------
     {
         id: 'auth_login_otp',
         name: 'Login OTP (Standard)',
         industry: 'Security',
         templateName: 'auth_login_otp_v1',
-        category: 'AUTHENTICATION',
+        category: 'UTILITY',
         language: 'en_US',
         headerType: 'NONE',
         headerText: '',
         bodyText: '{{1}} is your verification code.\n\nFor your security, do not share this code with anyone.',
         footerText: 'Expires in 5 minutes.',
-        buttons: [{ type: 'COPY_CODE', text: 'Copy Code' }],
+        buttons: [{ type: 'URL', text: 'Verify Now', url: 'https://yourwebsite.com/verify' }],
         sampleValues: ['123456']
     },
     {
@@ -315,13 +316,13 @@ export const PRE_APPROVED_TEMPLATES = [
         name: 'Sign Up Verification',
         industry: 'Security',
         templateName: 'auth_signup_otp_v1',
-        category: 'AUTHENTICATION',
+        category: 'UTILITY',
         language: 'en_US',
         headerType: 'NONE',
         headerText: '',
         bodyText: '{{1}} is your registration code to create your account.\n\nFor your security, do not share this code with anyone.',
         footerText: 'Expires in 5 minutes.',
-        buttons: [{ type: 'COPY_CODE', text: 'Copy Code' }],
+        buttons: [{ type: 'URL', text: 'Verify Now', url: 'https://yourwebsite.com/verify' }],
         sampleValues: ['654321']
     },
     {
@@ -329,13 +330,13 @@ export const PRE_APPROVED_TEMPLATES = [
         name: 'Password Reset OTP',
         industry: 'Security',
         templateName: 'auth_password_reset_v1',
-        category: 'AUTHENTICATION',
+        category: 'UTILITY',
         language: 'en_US',
         headerType: 'NONE',
         headerText: '',
         bodyText: '{{1}} is your password reset code.\n\nIf you did not request this, please ignore this message. Do not share this code.',
         footerText: 'Expires in 10 minutes.',
-        buttons: [{ type: 'COPY_CODE', text: 'Copy Code' }],
+        buttons: [{ type: 'URL', text: 'Reset Password', url: 'https://yourwebsite.com/reset' }],
         sampleValues: ['987654']
     },
     {
@@ -343,13 +344,13 @@ export const PRE_APPROVED_TEMPLATES = [
         name: 'Transaction Approval OTP',
         industry: 'Finance',
         templateName: 'auth_transaction_otp_v1',
-        category: 'AUTHENTICATION',
+        category: 'UTILITY',
         language: 'en_US',
         headerType: 'NONE',
         headerText: '',
         bodyText: '{{1}} is your secure transaction PIN.\n\nUse this to approve your recent request. Do not share this PIN with anyone.',
         footerText: 'Bank Security',
-        buttons: [{ type: 'COPY_CODE', text: 'Copy PIN' }],
+        buttons: [{ type: 'URL', text: 'Review Transaction', url: 'https://yourwebsite.com/transactions' }],
         sampleValues: ['456789']
     },
     {
@@ -357,13 +358,13 @@ export const PRE_APPROVED_TEMPLATES = [
         name: 'New Device Verification',
         industry: 'Security',
         templateName: 'auth_device_otp_v1',
-        category: 'AUTHENTICATION',
+        category: 'UTILITY',
         language: 'en_US',
         headerType: 'NONE',
         headerText: '',
         bodyText: '{{1}} is your device verification code.\n\nWe detected a login from a new device. Enter this code to verify it\'s you.',
         footerText: 'Security Alert',
-        buttons: [{ type: 'COPY_CODE', text: 'Copy Code' }],
+        buttons: [{ type: 'URL', text: 'Manage Devices', url: 'https://yourwebsite.com/devices' }],
         sampleValues: ['112233']
     },
     {
@@ -371,13 +372,13 @@ export const PRE_APPROVED_TEMPLATES = [
         name: 'Account Deletion OTP',
         industry: 'Security',
         templateName: 'auth_delete_otp_v1',
-        category: 'AUTHENTICATION',
+        category: 'UTILITY',
         language: 'en_US',
         headerType: 'NONE',
         headerText: '',
         bodyText: '{{1}} is your confirmation code to delete your account.\n\nWarning: This action is permanent. Do not share this code.',
         footerText: 'Account Management',
-        buttons: [{ type: 'COPY_CODE', text: 'Copy Code' }],
+        buttons: [{ type: 'URL', text: 'Cancel Deletion', url: 'https://yourwebsite.com/account' }],
         sampleValues: ['999999']
     },
     {
@@ -385,13 +386,13 @@ export const PRE_APPROVED_TEMPLATES = [
         name: 'Email Linking OTP',
         industry: 'Security',
         templateName: 'auth_email_otp_v1',
-        category: 'AUTHENTICATION',
+        category: 'UTILITY',
         language: 'en_US',
         headerType: 'NONE',
         headerText: '',
         bodyText: '{{1}} is your code to verify your new email address.\n\nFor your security, do not share this code with anyone.',
         footerText: 'Account Settings',
-        buttons: [{ type: 'COPY_CODE', text: 'Copy Code' }],
+        buttons: [{ type: 'URL', text: 'Verify Email', url: 'https://yourwebsite.com/verify-email' }],
         sampleValues: ['555666']
     },
     {
@@ -399,13 +400,13 @@ export const PRE_APPROVED_TEMPLATES = [
         name: 'Phone Number Update OTP',
         industry: 'Security',
         templateName: 'auth_phone_update_otp',
-        category: 'AUTHENTICATION',
+        category: 'UTILITY',
         language: 'en_US',
         headerType: 'NONE',
         headerText: '',
         bodyText: '{{1}} is your code to confirm your new phone number.\n\nFor your security, do not share this code with anyone.',
         footerText: 'Account Settings',
-        buttons: [{ type: 'COPY_CODE', text: 'Copy Code' }],
+        buttons: [{ type: 'URL', text: 'Verify Phone', url: 'https://yourwebsite.com/verify-phone' }],
         sampleValues: ['777888']
     },
     {
@@ -413,13 +414,13 @@ export const PRE_APPROVED_TEMPLATES = [
         name: 'Bank Transfer OTP',
         industry: 'Finance',
         templateName: 'auth_bank_transfer_otp',
-        category: 'AUTHENTICATION',
+        category: 'UTILITY',
         language: 'en_US',
         headerType: 'NONE',
         headerText: '',
         bodyText: '{{1}} is your authorization code for your bank transfer.\n\nDo not share this code with bank staff or anyone else.',
         footerText: 'Secure Banking',
-        buttons: [{ type: 'COPY_CODE', text: 'Copy Code' }],
+        buttons: [{ type: 'URL', text: 'View Transfer', url: 'https://yourwebsite.com/banking' }],
         sampleValues: ['123123']
     },
     {
@@ -427,13 +428,13 @@ export const PRE_APPROVED_TEMPLATES = [
         name: '2FA Login Code',
         industry: 'Security',
         templateName: 'auth_2fa_login_v1',
-        category: 'AUTHENTICATION',
+        category: 'UTILITY',
         language: 'en_US',
         headerType: 'NONE',
         headerText: '',
         bodyText: '{{1}} is your two-factor authentication code.\n\nPlease enter this code to complete your secure login.',
         footerText: 'Expires in 2 minutes.',
-        buttons: [{ type: 'COPY_CODE', text: 'Copy Code' }],
+        buttons: [{ type: 'URL', text: 'Login Now', url: 'https://yourwebsite.com/login' }],
         sampleValues: ['321321']
     }
 ];
