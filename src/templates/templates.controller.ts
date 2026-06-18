@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { GetUser } from '../auth/decorators/get-user.decorator';
+import { PRE_APPROVED_TEMPLATES } from './templates.library';
 
 @Controller('templates')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -20,6 +21,11 @@ export class TemplatesController {
     @Get()
     async getTemplates(@GetUser() user: any) {
         return this.templatesService.getTemplates(user.shopId);
+    }
+
+    @Get('library')
+    async getLibrary() {
+        return PRE_APPROVED_TEMPLATES;
     }
 
     @Delete(':id')
