@@ -1,38 +1,37 @@
 export const PRE_APPROVED_TEMPLATES = [
+    // ----------------------------------------
+    // MARKETING TEMPLATES (10+)
+    // ----------------------------------------
     {
-        id: 'lib_abandoned_cart_1',
-        name: 'Abandoned Cart Offer',
+        id: 'mkt_abandoned_cart_1',
+        name: 'Abandoned Cart (Standard)',
         industry: 'E-commerce',
-        templateName: 'abandoned_cart_recovery',
+        templateName: 'abandoned_cart_v1',
         category: 'MARKETING',
         language: 'en_US',
         headerType: 'NONE',
         headerText: '',
-        bodyText: 'Hi {{1}}, we noticed you left some great items in your cart! 🛒\n\nComplete your purchase today and get {{2}}% OFF using code {{3}}.\n\nTap the button below to checkout now.',
+        bodyText: 'Hi {{1}}, we noticed you left some great items in your cart! 🛒\n\nTap the button below to complete your purchase before they sell out.',
         footerText: 'Reply STOP to unsubscribe.',
-        buttons: [
-            { type: 'URL', text: '🛒 Checkout Now', url: 'https://yourwebsite.com/cart' }
-        ],
-        sampleValues: ['John', '15', 'SAVE15']
+        buttons: [{ type: 'URL', text: '🛒 Checkout Now', url: 'https://yourwebsite.com/cart' }],
+        sampleValues: ['John']
     },
     {
-        id: 'lib_order_confirmation',
-        name: 'Order Confirmation',
+        id: 'mkt_abandoned_cart_2',
+        name: 'Abandoned Cart (Discount)',
         industry: 'E-commerce',
-        templateName: 'order_confirmation_v1',
-        category: 'UTILITY',
+        templateName: 'abandoned_cart_offer',
+        category: 'MARKETING',
         language: 'en_US',
-        headerType: 'TEXT',
-        headerText: 'Order Confirmed! 🎉',
-        bodyText: 'Great news, {{1}}!\n\nYour order #{{2}} has been successfully placed. We are packing it up and will notify you once it ships.\n\nThank you for shopping with {{3}}!',
-        footerText: 'Keep this message for your records.',
-        buttons: [
-            { type: 'URL', text: '📦 Track Order', url: 'https://yourwebsite.com/track' }
-        ],
-        sampleValues: ['Jane', 'ORD-99812', 'OurStore']
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: 'Hi {{1}}, still thinking about it? 🤔\n\nComplete your purchase today and get {{2}}% OFF using code {{3}}.',
+        footerText: 'Reply STOP to unsubscribe.',
+        buttons: [{ type: 'URL', text: '🛍️ Claim Discount', url: 'https://yourwebsite.com/cart' }],
+        sampleValues: ['Jane', '15', 'SAVE15']
     },
     {
-        id: 'lib_product_launch',
+        id: 'mkt_product_launch',
         name: 'New Product Launch',
         industry: 'Retail',
         templateName: 'new_product_launch',
@@ -40,31 +39,174 @@ export const PRE_APPROVED_TEMPLATES = [
         language: 'en_US',
         headerType: 'IMAGE',
         headerText: '',
-        bodyText: 'Hi {{1}}, the wait is over! 🎉\n\nOur highly anticipated {{2}} is finally available.\n\nGrab yours before it sells out again!',
+        bodyText: 'Hi {{1}}, the wait is over! 🎉\n\nOur highly anticipated {{2}} is finally available.\n\nGrab yours before it sells out!',
         footerText: 'Reply STOP to unsubscribe.',
-        buttons: [
-            { type: 'URL', text: '✨ Shop Now', url: 'https://yourwebsite.com/new' }
-        ],
+        buttons: [{ type: 'URL', text: '✨ Shop Now', url: 'https://yourwebsite.com/new' }],
         sampleValues: ['Sarah', 'Summer Collection']
     },
     {
-        id: 'lib_webinar_reminder',
-        name: 'Webinar Reminder',
-        industry: 'Education',
-        templateName: 'webinar_reminder_alert',
+        id: 'mkt_flash_sale',
+        name: 'Flash Sale Alert',
+        industry: 'Retail',
+        templateName: 'flash_sale_alert',
+        category: 'MARKETING',
+        language: 'en_US',
+        headerType: 'TEXT',
+        headerText: 'Flash Sale! ⚡',
+        bodyText: 'Hey {{1}}! Our {{2}} hour flash sale starts NOW.\n\nGet up to {{3}}% off sitewide. Hurry, stock is limited!',
+        footerText: 'Valid while supplies last.',
+        buttons: [{ type: 'URL', text: '⚡ Shop the Sale', url: 'https://yourwebsite.com/sale' }],
+        sampleValues: ['Mike', '24', '50']
+    },
+    {
+        id: 'mkt_holiday_sale',
+        name: 'Holiday Special',
+        industry: 'E-commerce',
+        templateName: 'holiday_special_offer',
+        category: 'MARKETING',
+        language: 'en_US',
+        headerType: 'IMAGE',
+        headerText: '',
+        bodyText: 'Celebrate {{1}} with us! 🎈\n\nHi {{2}}, treat yourself or your loved ones with our special holiday collection. Use code {{3}} for extra savings.',
+        footerText: 'Happy Holidays!',
+        buttons: [{ type: 'URL', text: '🎁 View Collection', url: 'https://yourwebsite.com/holiday' }],
+        sampleValues: ['Diwali', 'Emily', 'FESTIVE20']
+    },
+    {
+        id: 'mkt_reengagement',
+        name: 'We Miss You (Re-engagement)',
+        industry: 'General',
+        templateName: 'customer_reengagement',
+        category: 'MARKETING',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: 'Hi {{1}}, it\'s been a while! 🥺\n\nWe\'ve added some amazing new {{2}} since your last visit. Come back and enjoy {{3}} off your next order!',
+        footerText: 'Reply STOP to unsubscribe.',
+        buttons: [{ type: 'URL', text: '👋 See What\'s New', url: 'https://yourwebsite.com/new-arrivals' }],
+        sampleValues: ['David', 'features', '$10']
+    },
+    {
+        id: 'mkt_webinar_invite',
+        name: 'Webinar Invitation',
+        industry: 'Education / SaaS',
+        templateName: 'webinar_invite',
+        category: 'MARKETING',
+        language: 'en_US',
+        headerType: 'DOCUMENT',
+        headerText: '',
+        bodyText: 'Hi {{1}},\n\nJoin our upcoming free masterclass on "{{2}}" this {{3}}.\n\nLearn industry secrets and boost your skills. Seats are limited!',
+        footerText: 'Powered by EdTech',
+        buttons: [{ type: 'URL', text: '🎟️ Register Free', url: 'https://zoom.us/webinar/register' }],
+        sampleValues: ['Alex', 'Advanced AI Marketing', 'Friday at 2 PM']
+    },
+    {
+        id: 'mkt_upsell',
+        name: 'Post-Purchase Upsell',
+        industry: 'E-commerce',
+        templateName: 'post_purchase_upsell',
+        category: 'MARKETING',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: 'Hi {{1}}, thanks for buying the {{2}}! ❤️\n\nCustomers who bought this also loved our {{3}}. Add it to your order now for an exclusive 20% discount!',
+        footerText: 'Offer expires in 2 hours.',
+        buttons: [{ type: 'URL', text: '➕ Add to Order', url: 'https://yourwebsite.com/upsell' }],
+        sampleValues: ['Lisa', 'Smart Watch', 'Premium Leather Band']
+    },
+    {
+        id: 'mkt_loyalty_update',
+        name: 'Loyalty Points Update',
+        industry: 'Retail',
+        templateName: 'loyalty_points_update',
+        category: 'MARKETING',
+        language: 'en_US',
+        headerType: 'TEXT',
+        headerText: 'You earned points! 🌟',
+        bodyText: 'Hi {{1}}, you just earned {{2}} points from your recent purchase!\n\nYou now have a total of {{3}} points. You can redeem them for a {{4}} reward today.',
+        footerText: 'Your Rewards Club',
+        buttons: [{ type: 'URL', text: '🏆 Redeem Rewards', url: 'https://yourwebsite.com/rewards' }],
+        sampleValues: ['Chris', '500', '1200', '$10']
+    },
+    {
+        id: 'mkt_event_promo',
+        name: 'Event Ticket Promo',
+        industry: 'Entertainment',
+        templateName: 'event_ticket_promo',
+        category: 'MARKETING',
+        language: 'en_US',
+        headerType: 'IMAGE',
+        headerText: '',
+        bodyText: 'Hey {{1}}! 🎸\n\nEarly bird tickets for {{2}} are officially on sale. Grab yours before general admission opens tomorrow!',
+        footerText: 'Reply STOP to unsubscribe.',
+        buttons: [{ type: 'URL', text: '🎫 Get Tickets', url: 'https://yourwebsite.com/tickets' }],
+        sampleValues: ['Sam', 'Summer Music Festival']
+    },
+
+    // ----------------------------------------
+    // UTILITY TEMPLATES (10+)
+    // ----------------------------------------
+    {
+        id: 'utl_order_confirm',
+        name: 'Order Confirmation',
+        industry: 'E-commerce',
+        templateName: 'order_confirmation_v2',
+        category: 'UTILITY',
+        language: 'en_US',
+        headerType: 'TEXT',
+        headerText: 'Order Confirmed! 🎉',
+        bodyText: 'Great news, {{1}}!\n\nYour order #{{2}} has been successfully placed. We are packing it up and will notify you once it ships.\n\nThank you for shopping with {{3}}!',
+        footerText: 'Keep this message for your records.',
+        buttons: [{ type: 'URL', text: '📦 Track Order', url: 'https://yourwebsite.com/track' }],
+        sampleValues: ['Jane', 'ORD-99812', 'OurStore']
+    },
+    {
+        id: 'utl_shipping_update',
+        name: 'Shipping Update',
+        industry: 'E-commerce',
+        templateName: 'shipping_update_v1',
         category: 'UTILITY',
         language: 'en_US',
         headerType: 'NONE',
         headerText: '',
-        bodyText: 'Hello {{1}},\n\nJust a quick reminder that your masterclass on {{2}} starts in 1 hour at {{3}}.\n\nHave your notebook ready! 📝',
-        footerText: 'Powered by EdTech Platform',
-        buttons: [
-            { type: 'URL', text: '🔗 Join Webinar', url: 'https://zoom.us/join' }
-        ],
-        sampleValues: ['Michael', 'Digital Marketing', '4:00 PM']
+        bodyText: 'Hi {{1}},\n\nGood news! Your order #{{2}} has been shipped via {{3}}.\n\nTracking number: {{4}}',
+        footerText: 'It may take 24h for tracking to update.',
+        buttons: [{ type: 'URL', text: '🚚 Track Shipment', url: 'https://yourwebsite.com/track' }],
+        sampleValues: ['John', 'ORD-99812', 'FedEx', 'FX123456789']
     },
     {
-        id: 'lib_appointment_reminder',
+        id: 'utl_out_for_delivery',
+        name: 'Out for Delivery',
+        industry: 'Logistics',
+        templateName: 'out_for_delivery_alert',
+        category: 'UTILITY',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: 'Hi {{1}},\n\nYour package for order #{{2}} is out for delivery today! 📦\n\nOur delivery partner will reach you at the provided address between {{3}}.',
+        footerText: 'Please keep your phone available.',
+        buttons: [{ type: 'PHONE_NUMBER', text: 'Call Driver', phone_number: '+1234567890' }],
+        sampleValues: ['Sarah', 'ORD-99812', '2 PM and 5 PM']
+    },
+    {
+        id: 'utl_order_delivered',
+        name: 'Order Delivered',
+        industry: 'E-commerce',
+        templateName: 'order_delivered_v1',
+        category: 'UTILITY',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: 'Hi {{1}},\n\nYour order #{{2}} has been successfully delivered! 🎉\n\nWe hope you love your purchase. If you have any issues, please let us know.',
+        footerText: 'Thank you for shopping with us.',
+        buttons: [
+            { type: 'URL', text: '⭐ Leave a Review', url: 'https://yourwebsite.com/review' },
+            { type: 'QUICK_REPLY', text: 'Report an Issue' }
+        ],
+        sampleValues: ['Jane', 'ORD-99812']
+    },
+    {
+        id: 'utl_appt_reminder',
         name: 'Appointment Reminder',
         industry: 'Health & Wellness',
         templateName: 'clinic_appointment_reminder',
@@ -72,16 +214,16 @@ export const PRE_APPROVED_TEMPLATES = [
         language: 'en_US',
         headerType: 'NONE',
         headerText: '',
-        bodyText: 'Hi {{1}},\n\nYour appointment with Dr. {{2}} is confirmed for {{3}} at {{4}}.\n\nPlease reply with "1" to confirm or "2" to reschedule.',
+        bodyText: 'Hi {{1}},\n\nYour appointment with {{2}} is confirmed for {{3}} at {{4}}.\n\nPlease reply with "1" to confirm or "2" to reschedule.',
         footerText: 'Please arrive 10 minutes early.',
         buttons: [
             { type: 'QUICK_REPLY', text: 'Confirm' },
             { type: 'QUICK_REPLY', text: 'Reschedule' }
         ],
-        sampleValues: ['David', 'Smith', 'Oct 24th', '10:00 AM']
+        sampleValues: ['David', 'Dr. Smith', 'Oct 24th', '10:00 AM']
     },
     {
-        id: 'lib_payment_reminder',
+        id: 'utl_payment_reminder',
         name: 'Payment Reminder',
         industry: 'Finance / SaaS',
         templateName: 'payment_due_reminder',
@@ -91,9 +233,207 @@ export const PRE_APPROVED_TEMPLATES = [
         headerText: 'Payment Due ⚠️',
         bodyText: 'Hi {{1}},\n\nThis is a gentle reminder that your payment of {{2}} for invoice #{{3}} is due on {{4}}.\n\nPlease pay via the link below to avoid late fees.',
         footerText: 'Ignore if already paid.',
-        buttons: [
-            { type: 'URL', text: '💳 Pay Now', url: 'https://yourwebsite.com/pay' }
-        ],
+        buttons: [{ type: 'URL', text: '💳 Pay Now', url: 'https://yourwebsite.com/pay' }],
         sampleValues: ['Emily', '$49.99', 'INV-5542', 'Oct 25th']
+    },
+    {
+        id: 'utl_payment_received',
+        name: 'Payment Received',
+        industry: 'Finance / SaaS',
+        templateName: 'payment_received_receipt',
+        category: 'UTILITY',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: 'Hi {{1}},\n\nThank you! We have successfully received your payment of {{2}} for invoice #{{3}}.\n\nYour account is now fully active.',
+        footerText: 'Thank you for your business.',
+        buttons: [{ type: 'URL', text: '📄 Download Receipt', url: 'https://yourwebsite.com/receipt' }],
+        sampleValues: ['Emily', '$49.99', 'INV-5542']
+    },
+    {
+        id: 'utl_ticket_opened',
+        name: 'Support Ticket Opened',
+        industry: 'Customer Support',
+        templateName: 'ticket_opened_v1',
+        category: 'UTILITY',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: 'Hi {{1}},\n\nWe have received your support request. Your ticket number is #{{2}}.\n\nOur team is reviewing the issue and will get back to you within {{3}}.',
+        footerText: 'Support Team',
+        buttons: [{ type: 'URL', text: '🎫 View Ticket', url: 'https://yourwebsite.com/support' }],
+        sampleValues: ['Mike', 'TKT-1029', '24 hours']
+    },
+    {
+        id: 'utl_ticket_resolved',
+        name: 'Support Ticket Resolved',
+        industry: 'Customer Support',
+        templateName: 'ticket_resolved_v1',
+        category: 'UTILITY',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: 'Hi {{1}},\n\nYour support ticket #{{2}} has been marked as resolved.\n\nIf you still need help, please reply to this message to reopen the ticket.',
+        footerText: 'Support Team',
+        buttons: [{ type: 'QUICK_REPLY', text: 'Reopen Ticket' }],
+        sampleValues: ['Mike', 'TKT-1029']
+    },
+    {
+        id: 'utl_account_update',
+        name: 'Account Update Alert',
+        industry: 'General',
+        templateName: 'account_update_alert',
+        category: 'UTILITY',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: 'Hi {{1}},\n\nWe noticed a recent update to your account: {{2}}.\n\nIf you did not authorize this change, please contact our support team immediately.',
+        footerText: 'Security Team',
+        buttons: [{ type: 'URL', text: '🛡️ Secure Account', url: 'https://yourwebsite.com/security' }],
+        sampleValues: ['Alex', 'Password Change']
+    },
+
+    // ----------------------------------------
+    // AUTHENTICATION TEMPLATES (10)
+    // ----------------------------------------
+    {
+        id: 'auth_login_otp',
+        name: 'Login OTP (Standard)',
+        industry: 'Security',
+        templateName: 'auth_login_otp_v1',
+        category: 'AUTHENTICATION',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: '{{1}} is your verification code.\n\nFor your security, do not share this code with anyone.',
+        footerText: 'Expires in 5 minutes.',
+        buttons: [{ type: 'COPY_CODE', text: 'Copy Code' }],
+        sampleValues: ['123456']
+    },
+    {
+        id: 'auth_signup_otp',
+        name: 'Sign Up Verification',
+        industry: 'Security',
+        templateName: 'auth_signup_otp_v1',
+        category: 'AUTHENTICATION',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: '{{1}} is your registration code to create your account.\n\nFor your security, do not share this code with anyone.',
+        footerText: 'Expires in 5 minutes.',
+        buttons: [{ type: 'COPY_CODE', text: 'Copy Code' }],
+        sampleValues: ['654321']
+    },
+    {
+        id: 'auth_reset_pwd',
+        name: 'Password Reset OTP',
+        industry: 'Security',
+        templateName: 'auth_password_reset_v1',
+        category: 'AUTHENTICATION',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: '{{1}} is your password reset code.\n\nIf you did not request this, please ignore this message. Do not share this code.',
+        footerText: 'Expires in 10 minutes.',
+        buttons: [{ type: 'COPY_CODE', text: 'Copy Code' }],
+        sampleValues: ['987654']
+    },
+    {
+        id: 'auth_transaction',
+        name: 'Transaction Approval OTP',
+        industry: 'Finance',
+        templateName: 'auth_transaction_otp_v1',
+        category: 'AUTHENTICATION',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: '{{1}} is your secure transaction PIN.\n\nUse this to approve your recent request. Do not share this PIN with anyone.',
+        footerText: 'Bank Security',
+        buttons: [{ type: 'COPY_CODE', text: 'Copy PIN' }],
+        sampleValues: ['456789']
+    },
+    {
+        id: 'auth_device_verify',
+        name: 'New Device Verification',
+        industry: 'Security',
+        templateName: 'auth_device_otp_v1',
+        category: 'AUTHENTICATION',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: '{{1}} is your device verification code.\n\nWe detected a login from a new device. Enter this code to verify it\'s you.',
+        footerText: 'Security Alert',
+        buttons: [{ type: 'COPY_CODE', text: 'Copy Code' }],
+        sampleValues: ['112233']
+    },
+    {
+        id: 'auth_account_delete',
+        name: 'Account Deletion OTP',
+        industry: 'Security',
+        templateName: 'auth_delete_otp_v1',
+        category: 'AUTHENTICATION',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: '{{1}} is your confirmation code to delete your account.\n\nWarning: This action is permanent. Do not share this code.',
+        footerText: 'Account Management',
+        buttons: [{ type: 'COPY_CODE', text: 'Copy Code' }],
+        sampleValues: ['999999']
+    },
+    {
+        id: 'auth_email_verify',
+        name: 'Email Linking OTP',
+        industry: 'Security',
+        templateName: 'auth_email_otp_v1',
+        category: 'AUTHENTICATION',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: '{{1}} is your code to verify your new email address.\n\nFor your security, do not share this code with anyone.',
+        footerText: 'Account Settings',
+        buttons: [{ type: 'COPY_CODE', text: 'Copy Code' }],
+        sampleValues: ['555666']
+    },
+    {
+        id: 'auth_phone_verify',
+        name: 'Phone Number Update OTP',
+        industry: 'Security',
+        templateName: 'auth_phone_update_otp',
+        category: 'AUTHENTICATION',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: '{{1}} is your code to confirm your new phone number.\n\nFor your security, do not share this code with anyone.',
+        footerText: 'Account Settings',
+        buttons: [{ type: 'COPY_CODE', text: 'Copy Code' }],
+        sampleValues: ['777888']
+    },
+    {
+        id: 'auth_bank_transfer',
+        name: 'Bank Transfer OTP',
+        industry: 'Finance',
+        templateName: 'auth_bank_transfer_otp',
+        category: 'AUTHENTICATION',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: '{{1}} is your authorization code for your bank transfer.\n\nDo not share this code with bank staff or anyone else.',
+        footerText: 'Secure Banking',
+        buttons: [{ type: 'COPY_CODE', text: 'Copy Code' }],
+        sampleValues: ['123123']
+    },
+    {
+        id: 'auth_2fa_login',
+        name: '2FA Login Code',
+        industry: 'Security',
+        templateName: 'auth_2fa_login_v1',
+        category: 'AUTHENTICATION',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: '{{1}} is your two-factor authentication code.\n\nPlease enter this code to complete your secure login.',
+        footerText: 'Expires in 2 minutes.',
+        buttons: [{ type: 'COPY_CODE', text: 'Copy Code' }],
+        sampleValues: ['321321']
     }
 ];
