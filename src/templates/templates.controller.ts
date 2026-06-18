@@ -37,4 +37,9 @@ export class TemplatesController {
     async uploadTemplateMedia(@GetUser() user: any, @UploadedFile() file: Express.Multer.File) {
         return this.templatesService.uploadTemplateMedia(user.shopId, file);
     }
+
+    @Post('upload-media-url')
+    async uploadTemplateMediaUrl(@GetUser() user: any, @Body() body: { fileUrl: string }) {
+        return this.templatesService.uploadTemplateMediaFromUrl(user.shopId, body.fileUrl);
+    }
 }

@@ -212,4 +212,42 @@ export class TemplatesService {
             throw new BadRequestException(`Media upload failed: ${errorMsg}`);
         }
     }
+
+    async uploadTemplateMediaFromUrl(shopId: string, fileUrl: string) {
+        const creds = await this.getCredentials(shopId);
+        try {
+            // Download the file into memory
+            const fileResp = await firstValueFrom(
+                this.httpService.get(fileUrl, { responseType: 'arraybuffer' })
+            );
+            const buffer = Buffer.from(fileResp.data);
+            const size = buffer.length;
+            const mimetype = fileResp.headers['content-type'] || 'application/octet-stream';
+
+            // Step 1: Create resumable upload session
+            const sessionRes = await firstValueFrom(
+                this.httpService.post(`${this.graphApiBase}/app/uploads?file_length=${size}&file_type=${mimetype}`, {}, {
+                    headers: { Authorization: `Bearer ${creds.accessToken}` }
+                })
+            );
+            const sessionId = sessionRes.data.id;
+
+            // Step 2: Upload file bytes
+            const uploadRes = await firstValueFrom(
+                this.httpService.post(`${this.graphApiBase}/${sessionId}`, buffer, {
+                    headers: {
+                        'Authorization': `OAuth ${creds.accessToken}`,
+                        'file_offset': '0',
+                        'Content-Type': 'application/octet-stream'
+                    }
+                })
+            );
+            
+            return { handle: uploadRes.data.h };
+        } catch (error: any) {
+            const errorMsg = error.response?.data?.error?.message || error.message;
+            this.logger.error(`Failed to upload template media sample from URL: ${errorMsg}`);
+            throw new BadRequestException(`Media upload failed: ${errorMsg}`);
+        }
+    }
 }
