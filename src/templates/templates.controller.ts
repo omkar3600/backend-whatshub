@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { TemplatesService } from './templates.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -29,5 +30,11 @@ export class TemplatesController {
     @Post('sync')
     async syncTemplates(@GetUser() user: any) {
         return this.templatesService.syncTemplates(user.shopId);
+    }
+
+    @Post('upload-media')
+    @UseInterceptors(FileInterceptor('file'))
+    async uploadTemplateMedia(@GetUser() user: any, @UploadedFile() file: Express.Multer.File) {
+        return this.templatesService.uploadTemplateMedia(user.shopId, file);
     }
 }

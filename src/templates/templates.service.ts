@@ -34,6 +34,19 @@ export class TemplatesService {
         const { templateName, category, language, components } = data;
         const creds = await this.getCredentials(shopId);
 
+        // Pre-flight validation for examples
+        const bodyComponent = components.find((c: any) => c.type === 'BODY');
+        if (bodyComponent && bodyComponent.text) {
+            // Match {{1}}, {{2}}, etc. (but only unique numbers to count variables)
+            const varMatches = bodyComponent.text.match(/{{\d+}}/g);
+            if (varMatches && varMatches.length > 0) {
+                const uniqueVars = new Set(varMatches).size;
+                if (!bodyComponent.example || !bodyComponent.example.body_text || !bodyComponent.example.body_text[0] || bodyComponent.example.body_text[0].length !== uniqueVars) {
+                    throw new BadRequestException(`Missing or incomplete sample values for variables. Expected ${uniqueVars} samples.`);
+                }
+            }
+        }
+
         this.logger.log(`Submitting template "${templateName}" to Meta for shop ${shopId}`);
 
         const url = `${this.graphApiBase}/${creds.businessAccountId}/message_templates`;
@@ -167,6 +180,36 @@ export class TemplatesService {
         } catch (error) {
             this.logger.error(`Failed to delete template ${id} locally: ${error.message}`);
             throw new BadRequestException('Failed to delete template from local database');
+        }
+    }
+
+    async uploadTemplateMedia(shopId: string, file: any) {
+        const creds = await this.getCredentials(shopId);
+        try {
+            // Step 1: Create resumable upload session
+            const sessionRes = await firstValueFrom(
+                this.httpService.post(`${this.graphApiBase}/app/uploads?file_length=${file.size}&file_type=${file.mimetype}`, {}, {
+                    headers: { Authorization: `Bearer ${creds.accessToken}` }
+                })
+            );
+            const sessionId = sessionRes.data.id;
+
+            // Step 2: Upload file bytes
+            const uploadRes = await firstValueFrom(
+                this.httpService.post(`${this.graphApiBase}/${sessionId}`, file.buffer, {
+                    headers: {
+                        'Authorization': `OAuth ${creds.accessToken}`,
+                        'file_offset': '0',
+                        'Content-Type': 'application/octet-stream'
+                    }
+                })
+            );
+            
+            return { handle: uploadRes.data.h };
+        } catch (error: any) {
+            const errorMsg = error.response?.data?.error?.message || error.message;
+            this.logger.error(`Failed to upload template media sample: ${errorMsg}`);
+            throw new BadRequestException(`Media upload failed: ${errorMsg}`);
         }
     }
 }
