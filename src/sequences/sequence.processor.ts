@@ -44,7 +44,7 @@ export class SequenceProcessor extends WorkerHost {
         // Send template
         try {
             const templateParamsObj = step.templateParams as string[];
-            let finalComponents = [];
+            let finalComponents: any[] = [];
 
             if (templateParamsObj && Array.isArray(templateParamsObj) && templateParamsObj.length > 0) {
                 // Parse dynamic variables
