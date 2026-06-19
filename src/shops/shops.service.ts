@@ -31,13 +31,94 @@ export class ShopsService {
         const contactCount = await this.prisma.contact.count({ where: { shopId } });
         const templateCount = await this.prisma.template.count({ where: { shopId } });
 
+        // Calculate Contact Growth (Last 30 days vs Previous 30 days)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const sixtyDaysAgo = new Date();
+        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+        const newContacts = await this.prisma.contact.count({
+            where: { shopId, createdAt: { gte: thirtyDaysAgo } }
+        });
+        const oldContacts = await this.prisma.contact.count({
+            where: { shopId, createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo } }
+        });
+        const contactGrowth = oldContacts === 0 ? 100 : Math.round(((newContacts - oldContacts) / oldContacts) * 100);
+
+        // Fetch Recent Campaigns
+        const recentCampaigns = await this.prisma.campaign.findMany({
+            where: { shopId },
+            orderBy: { createdAt: 'desc' },
+            take: 5,
+            select: { id: true, name: true, status: true, stats: true, createdAt: true }
+        });
+
+        // Global Campaign Funnel
+        let globalSent = 0, globalDelivered = 0, globalRead = 0, globalFailed = 0;
+        const allCampaigns = await this.prisma.campaign.findMany({
+            where: { shopId, status: 'completed' },
+            select: { stats: true }
+        });
+        
+        allCampaigns.forEach(c => {
+            const st = c.stats as any;
+            if (st) {
+                globalSent += (st.sent || 0);
+                globalDelivered += (st.delivered || 0);
+                globalRead += (st.read || 0);
+                globalFailed += (st.failed || 0);
+            }
+        });
+
+        // Message Volume Chart (Last 7 Days)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
+
+        const recentMessages = await this.prisma.message.findMany({
+            where: { shopId, createdAt: { gte: sevenDaysAgo } },
+            select: { createdAt: true, direction: true }
+        });
+
+        // Group by day (YYYY-MM-DD)
+        const volumeMap = new Map<string, { date: string; inbound: number; outbound: number }>();
+        // Initialize last 7 days to 0
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(sevenDaysAgo);
+            d.setDate(d.getDate() + i);
+            const dateStr = d.toISOString().split('T')[0];
+            const shortDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            volumeMap.set(dateStr, { date: shortDate, inbound: 0, outbound: 0 });
+        }
+
+        recentMessages.forEach(m => {
+            const dateStr = m.createdAt.toISOString().split('T')[0];
+            const entry = volumeMap.get(dateStr);
+            if (entry) {
+                if (m.direction === 'inbound') entry.inbound++;
+                else entry.outbound++;
+            }
+        });
+
+        const messageVolume = Array.from(volumeMap.values());
+
         return {
             shop,
             stats: {
                 totalMessages: messageCount,
                 totalContacts: contactCount,
                 totalTemplates: templateCount,
+                contactGrowth,
+                newContacts
             },
+            campaignFunnel: {
+                sent: globalSent,
+                delivered: globalDelivered,
+                read: globalRead,
+                failed: globalFailed
+            },
+            recentCampaigns,
+            messageVolume
         };
     }
 
