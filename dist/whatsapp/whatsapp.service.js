@@ -22,6 +22,7 @@ const rxjs_1 = require("rxjs");
 const chat_gateway_1 = require("../chat/chat.gateway");
 const chatbot_service_1 = require("../chatbot/chatbot.service");
 const flow_engine_service_1 = require("../flows/flow-engine.service");
+const sequences_service_1 = require("../sequences/sequences.service");
 let WhatsappService = WhatsappService_1 = class WhatsappService {
     prisma;
     httpService;
@@ -29,15 +30,17 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
     chatGateway;
     chatbotService;
     flowEngineService;
+    sequencesService;
     logger = new common_1.Logger(WhatsappService_1.name);
     graphApiBase = `https://graph.facebook.com/${process.env.META_API_VERSION || 'v18.0'}`;
-    constructor(prisma, httpService, cryptoService, chatGateway, chatbotService, flowEngineService) {
+    constructor(prisma, httpService, cryptoService, chatGateway, chatbotService, flowEngineService, sequencesService) {
         this.prisma = prisma;
         this.httpService = httpService;
         this.cryptoService = cryptoService;
         this.chatGateway = chatGateway;
         this.chatbotService = chatbotService;
         this.flowEngineService = flowEngineService;
+        this.sequencesService = sequencesService;
     }
     async getCredentials(shopId) {
         const account = await this.prisma.whatsAppBusinessAccount.findFirst({
@@ -359,6 +362,33 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
         let automationFired = false;
         if (messageData.type === 'text') {
             const incomingText = messageData.text.body.trim().toLowerCase();
+            await this.sequencesService.handleKeywordTriggered(shopId, contact.id, incomingText);
+            try {
+                const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+                const recentCampaignContact = await this.prisma.campaignContact.findFirst({
+                    where: {
+                        phone: contact.phone,
+                        sentAt: { gte: fortyEightHoursAgo },
+                        campaign: { shopId }
+                    },
+                    orderBy: { sentAt: 'desc' }
+                });
+                if (recentCampaignContact) {
+                    const statusRank = { pending: 0, sent: 1, delivered: 2, read: 3, clicked: 4, replied: 5 };
+                    const incomingRank = statusRank['replied'];
+                    const existingRank = statusRank[recentCampaignContact.status] ?? 0;
+                    if (incomingRank > existingRank) {
+                        await this.prisma.campaignContact.update({
+                            where: { id: recentCampaignContact.id },
+                            data: { status: 'replied' }
+                        });
+                        this.logger.log(`[Campaign] Contact ${contact.phone} replied to campaign ${recentCampaignContact.campaignId}`);
+                    }
+                }
+            }
+            catch (err) {
+                this.logger.warn(`Failed to update campaign reply tracking for ${contact.phone}: ${err}`);
+            }
             const automations = await this.prisma.automation.findMany({
                 where: { shopId, isActive: true }
             });
@@ -473,9 +503,9 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
         catch (e) {
             this.logger.warn(`Status update failed for message ${messageId}. It might not exist.`);
         }
-        if (['delivered', 'read', 'sent'].includes(status)) {
+        if (['delivered', 'read', 'sent', 'replied'].includes(status)) {
             try {
-                const statusRank = { pending: 0, sent: 1, delivered: 2, read: 3, clicked: 4 };
+                const statusRank = { pending: 0, sent: 1, delivered: 2, read: 3, clicked: 4, replied: 5 };
                 const incomingRank = statusRank[status] ?? 0;
                 const existing = await this.prisma.campaignContact.findFirst({
                     where: { wamid: messageId },
@@ -730,11 +760,13 @@ exports.WhatsappService = WhatsappService;
 exports.WhatsappService = WhatsappService = WhatsappService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(5, (0, common_1.Inject)((0, common_1.forwardRef)(() => flow_engine_service_1.FlowEngineService))),
+    __param(6, (0, common_1.Inject)((0, common_1.forwardRef)(() => sequences_service_1.SequencesService))),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         axios_1.HttpService,
         crypto_service_1.CryptoService,
         chat_gateway_1.ChatGateway,
         chatbot_service_1.ChatbotService,
-        flow_engine_service_1.FlowEngineService])
+        flow_engine_service_1.FlowEngineService,
+        sequences_service_1.SequencesService])
 ], WhatsappService);
 //# sourceMappingURL=whatsapp.service.js.map

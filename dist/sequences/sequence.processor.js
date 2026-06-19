@@ -48,8 +48,25 @@ let SequenceProcessor = class SequenceProcessor extends bullmq_1.WorkerHost {
         }
         try {
             const templateParamsObj = step.templateParams;
-            const templateContent = templateParamsObj && Array.isArray(templateParamsObj) && templateParamsObj.length > 0
-                ? { name: step.template.templateName, language: step.template.language, components: templateParamsObj }
+            let finalComponents = [];
+            if (templateParamsObj && Array.isArray(templateParamsObj) && templateParamsObj.length > 0) {
+                const parsedParams = templateParamsObj.map(param => {
+                    let val = param;
+                    if (val === '[Contact Name]')
+                        val = subscriber.contact.name || '';
+                    else if (val === '[Phone]')
+                        val = subscriber.contact.phone || '';
+                    return { type: 'text', text: val };
+                });
+                finalComponents = [
+                    {
+                        type: 'BODY',
+                        parameters: parsedParams
+                    }
+                ];
+            }
+            const templateContent = finalComponents.length > 0
+                ? { name: step.template.templateName, language: step.template.language, components: finalComponents }
                 : { name: step.template.templateName, language: step.template.language };
             const result = await this.whatsappService.sendOutboundMessage(subscriber.sequence.shopId, subscriber.contact.phone, 'template', templateContent);
             const conversation = await this.prisma.conversation.upsert({

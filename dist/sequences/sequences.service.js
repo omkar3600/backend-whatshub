@@ -25,12 +25,14 @@ let SequencesService = class SequencesService {
         this.sequencesQueue = sequencesQueue;
     }
     async createSequence(shopId, data) {
-        const { name, triggerTag, steps } = data;
+        const { name, triggerType, triggerTag, triggerKeyword, steps } = data;
         const sequence = await this.prisma.sequence.create({
             data: {
                 shopId,
                 name,
+                triggerType,
                 triggerTag,
+                triggerKeyword,
                 steps: {
                     create: steps.map((s, idx) => ({
                         stepNumber: idx + 1,
@@ -70,6 +72,24 @@ let SequencesService = class SequencesService {
             where: { id, shopId }
         });
     }
+    async getSequenceAnalytics(shopId, sequenceId) {
+        const stepCounts = await this.prisma.sequenceSubscriber.groupBy({
+            by: ['currentStep', 'status'],
+            where: { sequenceId, sequence: { shopId } },
+            _count: { id: true }
+        });
+        const totalEnrolled = await this.prisma.sequenceSubscriber.count({
+            where: { sequenceId, sequence: { shopId } }
+        });
+        return {
+            totalEnrolled,
+            stepBreakdown: stepCounts.map(sc => ({
+                step: sc.currentStep,
+                status: sc.status,
+                count: sc._count.id
+            }))
+        };
+    }
     async handleContactTagsUpdated(shopId, contactId, tags) {
         if (!tags || tags.length === 0)
             return;
@@ -100,6 +120,33 @@ let SequencesService = class SequencesService {
                 await this.enqueueStep(sub.id, step1.id, step1.delayHours);
             }
             else if (existingSub.status === 'cancelled') {
+            }
+        }
+    }
+    async handleKeywordTriggered(shopId, contactId, keyword) {
+        if (!keyword)
+            return;
+        const activeSequences = await this.prisma.sequence.findMany({
+            where: {
+                shopId,
+                isActive: true,
+                triggerType: 'KEYWORD',
+                triggerKeyword: { equals: keyword, mode: 'insensitive' }
+            },
+            include: { steps: { orderBy: { stepNumber: 'asc' }, take: 1 } }
+        });
+        for (const seq of activeSequences) {
+            if (seq.steps.length === 0)
+                continue;
+            const existingSub = await this.prisma.sequenceSubscriber.findUnique({
+                where: { sequenceId_contactId: { sequenceId: seq.id, contactId } }
+            });
+            if (!existingSub) {
+                const sub = await this.prisma.sequenceSubscriber.create({
+                    data: { sequenceId: seq.id, contactId, status: 'active', currentStep: 1 }
+                });
+                const step1 = seq.steps[0];
+                await this.enqueueStep(sub.id, step1.id, step1.delayHours);
             }
         }
     }

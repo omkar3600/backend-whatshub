@@ -27,6 +27,9 @@ let SequencesController = class SequencesController {
     async findAll(req) {
         return this.sequencesService.getSequences(req.user.shopId);
     }
+    async getAnalytics(req, id) {
+        return this.sequencesService.getSequenceAnalytics(req.user.shopId, id);
+    }
     async toggle(req, id, data) {
         return this.sequencesService.toggleSequence(req.user.shopId, id, data.isActive);
     }
@@ -50,6 +53,14 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], SequencesController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)(':id/analytics'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], SequencesController.prototype, "getAnalytics", null);
 __decorate([
     (0, common_1.Put)(':id/toggle'),
     __param(0, (0, common_1.Request)()),

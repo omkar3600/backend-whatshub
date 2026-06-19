@@ -420,6 +420,36 @@ export class WhatsappService {
             // Check Sequence keyword triggers
             await this.sequencesService.handleKeywordTriggered(shopId, contact.id, incomingText);
 
+            // --- Campaign Reply Tracking ---
+            try {
+                // Find the most recent CampaignContact for this phone within the last 48 hours
+                const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+                const recentCampaignContact = await this.prisma.campaignContact.findFirst({
+                    where: {
+                        phone: contact.phone,
+                        sentAt: { gte: fortyEightHoursAgo },
+                        campaign: { shopId }
+                    },
+                    orderBy: { sentAt: 'desc' }
+                });
+
+                if (recentCampaignContact) {
+                    const statusRank: Record<string, number> = { pending: 0, sent: 1, delivered: 2, read: 3, clicked: 4, replied: 5 };
+                    const incomingRank = statusRank['replied'];
+                    const existingRank = statusRank[recentCampaignContact.status] ?? 0;
+                    
+                    if (incomingRank > existingRank) {
+                        await this.prisma.campaignContact.update({
+                            where: { id: recentCampaignContact.id },
+                            data: { status: 'replied' }
+                        });
+                        this.logger.log(`[Campaign] Contact ${contact.phone} replied to campaign ${recentCampaignContact.campaignId}`);
+                    }
+                }
+            } catch (err) {
+                this.logger.warn(`Failed to update campaign reply tracking for ${contact.phone}: ${err}`);
+            }
+
             const automations = await this.prisma.automation.findMany({
                 where: { shopId, isActive: true }
             });
@@ -548,9 +578,9 @@ export class WhatsappService {
             this.logger.warn(`Status update failed for message ${messageId}. It might not exist.`);
         }
 
-        if (['delivered', 'read', 'sent'].includes(status)) {
+        if (['delivered', 'read', 'sent', 'replied'].includes(status)) {
             try {
-                const statusRank: Record<string, number> = { pending: 0, sent: 1, delivered: 2, read: 3, clicked: 4 };
+                const statusRank: Record<string, number> = { pending: 0, sent: 1, delivered: 2, read: 3, clicked: 4, replied: 5 };
                 const incomingRank = statusRank[status] ?? 0;
 
                 const existing = await this.prisma.campaignContact.findFirst({

@@ -22,7 +22,7 @@ exports.SequencesModule = SequencesModule = __decorate([
             bullmq_1.BullModule.registerQueue({
                 name: 'sequences',
             }),
-            whatsapp_module_1.WhatsappModule,
+            (0, common_1.forwardRef)(() => whatsapp_module_1.WhatsappModule),
         ],
         controllers: [sequences_controller_1.SequencesController],
         providers: [sequences_service_1.SequencesService, sequence_processor_1.SequenceProcessor],

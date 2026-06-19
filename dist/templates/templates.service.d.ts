@@ -39,4 +39,10 @@ export declare class TemplatesService {
     deleteTemplate(shopId: string, id: string): Promise<{
         message: string;
     }>;
+    uploadTemplateMedia(shopId: string, file: any): Promise<{
+        handle: any;
+    }>;
+    uploadTemplateMediaFromUrl(shopId: string, fileUrl: string): Promise<{
+        handle: any;
+    }>;
 }

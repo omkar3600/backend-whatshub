@@ -6,7 +6,9 @@ export declare class SequencesService {
     constructor(prisma: PrismaService, sequencesQueue: Queue);
     createSequence(shopId: string, data: {
         name: string;
-        triggerTag: string;
+        triggerType: string;
+        triggerTag?: string;
+        triggerKeyword?: string;
         steps: any[];
     }): Promise<{
         steps: {
@@ -26,6 +28,8 @@ export declare class SequencesService {
         updatedAt: Date;
         shopId: string;
         isActive: boolean;
+        triggerKeyword: string | null;
+        triggerType: string;
         triggerTag: string | null;
     }>;
     getSequences(shopId: string): Promise<({
@@ -61,6 +65,8 @@ export declare class SequencesService {
         updatedAt: Date;
         shopId: string;
         isActive: boolean;
+        triggerKeyword: string | null;
+        triggerType: string;
         triggerTag: string | null;
     })[]>;
     toggleSequence(shopId: string, id: string, isActive: boolean): Promise<{
@@ -70,6 +76,8 @@ export declare class SequencesService {
         updatedAt: Date;
         shopId: string;
         isActive: boolean;
+        triggerKeyword: string | null;
+        triggerType: string;
         triggerTag: string | null;
     }>;
     deleteSequence(shopId: string, id: string): Promise<{
@@ -79,8 +87,19 @@ export declare class SequencesService {
         updatedAt: Date;
         shopId: string;
         isActive: boolean;
+        triggerKeyword: string | null;
+        triggerType: string;
         triggerTag: string | null;
     }>;
+    getSequenceAnalytics(shopId: string, sequenceId: string): Promise<{
+        totalEnrolled: number;
+        stepBreakdown: {
+            step: number;
+            status: string;
+            count: number;
+        }[];
+    }>;
     handleContactTagsUpdated(shopId: string, contactId: string, tags: string[]): Promise<void>;
+    handleKeywordTriggered(shopId: string, contactId: string, keyword: string): Promise<void>;
     enqueueStep(subscriberId: string, stepId: string, delayHours: number): Promise<void>;
 }

@@ -14,11 +14,13 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TemplatesController = void 0;
 const common_1 = require("@nestjs/common");
+const platform_express_1 = require("@nestjs/platform-express");
 const templates_service_1 = require("./templates.service");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
 const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 const get_user_decorator_1 = require("../auth/decorators/get-user.decorator");
+const templates_library_1 = require("./templates.library");
 let TemplatesController = class TemplatesController {
     templatesService;
     constructor(templatesService) {
@@ -30,11 +32,20 @@ let TemplatesController = class TemplatesController {
     async getTemplates(user) {
         return this.templatesService.getTemplates(user.shopId);
     }
+    async getLibrary() {
+        return templates_library_1.PRE_APPROVED_TEMPLATES;
+    }
     async deleteTemplate(user, id) {
         return this.templatesService.deleteTemplate(user.shopId, id);
     }
     async syncTemplates(user) {
         return this.templatesService.syncTemplates(user.shopId);
+    }
+    async uploadTemplateMedia(user, file) {
+        return this.templatesService.uploadTemplateMedia(user.shopId, file);
+    }
+    async uploadTemplateMediaUrl(user, body) {
+        return this.templatesService.uploadTemplateMediaFromUrl(user.shopId, body.fileUrl);
     }
 };
 exports.TemplatesController = TemplatesController;
@@ -54,6 +65,12 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], TemplatesController.prototype, "getTemplates", null);
 __decorate([
+    (0, common_1.Get)('library'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], TemplatesController.prototype, "getLibrary", null);
+__decorate([
     (0, common_1.Delete)(':id'),
     __param(0, (0, get_user_decorator_1.GetUser)()),
     __param(1, (0, common_1.Param)('id')),
@@ -68,6 +85,23 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], TemplatesController.prototype, "syncTemplates", null);
+__decorate([
+    (0, common_1.Post)('upload-media'),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file')),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.UploadedFile)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], TemplatesController.prototype, "uploadTemplateMedia", null);
+__decorate([
+    (0, common_1.Post)('upload-media-url'),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], TemplatesController.prototype, "uploadTemplateMediaUrl", null);
 exports.TemplatesController = TemplatesController = __decorate([
     (0, common_1.Controller)('templates'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),

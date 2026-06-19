@@ -184,14 +184,15 @@ export class CampaignsService {
         if (!campaign) throw new NotFoundException('Campaign not found');
 
         const allContacts = campaign.contacts;
-        const readPhones = new Set(allContacts.filter(c => c.status === 'read').map(c => c.phone));
+        const readPhones = new Set(allContacts.filter(c => c.status === 'read' || c.status === 'replied').map(c => c.phone));
         const byStatus = {
             sent: allContacts.filter(c => c.status === 'sent'),
             delivered: allContacts.filter(c => c.status === 'delivered'),
             read: allContacts.filter(c => c.status === 'read'),
+            replied: allContacts.filter(c => c.status === 'replied'),
             clicked: allContacts.filter(c => c.status === 'clicked'),
             failed: allContacts.filter(c => c.status === 'failed'),
-            // Unread = delivered or sent but never progressed to 'read'
+            // Unread = delivered or sent but never progressed to 'read' or 'replied'
             unread: allContacts.filter(c => ['delivered', 'sent'].includes(c.status) && !readPhones.has(c.phone)),
         };
 
@@ -200,6 +201,7 @@ export class CampaignsService {
             sent: byStatus.sent.length,
             delivered: byStatus.delivered.length,
             read: byStatus.read.length,
+            replied: byStatus.replied.length,
             clicked: byStatus.clicked.length,
             failed: byStatus.failed.length,
             unread: byStatus.unread.length,

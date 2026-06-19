@@ -4,7 +4,9 @@ export declare class SequencesController {
     constructor(sequencesService: SequencesService);
     create(req: any, data: {
         name: string;
-        triggerTag: string;
+        triggerType: string;
+        triggerTag?: string;
+        triggerKeyword?: string;
         steps: any[];
     }): Promise<{
         steps: {
@@ -24,6 +26,8 @@ export declare class SequencesController {
         updatedAt: Date;
         shopId: string;
         isActive: boolean;
+        triggerKeyword: string | null;
+        triggerType: string;
         triggerTag: string | null;
     }>;
     findAll(req: any): Promise<({
@@ -59,8 +63,18 @@ export declare class SequencesController {
         updatedAt: Date;
         shopId: string;
         isActive: boolean;
+        triggerKeyword: string | null;
+        triggerType: string;
         triggerTag: string | null;
     })[]>;
+    getAnalytics(req: any, id: string): Promise<{
+        totalEnrolled: number;
+        stepBreakdown: {
+            step: number;
+            status: string;
+            count: number;
+        }[];
+    }>;
     toggle(req: any, id: string, data: {
         isActive: boolean;
     }): Promise<{
@@ -70,6 +84,8 @@ export declare class SequencesController {
         updatedAt: Date;
         shopId: string;
         isActive: boolean;
+        triggerKeyword: string | null;
+        triggerType: string;
         triggerTag: string | null;
     }>;
     delete(req: any, id: string): Promise<{
@@ -79,6 +95,8 @@ export declare class SequencesController {
         updatedAt: Date;
         shopId: string;
         isActive: boolean;
+        triggerKeyword: string | null;
+        triggerType: string;
         triggerTag: string | null;
     }>;
 }

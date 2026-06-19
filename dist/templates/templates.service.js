@@ -42,6 +42,16 @@ let TemplatesService = TemplatesService_1 = class TemplatesService {
     async createTemplate(shopId, data) {
         const { templateName, category, language, components } = data;
         const creds = await this.getCredentials(shopId);
+        const bodyComponent = components.find((c) => c.type === 'BODY');
+        if (bodyComponent && bodyComponent.text) {
+            const varMatches = bodyComponent.text.match(/{{\d+}}/g);
+            if (varMatches && varMatches.length > 0) {
+                const uniqueVars = new Set(varMatches).size;
+                if (!bodyComponent.example || !bodyComponent.example.body_text || !bodyComponent.example.body_text[0] || bodyComponent.example.body_text[0].length !== uniqueVars) {
+                    throw new common_1.BadRequestException(`Missing or incomplete sample values for variables. Expected ${uniqueVars} samples.`);
+                }
+            }
+        }
         this.logger.log(`Submitting template "${templateName}" to Meta for shop ${shopId}`);
         const url = `${this.graphApiBase}/${creds.businessAccountId}/message_templates`;
         try {
@@ -156,6 +166,54 @@ let TemplatesService = TemplatesService_1 = class TemplatesService {
         catch (error) {
             this.logger.error(`Failed to delete template ${id} locally: ${error.message}`);
             throw new common_1.BadRequestException('Failed to delete template from local database');
+        }
+    }
+    async uploadTemplateMedia(shopId, file) {
+        const creds = await this.getCredentials(shopId);
+        try {
+            const sessionRes = await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${this.graphApiBase}/app/uploads?file_length=${file.size}&file_type=${file.mimetype}`, {}, {
+                headers: { Authorization: `Bearer ${creds.accessToken}` }
+            }));
+            const sessionId = sessionRes.data.id;
+            const uploadRes = await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${this.graphApiBase}/${sessionId}`, file.buffer, {
+                headers: {
+                    'Authorization': `OAuth ${creds.accessToken}`,
+                    'file_offset': '0',
+                    'Content-Type': 'application/octet-stream'
+                }
+            }));
+            return { handle: uploadRes.data.h };
+        }
+        catch (error) {
+            const errorMsg = error.response?.data?.error?.message || error.message;
+            this.logger.error(`Failed to upload template media sample: ${errorMsg}`);
+            throw new common_1.BadRequestException(`Media upload failed: ${errorMsg}`);
+        }
+    }
+    async uploadTemplateMediaFromUrl(shopId, fileUrl) {
+        const creds = await this.getCredentials(shopId);
+        try {
+            const fileResp = await (0, rxjs_1.firstValueFrom)(this.httpService.get(fileUrl, { responseType: 'arraybuffer' }));
+            const buffer = Buffer.from(fileResp.data);
+            const size = buffer.length;
+            const mimetype = fileResp.headers['content-type'] || 'application/octet-stream';
+            const sessionRes = await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${this.graphApiBase}/app/uploads?file_length=${size}&file_type=${mimetype}`, {}, {
+                headers: { Authorization: `Bearer ${creds.accessToken}` }
+            }));
+            const sessionId = sessionRes.data.id;
+            const uploadRes = await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${this.graphApiBase}/${sessionId}`, buffer, {
+                headers: {
+                    'Authorization': `OAuth ${creds.accessToken}`,
+                    'file_offset': '0',
+                    'Content-Type': 'application/octet-stream'
+                }
+            }));
+            return { handle: uploadRes.data.h };
+        }
+        catch (error) {
+            const errorMsg = error.response?.data?.error?.message || error.message;
+            this.logger.error(`Failed to upload template media sample from URL: ${errorMsg}`);
+            throw new common_1.BadRequestException(`Media upload failed: ${errorMsg}`);
         }
     }
 };
