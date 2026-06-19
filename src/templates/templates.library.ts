@@ -142,6 +142,76 @@ export const PRE_APPROVED_TEMPLATES = [
         buttons: [{ type: 'URL', text: 'Get Tickets', url: 'https://yourwebsite.com/tickets' }],
         sampleValues: ['Sam', 'Summer Music Festival']
     },
+    {
+        id: 'mkt_restock_alert',
+        name: 'Back in Stock Alert',
+        industry: 'Retail',
+        templateName: 'back_in_stock_v1',
+        category: 'MARKETING',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: 'Good news, {{1}}! 🎉\n\nThe {{2}} you were looking at is finally back in stock.\n\nGrab it now before it sells out again!',
+        footerText: 'Limited quantity available.',
+        buttons: [{ type: 'URL', text: 'Shop Now', url: 'https://yourwebsite.com/product' }],
+        sampleValues: ['Amanda', 'Wireless Headphones']
+    },
+    {
+        id: 'mkt_early_access',
+        name: 'VIP Early Access',
+        industry: 'E-commerce',
+        templateName: 'vip_early_access',
+        category: 'MARKETING',
+        language: 'en_US',
+        headerType: 'TEXT',
+        headerText: 'VIP Exclusive 💎',
+        bodyText: 'Hi {{1}},\n\nAs one of our most valued customers, you get 24-hour early access to our {{2}}!\n\nUse your exclusive link below to shop before anyone else.',
+        footerText: 'Thank you for your loyalty.',
+        buttons: [{ type: 'URL', text: 'Enter VIP Store', url: 'https://yourwebsite.com/vip' }],
+        sampleValues: ['Chris', 'Black Friday Sale']
+    },
+    {
+        id: 'mkt_welcome_offer',
+        name: 'Welcome Discount',
+        industry: 'General',
+        templateName: 'welcome_discount_v1',
+        category: 'MARKETING',
+        language: 'en_US',
+        headerType: 'IMAGE',
+        headerText: '',
+        bodyText: 'Welcome to the family, {{1}}! 👋\n\nThanks for signing up. To show our appreciation, here is {{2}} off your first purchase.\n\nUse code: {{3}} at checkout.',
+        footerText: 'Valid for 7 days.',
+        buttons: [{ type: 'URL', text: 'Start Shopping', url: 'https://yourwebsite.com/shop' }],
+        sampleValues: ['Jordan', '20%', 'WELCOME20']
+    },
+    {
+        id: 'mkt_feedback_request',
+        name: 'Feedback & Review',
+        industry: 'Service',
+        templateName: 'service_feedback_req',
+        category: 'MARKETING',
+        language: 'en_US',
+        headerType: 'NONE',
+        headerText: '',
+        bodyText: 'Hi {{1}},\n\nWe hope you enjoyed your recent experience with {{2}}.\n\nCould you take 1 minute to leave us a quick review? Your feedback helps us improve!',
+        footerText: 'We appreciate your time.',
+        buttons: [{ type: 'URL', text: 'Leave a Review', url: 'https://yourwebsite.com/review' }],
+        sampleValues: ['Taylor', 'our support team']
+    },
+    {
+        id: 'mkt_seasonal_promo',
+        name: 'Seasonal Promotion',
+        industry: 'Retail',
+        templateName: 'seasonal_promo_v1',
+        category: 'MARKETING',
+        language: 'en_US',
+        headerType: 'TEXT',
+        headerText: 'Season Preview ☀️',
+        bodyText: 'Hey {{1}}! Ready for the new season?\n\nDiscover our latest {{2}} collection and enjoy free shipping on all orders over {{3}}.',
+        footerText: 'Reply STOP to opt out.',
+        buttons: [{ type: 'URL', text: 'View Collection', url: 'https://yourwebsite.com/collection' }],
+        sampleValues: ['Alex', 'Summer', '$50']
+    },
 
     // ----------------------------------------
     // UTILITY TEMPLATES (10+)
