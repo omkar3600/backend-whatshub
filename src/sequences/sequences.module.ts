@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { SequencesService } from './sequences.service';
 import { SequencesController } from './sequences.controller';
@@ -10,7 +10,7 @@ import { WhatsappModule } from '../whatsapp/whatsapp.module';
     BullModule.registerQueue({
       name: 'sequences',
     }),
-    WhatsappModule,
+    forwardRef(() => WhatsappModule),
   ],
   controllers: [SequencesController],
   providers: [SequencesService, SequenceProcessor],

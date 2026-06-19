@@ -8,13 +8,18 @@ export class SequencesController {
     constructor(private readonly sequencesService: SequencesService) {}
 
     @Post()
-    async create(@Request() req, @Body() data: { name: string; triggerTag: string; steps: any[] }) {
+    async create(@Request() req, @Body() data: { name: string; triggerType: string; triggerTag?: string; triggerKeyword?: string; steps: any[] }) {
         return this.sequencesService.createSequence(req.user.shopId, data);
     }
 
     @Get()
     async findAll(@Request() req) {
         return this.sequencesService.getSequences(req.user.shopId);
+    }
+
+    @Get(':id/analytics')
+    async getAnalytics(@Request() req, @Param('id') id: string) {
+        return this.sequencesService.getSequenceAnalytics(req.user.shopId, id);
     }
 
     @Put(':id/toggle')

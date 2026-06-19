@@ -6,6 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { ChatGateway } from '../chat/chat.gateway';
 import { ChatbotService } from '../chatbot/chatbot.service';
 import { FlowEngineService } from '../flows/flow-engine.service';
+import { SequencesService } from '../sequences/sequences.service';
 
 interface WhatsAppCredentials {
     shopId: string;
@@ -28,6 +29,8 @@ export class WhatsappService {
         private chatbotService: ChatbotService,
         @Inject(forwardRef(() => FlowEngineService))
         private flowEngineService: FlowEngineService,
+        @Inject(forwardRef(() => SequencesService))
+        private sequencesService: SequencesService,
     ) { }
 
     /**
@@ -413,6 +416,10 @@ export class WhatsappService {
         let automationFired = false;
         if (messageData.type === 'text') {
             const incomingText = messageData.text.body.trim().toLowerCase();
+
+            // Check Sequence keyword triggers
+            await this.sequencesService.handleKeywordTriggered(shopId, contact.id, incomingText);
+
             const automations = await this.prisma.automation.findMany({
                 where: { shopId, isActive: true }
             });

@@ -363,7 +363,9 @@ model Sequence {
   id             String               @id @default(uuid())
   shopId         String
   name           String
+  triggerType    String               @default("TAG") // TAG or KEYWORD
   triggerTag     String?
+  triggerKeyword String?
   isActive       Boolean              @default(true)
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
