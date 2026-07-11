@@ -134,6 +134,63 @@ export class ContactsService {
         return { imported, skipped, errors: errors.slice(0, 20) }; // Max 20 error messages
     }
 
+    async importBulk(shopId: string, rows: any[]): Promise<{ imported: number; skipped: number; errors: string[] }> {
+        let imported = 0;
+        let skipped = 0;
+        const errors: string[] = [];
+
+        for (let i = 0; i < rows.length; i++) {
+            const mapped = rows[i];
+            
+            // Clean phone number
+            let phone = String(mapped.phone || '').replace(/[\s\-\(\)\+\.]/g, '').trim();
+            if (!phone || phone.length < 7) {
+                skipped++;
+                if (phone) errors.push(`Row ${i + 2}: Invalid phone "${phone}"`);
+                continue;
+            }
+
+            // Auto-prefix with 91 if phone starts without country code (10 digits)
+            if (phone.length === 10 && /^\d+$/.test(phone)) {
+                phone = '91' + phone;
+            }
+
+            const name = String(mapped.name || '').trim() || 'Unknown';
+            const city = mapped.city ? String(mapped.city).trim() : undefined;
+            const notes = mapped.notes ? String(mapped.notes).trim() : undefined;
+            let tags: string[] = [];
+            if (mapped.tags) {
+                tags = Array.isArray(mapped.tags) ? mapped.tags : String(mapped.tags).split(',').map(t => t.trim()).filter(Boolean);
+            }
+
+            try {
+                const contact = await this.prisma.contact.upsert({
+                    where: { shopId_phone: { shopId, phone } },
+                    create: { shopId, name, phone, tags, city, notes },
+                    update: {
+                        // Only update non-empty values — don't overwrite existing data with blanks
+                        ...(name !== 'Unknown' ? { name } : {}),
+                        ...(tags.length > 0 ? { tags } : {}),
+                        ...(city ? { city } : {}),
+                        ...(notes ? { notes } : {}),
+                    },
+                });
+                
+                // Trigger sequence logic if tags were updated
+                if (tags.length > 0) {
+                    await this.sequencesService.handleContactTagsUpdated(shopId, contact.id, tags);
+                }
+                
+                imported++;
+            } catch (err: any) {
+                skipped++;
+                errors.push(`Row ${i + 2}: ${err?.message?.substring(0, 80) || 'Database error'}`);
+            }
+        }
+
+        return { imported, skipped, errors };
+    }
+
     async getContacts(shopId: string, filters: any) {
         const { page, limit, search } = filters || {};
         

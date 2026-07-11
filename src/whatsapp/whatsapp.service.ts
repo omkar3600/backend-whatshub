@@ -434,20 +434,22 @@ export class WhatsappService {
                 });
 
                 if (recentCampaignContact) {
-                    const statusRank: Record<string, number> = { pending: 0, sent: 1, delivered: 2, read: 3, clicked: 4, replied: 5 };
-                    const incomingRank = statusRank['replied'];
+                    const statusRank: Record<string, number> = { failed: -1, pending: 0, sent: 1, delivered: 2, read: 3, clicked: 4, replied: 5 };
+                    const isClick = ['button', 'interactive'].includes(messageData.type);
+                    const incomingStatus = isClick ? 'clicked' : 'replied';
+                    const incomingRank = statusRank[incomingStatus];
                     const existingRank = statusRank[recentCampaignContact.status] ?? 0;
                     
                     if (incomingRank > existingRank) {
                         await this.prisma.campaignContact.update({
                             where: { id: recentCampaignContact.id },
-                            data: { status: 'replied' }
+                            data: { status: incomingStatus }
                         });
-                        this.logger.log(`[Campaign] Contact ${contact.phone} replied to campaign ${recentCampaignContact.campaignId}`);
+                        this.logger.log(`[Campaign] Contact ${contact.phone} ${incomingStatus} to campaign ${recentCampaignContact.campaignId}`);
                     }
                 }
             } catch (err) {
-                this.logger.warn(`Failed to update campaign reply tracking for ${contact.phone}: ${err}`);
+                this.logger.warn(`Failed to update campaign tracking for ${contact.phone}: ${err}`);
             }
 
             const automations = await this.prisma.automation.findMany({
@@ -456,10 +458,14 @@ export class WhatsappService {
             this.logger.log(`[Automation] ${automations.length} active automation(s). Incoming: "${incomingText}"`);
 
             for (const auto of automations) {
-                const keyword = auto.triggerKeyword?.toLowerCase().trim();
-                if (!keyword) continue;
-                if (incomingText.includes(keyword) || keyword === incomingText) {
-                    this.logger.log(`[Automation] MATCH! Keyword="${keyword}" → sending reply to ${contactData.wa_id}`);
+                const keywordString = auto.triggerKeyword?.toLowerCase().trim();
+                if (!keywordString) continue;
+                
+                const keywords = keywordString.split(',').map((k: string) => k.trim()).filter(Boolean);
+                const isMatch = keywords.some((kw: string) => incomingText.includes(kw) || kw === incomingText);
+
+                if (isMatch) {
+                    this.logger.log(`[Automation] MATCH! Keyword="${keywordString}" → sending reply to ${contactData.wa_id}`);
                     try {
                         const metaRes = await this.sendOutboundMessage(shopId, contactData.wa_id, 'text', auto.replyText);
                         const wamid = metaRes?.messages?.[0]?.id;
@@ -561,6 +567,11 @@ export class WhatsappService {
     private async handleMessageStatus(shopId: string, statusData: any) {
         const { id: messageId, status, recipient_id: recipientPhone } = statusData;
 
+        let failReason = null;
+        if (status === 'failed' && statusData.errors && statusData.errors.length > 0) {
+            failReason = statusData.errors[0].title || statusData.errors[0].message || 'Unknown error';
+        }
+
         let message: any = null;
         try {
             message = await this.prisma.message.update({
@@ -578,9 +589,9 @@ export class WhatsappService {
             this.logger.warn(`Status update failed for message ${messageId}. It might not exist.`);
         }
 
-        if (['delivered', 'read', 'sent', 'replied'].includes(status)) {
+        if (['delivered', 'read', 'sent', 'replied', 'failed'].includes(status)) {
             try {
-                const statusRank: Record<string, number> = { pending: 0, sent: 1, delivered: 2, read: 3, clicked: 4, replied: 5 };
+                const statusRank: Record<string, number> = { failed: -1, pending: 0, sent: 1, delivered: 2, read: 3, clicked: 4, replied: 5 };
                 const incomingRank = statusRank[status] ?? 0;
 
                 const existing = await this.prisma.campaignContact.findFirst({
@@ -589,10 +600,13 @@ export class WhatsappService {
 
                 if (existing) {
                     const existingRank = statusRank[existing.status] ?? 0;
-                    if (incomingRank > existingRank) {
+                    if (status === 'failed' || incomingRank > existingRank) {
                         await this.prisma.campaignContact.update({
                             where: { id: existing.id },
-                            data: { status },
+                            data: { 
+                                status,
+                                ...(failReason ? { failReason } : {})
+                            },
                         });
                         this.logger.log(`[Campaign] Updated CampaignContact wamid:${messageId} → ${status}`);
                     }

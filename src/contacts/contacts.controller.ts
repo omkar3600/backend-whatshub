@@ -30,6 +30,12 @@ export class ContactsController {
         return this.contactsService.importFromExcel(user.shopId, file);
     }
 
+    @Post('bulk')
+    async importBulkContacts(@GetUser() user: any, @Body() body: { rows: any[] }) {
+        if (!body.rows || !Array.isArray(body.rows)) throw new BadRequestException('Invalid payload');
+        return this.contactsService.importBulk(user.shopId, body.rows);
+    }
+
     @Get()
     async getContacts(@GetUser() user: any, @Query() query: GetContactsQueryDto) {
         return this.contactsService.getContacts(user.shopId, query);
