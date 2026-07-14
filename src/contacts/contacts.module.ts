@@ -6,6 +6,7 @@ import { SequencesModule } from '../sequences/sequences.module';
 @Module({
   imports: [SequencesModule],
   controllers: [ContactsController],
-  providers: [ContactsService]
+  providers: [ContactsService],
+  exports: [ContactsService]
 })
 export class ContactsModule {}
