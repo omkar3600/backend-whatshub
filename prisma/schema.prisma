@@ -54,6 +54,7 @@ model Shop {
   chatbotConfig    ChatbotConfig?
   flows            Flow[]
   sequences        Sequence[]
+  apiKeys          ApiKey[]
 }
 
 model Subscription {
@@ -398,4 +399,20 @@ model SequenceSubscriber {
   contact        Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
   
   @@unique([sequenceId, contactId])
+}
+
+model ApiKey {
+  id          String    @id @default(uuid())
+  shopId      String
+  name        String
+  keyHash     String    @unique
+  scopes      Json?
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  status      String    @default("active") // active, disabled, revoked
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  shop        Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  
+  @@index([shopId])
 }
