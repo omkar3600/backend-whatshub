@@ -258,4 +258,68 @@ export class ContactsService {
             where: { id, shopId },
         });
     }
+
+    async deleteBulk(shopId: string) {
+        return this.prisma.contact.deleteMany({
+            where: { shopId },
+        });
+    }
+
+    async normalizeContacts(shopId: string) {
+        const contacts = await this.prisma.contact.findMany({ where: { shopId } });
+        let updatedCount = 0;
+        let invalidCount = 0;
+        let errorCount = 0;
+
+        for (const contact of contacts) {
+            let phone = contact.phone.trim();
+            let newPhone = phone;
+            let isValid = true;
+            let tags = Array.isArray(contact.tags) ? [...contact.tags as string[]] : [];
+
+            if (phone.startsWith('+91')) {
+                newPhone = '91' + phone.substring(3);
+            } else if (phone.startsWith('91') && phone.length === 12 && /^\d+$/.test(phone)) {
+                newPhone = phone;
+            } else if (phone.length === 10 && /^\d+$/.test(phone)) {
+                newPhone = '91' + phone;
+            } else {
+                isValid = false;
+            }
+
+            if (!isValid) {
+                if (!tags.includes('Invalid Number')) {
+                    tags.push('Invalid Number');
+                    try {
+                        await this.prisma.contact.update({
+                            where: { id: contact.id },
+                            data: { tags }
+                        });
+                        invalidCount++;
+                    } catch (e) {
+                        errorCount++;
+                    }
+                }
+            } else if (newPhone !== contact.phone) {
+                try {
+                    await this.prisma.contact.update({
+                        where: { id: contact.id },
+                        data: { phone: newPhone }
+                    });
+                    updatedCount++;
+                } catch (e) {
+                    errorCount++;
+                    if (!tags.includes('Duplicate Number')) {
+                         tags.push('Duplicate Number');
+                         await this.prisma.contact.update({
+                            where: { id: contact.id },
+                            data: { tags }
+                         }).catch(() => {});
+                    }
+                }
+            }
+        }
+
+        return { updated: updatedCount, invalid: invalidCount, errors: errorCount, total: contacts.length };
+    }
 }

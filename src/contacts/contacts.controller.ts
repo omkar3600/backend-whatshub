@@ -41,6 +41,11 @@ export class ContactsController {
         return this.contactsService.getContacts(user.shopId, query);
     }
 
+    @Post('normalize')
+    async normalizeContacts(@GetUser() user: any) {
+        return this.contactsService.normalizeContacts(user.shopId);
+    }
+
     @Get(':id')
     async getContact(@GetUser() user: any, @Param('id') id: string) {
         return this.contactsService.getContact(user.shopId, id);
@@ -49,6 +54,11 @@ export class ContactsController {
     @Put(':id')
     async updateContact(@GetUser() user: any, @Param('id') id: string, @Body() body: UpdateContactDto) {
         return this.contactsService.updateContact(user.shopId, id, body);
+    }
+
+    @Delete('bulk')
+    async deleteBulkContacts(@GetUser() user: any) {
+        return this.contactsService.deleteBulk(user.shopId);
     }
 
     @Delete(':id')
