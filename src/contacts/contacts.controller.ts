@@ -57,8 +57,8 @@ export class ContactsController {
     }
 
     @Delete('bulk')
-    async deleteBulkContacts(@GetUser() user: any) {
-        return this.contactsService.deleteBulk(user.shopId);
+    async deleteBulkContacts(@GetUser() user: any, @Body() body: { ids: string[] }) {
+        return this.contactsService.deleteBulk(user.shopId, body.ids);
     }
 
     @Delete(':id')
