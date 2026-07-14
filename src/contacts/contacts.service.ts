@@ -254,12 +254,32 @@ export class ContactsService {
     }
 
     async deleteContact(shopId: string, id: string) {
+        // Delete dependent records first
+        const conversations = await this.prisma.conversation.findMany({ where: { shopId, contactId: id } });
+        const convIds = conversations.map(c => c.id);
+        
+        if (convIds.length > 0) {
+            await this.prisma.message.deleteMany({ where: { conversationId: { in: convIds } } });
+            await this.prisma.conversation.deleteMany({ where: { id: { in: convIds } } });
+        }
+        await this.prisma.campaignContact.updateMany({ where: { contactId: id }, data: { contactId: null } });
+        
         return this.prisma.contact.delete({
             where: { id, shopId },
         });
     }
 
     async deleteBulk(shopId: string) {
+        // Delete all dependent records for this shop's contacts
+        await this.prisma.message.deleteMany({ where: { shopId } });
+        await this.prisma.conversation.deleteMany({ where: { shopId } });
+        await this.prisma.campaignContact.updateMany({
+            where: { contact: { shopId } },
+            data: { contactId: null }
+        });
+        // flowSession and sequenceSubscriber have onDelete: Cascade so they might be deleted automatically, 
+        // but just in case, we could delete them if prisma errors, though Cascade should handle them.
+        
         return this.prisma.contact.deleteMany({
             where: { shopId },
         });
