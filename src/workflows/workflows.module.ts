@@ -1,4 +1,4 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Module, OnModuleInit, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { WorkflowsController } from './workflows.controller';
 import { WorkflowsService } from './workflows.service';
@@ -23,7 +23,7 @@ import { WhatsappModule } from '../whatsapp/whatsapp.module';
     BullModule.registerQueue({
       name: 'workflow-dlq',
     }),
-    WhatsappModule,
+    forwardRef(() => WhatsappModule),
   ],
   controllers: [WorkflowsController],
   providers: [

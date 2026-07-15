@@ -61,7 +61,7 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
             bullmq_1.BullModule.registerQueue({
                 name: 'workflow-dlq',
             }),
-            whatsapp_module_1.WhatsappModule,
+            (0, common_1.forwardRef)(() => whatsapp_module_1.WhatsappModule),
         ],
         controllers: [workflows_controller_1.WorkflowsController],
         providers: [
