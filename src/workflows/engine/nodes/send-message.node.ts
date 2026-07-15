@@ -47,13 +47,20 @@ export class SendMessageExecutor implements INodeExecutor {
     }
 
     try {
+      const contactData = await this.whatsappService['prisma'].contact.findUnique({
+        where: { id: context.contactId }
+      });
+      if (!contactData) throw new Error('Contact not found');
+
       if (nodeData.messageType === 'text') {
-        // Find phone number for this contact
-        // In a real implementation, we'd fetch the Contact's phone and the Shop's default WhatsApp Account
-        // For testing, we mock this or call the real service if available.
-        this.logger.log(`[WhatsApp API Mock] Sending TEXT to Contact ${context.contactId}: ${messageContent}`);
+        this.logger.log(`[Workflow] Sending TEXT to Contact ${context.contactId} (${contactData.phone})`);
+        await this.whatsappService.sendOutboundMessage(context.shopId, contactData.phone, 'text', messageContent);
       } else if (nodeData.messageType === 'template') {
-        this.logger.log(`[WhatsApp API Mock] Sending TEMPLATE ${nodeData.templateName} to Contact ${context.contactId}`);
+        this.logger.log(`[Workflow] Sending TEMPLATE ${nodeData.templateName} to Contact ${context.contactId} (${contactData.phone})`);
+        await this.whatsappService.sendOutboundMessage(context.shopId, contactData.phone, 'template', {
+          name: nodeData.templateName,
+          language: 'en_US'
+        });
       }
       
       return { status: 'continue' };

@@ -1,4 +1,5 @@
-import { Controller, Post, Body, Param, Get } from '@nestjs/common';
+import { Controller, Post, Body, Param, Get, Put, Delete, Query } from '@nestjs/common';
+import { WorkflowsService } from './workflows.service';
 import { WorkflowEngineService } from './engine/workflow-engine.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -7,7 +8,47 @@ export class WorkflowsController {
   constructor(
     private readonly engineService: WorkflowEngineService,
     private readonly prisma: PrismaService,
+    private readonly workflowsService: WorkflowsService,
   ) {}
+
+  @Get()
+  async listWorkflows(@Query('shopId') shopId: string) {
+    if (!shopId) throw new Error('shopId is required');
+    return this.workflowsService.listWorkflows(shopId);
+  }
+
+  @Get(':id')
+  async getWorkflow(@Query('shopId') shopId: string, @Param('id') id: string) {
+    if (!shopId) throw new Error('shopId is required');
+    return this.workflowsService.getWorkflow(shopId, id);
+  }
+
+  @Post()
+  async createWorkflow(@Body() body: { shopId: string; name: string }) {
+    if (!body.shopId || !body.name) throw new Error('shopId and name are required');
+    return this.workflowsService.createWorkflow(body.shopId, body.name);
+  }
+
+  @Put(':id/version')
+  async updateWorkflowGraph(
+    @Param('id') id: string,
+    @Body() body: { shopId: string; graph: any }
+  ) {
+    if (!body.shopId || !body.graph) throw new Error('shopId and graph are required');
+    return this.workflowsService.updateWorkflowGraph(body.shopId, id, body.graph);
+  }
+
+  @Post(':id/publish')
+  async publishWorkflow(@Param('id') id: string, @Body() body: { shopId: string }) {
+    if (!body.shopId) throw new Error('shopId is required');
+    return this.workflowsService.publishWorkflow(body.shopId, id);
+  }
+
+  @Delete(':id')
+  async deleteWorkflow(@Param('id') id: string, @Query('shopId') shopId: string) {
+    if (!shopId) throw new Error('shopId is required');
+    return this.workflowsService.deleteWorkflow(shopId, id);
+  }
 
   @Post(':id/test-trigger')
   async triggerTestWorkflow(
