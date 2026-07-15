@@ -53,8 +53,8 @@ model Shop {
   onboardingEvents OnboardingEvent[]
   chatbotConfig    ChatbotConfig?
   flows            Flow[]
-  sequences        Sequence[]
   apiKeys          ApiKey[]
+  workflows        Workflow[]
 }
 
 model Subscription {
@@ -172,7 +172,7 @@ model Contact {
   conversations    Conversation[]
   campaignContacts CampaignContact[]
   flowSession      FlowSession?
-  sequenceSubs     SequenceSubscriber[]
+  workflowInstances WorkflowInstance[]
 
   @@unique([shopId, phone])
 }
@@ -226,7 +226,6 @@ model Template {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   campaigns    Campaign[]
-  sequenceSteps SequenceStep[]
   shop         Shop       @relation(fields: [shopId], references: [id])
 }
 
@@ -360,47 +359,6 @@ model FlowVersion {
   flow          Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
 }
 
-model Sequence {
-  id             String               @id @default(uuid())
-  shopId         String
-  name           String
-  triggerType    String               @default("TAG") // TAG or KEYWORD
-  triggerTag     String?
-  triggerKeyword String?
-  isActive       Boolean              @default(true)
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  shop           Shop                 @relation(fields: [shopId], references: [id])
-  steps          SequenceStep[]
-  subscribers    SequenceSubscriber[]
-}
-
-model SequenceStep {
-  id             String     @id @default(uuid())
-  sequenceId     String
-  stepNumber     Int
-  delayHours     Int        @default(24)
-  templateId     String
-  templateParams Json?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  sequence       Sequence   @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
-  template       Template   @relation(fields: [templateId], references: [id])
-}
-
-model SequenceSubscriber {
-  id             String    @id @default(uuid())
-  sequenceId     String
-  contactId      String
-  status         String    @default("active") // active, completed, cancelled
-  currentStep    Int       @default(1)
-  enrolledAt     DateTime  @default(now())
-  sequence       Sequence  @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
-  contact        Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  
-  @@unique([sequenceId, contactId])
-}
-
 model ApiKey {
   id          String    @id @default(uuid())
   shopId      String
@@ -415,4 +373,167 @@ model ApiKey {
   shop        Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
   
   @@index([shopId])
+}
+
+// ==========================================
+// Workflow Automation Engine Models
+// ==========================================
+
+model Workflow {
+  id          String   @id @default(uuid())
+  shopId      String
+  name        String
+  description String?
+  status      String   @default("draft") // draft, published, paused, archived
+  isTemplate  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  shop        Shop              @relation(fields: [shopId], references: [id])
+  versions    WorkflowVersion[]
+  instances   WorkflowInstance[]
+  jobs        WorkflowJob[]
+  analytics   WorkflowAnalytics[]
+  auditLogs   WorkflowAuditLog[]
+
+  @@index([shopId])
+}
+
+model WorkflowVersion {
+  id             String         @id @default(uuid())
+  workflowId     String
+  versionNumber  Int
+  status         String         @default("draft") // draft, published
+  graph          Json           // Complete JSON: { nodes: [], edges: [], viewport: {}, metadata: {} }
+  createdAt      DateTime       @default(now())
+  
+  workflow       Workflow       @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  instances      WorkflowInstance[]
+}
+
+model WorkflowInstance {
+  id                String   @id @default(uuid())
+  shopId            String
+  workflowId        String
+  workflowVersionId String
+  contactId         String
+  
+  // Execution State
+  currentNodeId     String?
+  previousNodeId    String?
+  lastExecutedNodeId String?
+  
+  status            String   @default("active") // active, paused, waiting, completed, failed, cancelled
+  variables         Json     @default("{}")
+  resumeToken       String?  @unique
+  
+  // Concurrency & Analytics
+  executionVersion  Int      @default(0) // Optimistic locking
+  entryTime         DateTime @default(now())
+  enteredNodeAt     DateTime?
+  lastExecutionAt   DateTime?
+  completionTime    DateTime?
+  updatedAt         DateTime @updatedAt
+
+  workflow          Workflow        @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  version           WorkflowVersion @relation(fields: [workflowVersionId], references: [id])
+  contact           Contact         @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  jobs              WorkflowJob[]
+  logs              WorkflowExecutionLog[]
+  
+  @@unique([workflowId, contactId])
+  @@index([shopId, status])
+  @@index([resumeToken])
+}
+
+// History & Auditing
+model WorkflowJob {
+  id             String   @id @default(uuid())
+  shopId         String
+  workflowId     String
+  instanceId     String
+  nodeId         String
+  jobId          String?  // BullMQ Job ID reference
+  idempotencyKey String?  @unique
+  status         String   @default("pending") // pending, processing, completed, failed, cancelled, dlq
+  retries        Int      @default(0)
+  error          String?  @db.Text
+  data           Json?
+  createdAt      DateTime @default(now())
+  completedAt    DateTime?
+
+  workflow       Workflow         @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  instance       WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, status])
+}
+
+model WorkflowExecutionLog {
+  id             String   @id @default(uuid())
+  instanceId     String
+  nodeId         String
+  status         String   // success, error, waiting, cancelled
+  startedAt      DateTime @default(now())
+  completedAt    DateTime?
+  durationMs     Int?
+  error          String?  @db.Text
+  data           Json?
+
+  instance       WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId])
+}
+
+model WorkflowAuditLog {
+  id          String   @id @default(uuid())
+  shopId      String
+  workflowId  String
+  userId      String?  // The user who performed the action
+  action      String   // created, published, edited, paused, deleted
+  oldValue    Json?
+  newValue    Json?
+  createdAt   DateTime @default(now())
+
+  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
+  @@index([workflowId])
+}
+
+model WorkflowAnalytics {
+  id                String   @id @default(uuid())
+  workflowId        String
+  shopId            String
+  
+  // Aggregate Metrics
+  totalStarted      Int      @default(0)
+  totalCompleted    Int      @default(0)
+  totalFailed       Int      @default(0)
+  totalWaiting      Int      @default(0)
+  totalCancelled    Int      @default(0)
+  avgExecutionTimeMs Int     @default(0)
+  
+  // Detailed Node Metrics 
+  nodeMetrics       Json     @default("{}")
+  
+  updatedAt         DateTime @updatedAt
+  
+  workflow          Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  @@unique([workflowId])
+}
+
+model WorkflowTemplate {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  category    String
+  tags        Json?
+  graph       Json
+  isSystem    Boolean  @default(false)
+  shopId      String?  // Null if system-wide
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
 }

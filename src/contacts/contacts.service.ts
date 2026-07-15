@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { SequencesService } from '../sequences/sequences.service';
 import * as XLSX from 'xlsx';
 
 @Injectable()
@@ -8,8 +7,7 @@ export class ContactsService {
     private readonly logger = new Logger(ContactsService.name);
 
     constructor(
-        private prisma: PrismaService,
-        private sequencesService: SequencesService
+        private prisma: PrismaService
     ) { }
 
     async createContact(shopId: string, data: any) {
@@ -118,11 +116,6 @@ export class ContactsService {
                     },
                 });
                 
-                // Trigger sequence logic if tags were updated
-                if (tags.length > 0) {
-                    await this.sequencesService.handleContactTagsUpdated(shopId, contact.id, tags);
-                }
-                
                 imported++;
             } catch (err: any) {
                 skipped++;
@@ -175,11 +168,6 @@ export class ContactsService {
                         ...(notes ? { notes } : {}),
                     },
                 });
-                
-                // Trigger sequence logic if tags were updated
-                if (tags.length > 0) {
-                    await this.sequencesService.handleContactTagsUpdated(shopId, contact.id, tags);
-                }
                 
                 imported++;
             } catch (err: any) {
@@ -245,10 +233,6 @@ export class ContactsService {
             where: { id, shopId },
             data: { name, phone, tags, city, notes },
         });
-
-        if (tags && tags.length > 0) {
-            await this.sequencesService.handleContactTagsUpdated(shopId, id, tags);
-        }
 
         return contact;
     }

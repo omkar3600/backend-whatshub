@@ -25,9 +25,9 @@ import { EmbeddedSignupModule } from './embedded-signup/embedded-signup.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { FlowsModule } from './flows/flows.module';
-import { SequencesModule } from './sequences/sequences.module';
 import { ApiKeysModule } from './api-keys/api-keys.module';
 import { IntegrationModule } from './integration/integration.module';
+import { WorkflowsModule } from './workflows/workflows.module';
 
 @Module({
   imports: [
@@ -66,9 +66,9 @@ import { IntegrationModule } from './integration/integration.module';
     ChatbotModule,
     EmbeddedSignupModule,
     FlowsModule,
-    SequencesModule,
     ApiKeysModule,
     IntegrationModule,
+    WorkflowsModule,
   ],
   controllers: [AppController],
   providers: [

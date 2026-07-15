@@ -129,8 +129,6 @@ export class AdminService {
             // 2. Delete flows (this will cascade delete flow sessions, analytics, and versions)
             await prisma.flow.deleteMany({ where: { shopId } });
 
-            // 3. Delete sequences (this will cascade delete sequence steps and subscribers)
-            await prisma.sequence.deleteMany({ where: { shopId } });
 
             // 4. Delete campaigns (this will cascade delete campaign contacts)
             await prisma.campaign.deleteMany({ where: { shopId } });
