@@ -1,8 +1,10 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { WorkflowPublishingService } from './engine/workflow-publishing.service';
 export declare class WorkflowsService {
     private readonly prisma;
-    constructor(prisma: PrismaService);
+    private readonly publishingService;
+    constructor(prisma: PrismaService, publishingService: WorkflowPublishingService);
     listWorkflows(shopId: string): Promise<({
         _count: {
             instances: number;
@@ -23,8 +25,8 @@ export declare class WorkflowsService {
             status: string;
             createdAt: Date;
             versionNumber: number;
-            graph: Prisma.JsonValue;
             workflowId: string;
+            graph: Prisma.JsonValue;
         }[];
     } & {
         name: string;
@@ -42,8 +44,8 @@ export declare class WorkflowsService {
             status: string;
             createdAt: Date;
             versionNumber: number;
-            graph: Prisma.JsonValue;
             workflowId: string;
+            graph: Prisma.JsonValue;
         }[];
     } & {
         name: string;
@@ -60,8 +62,8 @@ export declare class WorkflowsService {
         status: string;
         createdAt: Date;
         versionNumber: number;
-        graph: Prisma.JsonValue;
         workflowId: string;
+        graph: Prisma.JsonValue;
     }>;
     publishWorkflow(shopId: string, id: string): Promise<{
         name: string;

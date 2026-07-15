@@ -26,8 +26,8 @@ export declare class WorkflowsController {
             status: string;
             createdAt: Date;
             versionNumber: number;
-            graph: import("@prisma/client/runtime/library").JsonValue;
             workflowId: string;
+            graph: import("@prisma/client/runtime/library").JsonValue;
         }[];
     } & {
         name: string;
@@ -48,8 +48,8 @@ export declare class WorkflowsController {
             status: string;
             createdAt: Date;
             versionNumber: number;
-            graph: import("@prisma/client/runtime/library").JsonValue;
             workflowId: string;
+            graph: import("@prisma/client/runtime/library").JsonValue;
         }[];
     } & {
         name: string;
@@ -69,8 +69,8 @@ export declare class WorkflowsController {
         status: string;
         createdAt: Date;
         versionNumber: number;
-        graph: import("@prisma/client/runtime/library").JsonValue;
         workflowId: string;
+        graph: import("@prisma/client/runtime/library").JsonValue;
     }>;
     publishWorkflow(id: string, body: {
         shopId: string;

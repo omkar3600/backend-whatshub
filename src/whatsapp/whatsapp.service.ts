@@ -6,6 +6,8 @@ import { firstValueFrom } from 'rxjs';
 import { ChatGateway } from '../chat/chat.gateway';
 import { ChatbotService } from '../chatbot/chatbot.service';
 import { FlowEngineService } from '../flows/flow-engine.service';
+import { WorkflowEngineService } from '../workflows/engine/workflow-engine.service';
+import { TriggerRegistry } from '../workflows/engine/registries/trigger.registry';
 
 interface WhatsAppCredentials {
     shopId: string;
@@ -27,7 +29,11 @@ export class WhatsappService {
         private chatGateway: ChatGateway,
         private chatbotService: ChatbotService,
         @Inject(forwardRef(() => FlowEngineService))
-        private flowEngineService: FlowEngineService
+        private flowEngineService: FlowEngineService,
+        @Inject(forwardRef(() => WorkflowEngineService))
+        private workflowEngineService: WorkflowEngineService,
+        @Inject(forwardRef(() => TriggerRegistry))
+        private triggerRegistry: TriggerRegistry
     ) { }
 
     /**
@@ -409,7 +415,61 @@ export class WhatsappService {
             },
         });
 
-        // --- Smart Automations ---
+        // --- Workflow Automation Engine ---
+        let workflowFired = false;
+        
+        // 1. Resume any Waiting nodes
+        const waitingInstances = await this.prisma.workflowInstance.findMany({
+            where: { shopId, contactId: contact.id, status: 'waiting' }
+        });
+
+        for (const instance of waitingInstances) {
+            // Update instance status to active
+            await this.prisma.workflowInstance.update({
+                where: { id: instance.id },
+                data: { status: 'active', resumeToken: null }
+            });
+            // Enqueue the current node again (or the next node)
+            // WaitReplyExecutor just pauses. Re-enqueuing the node will re-execute it?
+            // Actually, if a node returned 'wait', resuming means moving to the next edges.
+            // Let's just manually transition it to the next nodes by fetching the graph.
+            const version = await this.prisma.workflowVersion.findUnique({ where: { id: instance.workflowVersionId } });
+            if (version) {
+               const graph: any = version.graph;
+               const edges = graph.edges?.filter((e: any) => e.source === instance.currentNodeId) || [];
+               await this.prisma.workflowInstance.update({
+                 where: { id: instance.id },
+                 data: { previousNodeId: instance.currentNodeId, lastExecutedNodeId: instance.currentNodeId, executionVersion: { increment: 1 } }
+               });
+               for (const edge of edges) {
+                 await this.workflowEngineService.enqueueNodeExecution(instance.id, edge.target);
+               }
+               workflowFired = true;
+               this.logger.log(`[Workflow] Resumed waiting instance ${instance.id} for contact ${contact.phone}`);
+            }
+        }
+
+        // 2. Evaluate incoming message triggers
+        if (messageData.type === 'text' && !workflowFired) {
+            try {
+                const trigger = this.triggerRegistry.get('incomingMessage');
+                if (trigger && trigger.evaluate) {
+                    await trigger.evaluate({
+                        shopId,
+                        contactId: contact.id,
+                        messageText: messageData.text.body,
+                        messageType: 'text'
+                    });
+                    // Note: We don't strictly set workflowFired=true here because evaluation is async and might not match
+                    // For simplicity, we just evaluate it alongside the legacy automations below.
+                }
+            } catch (e) {
+                this.logger.error(`[Workflow] Failed to evaluate triggers: ${e.message}`);
+            }
+        }
+
+
+        // --- Smart Automations (Legacy) ---
         let automationFired = false;
         if (messageData.type === 'text') {
             const incomingText = messageData.text.body.trim().toLowerCase();

@@ -15,6 +15,7 @@ export interface ExecutionResult {
     error?: string;
     delayMs?: number;
     resumeToken?: string;
+    branch?: string;
 }
 export interface INodeExecutor {
     type: string;

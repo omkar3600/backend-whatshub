@@ -1,10 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { WorkflowPublishingService } from './engine/workflow-publishing.service';
 
 @Injectable()
 export class WorkflowsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly publishingService: WorkflowPublishingService
+  ) {}
 
   async listWorkflows(shopId: string) {
     return this.prisma.workflow.findMany({
@@ -91,6 +95,9 @@ export class WorkflowsService {
     if (!latestVersion || latestVersion.status === 'published') {
       return workflow;
     }
+
+    // Run enterprise validations
+    this.publishingService.validateGraph(latestVersion.graph);
 
     // Mark version as published
     await this.prisma.workflowVersion.update({

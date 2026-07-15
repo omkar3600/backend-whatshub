@@ -198,9 +198,15 @@ export class WorkflowEngineService {
     }
 
     // Continue
-    const edges = graph.edges?.filter((e: any) => e.source === nodeId) || [];
+    let edges = graph.edges?.filter((e: any) => e.source === nodeId) || [];
+    
+    // If the node specified a branch, only follow edges connected to that branch's sourceHandle
+    if (result.branch) {
+      edges = edges.filter((e: any) => e.sourceHandle === result.branch);
+    }
+
     if (edges.length === 0) {
-      // Reached the end
+      // Reached the end or a branch with no connected nodes
       await this.prisma.workflowInstance.update({
         where: { id: instance.id },
         data: { status: 'completed', completionTime: new Date() }

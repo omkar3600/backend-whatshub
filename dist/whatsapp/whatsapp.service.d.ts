@@ -4,6 +4,8 @@ import { CryptoService } from '../common/services/crypto.service';
 import { ChatGateway } from '../chat/chat.gateway';
 import { ChatbotService } from '../chatbot/chatbot.service';
 import { FlowEngineService } from '../flows/flow-engine.service';
+import { WorkflowEngineService } from '../workflows/engine/workflow-engine.service';
+import { TriggerRegistry } from '../workflows/engine/registries/trigger.registry';
 interface WhatsAppCredentials {
     shopId: string;
     phoneNumberId: string;
@@ -18,9 +20,11 @@ export declare class WhatsappService {
     private chatGateway;
     private chatbotService;
     private flowEngineService;
+    private workflowEngineService;
+    private triggerRegistry;
     private readonly logger;
     private readonly graphApiBase;
-    constructor(prisma: PrismaService, httpService: HttpService, cryptoService: CryptoService, chatGateway: ChatGateway, chatbotService: ChatbotService, flowEngineService: FlowEngineService);
+    constructor(prisma: PrismaService, httpService: HttpService, cryptoService: CryptoService, chatGateway: ChatGateway, chatbotService: ChatbotService, flowEngineService: FlowEngineService, workflowEngineService: WorkflowEngineService, triggerRegistry: TriggerRegistry);
     getCredentials(shopId: string): Promise<WhatsAppCredentials>;
     getCredentialsByPhoneNumberId(phoneNumberId: string): Promise<WhatsAppCredentials | null>;
     getShopByWabaId(wabaId: string): Promise<string | null>;

@@ -22,6 +22,8 @@ const rxjs_1 = require("rxjs");
 const chat_gateway_1 = require("../chat/chat.gateway");
 const chatbot_service_1 = require("../chatbot/chatbot.service");
 const flow_engine_service_1 = require("../flows/flow-engine.service");
+const workflow_engine_service_1 = require("../workflows/engine/workflow-engine.service");
+const trigger_registry_1 = require("../workflows/engine/registries/trigger.registry");
 let WhatsappService = WhatsappService_1 = class WhatsappService {
     prisma;
     httpService;
@@ -29,15 +31,19 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
     chatGateway;
     chatbotService;
     flowEngineService;
+    workflowEngineService;
+    triggerRegistry;
     logger = new common_1.Logger(WhatsappService_1.name);
     graphApiBase = `https://graph.facebook.com/${process.env.META_API_VERSION || 'v18.0'}`;
-    constructor(prisma, httpService, cryptoService, chatGateway, chatbotService, flowEngineService) {
+    constructor(prisma, httpService, cryptoService, chatGateway, chatbotService, flowEngineService, workflowEngineService, triggerRegistry) {
         this.prisma = prisma;
         this.httpService = httpService;
         this.cryptoService = cryptoService;
         this.chatGateway = chatGateway;
         this.chatbotService = chatbotService;
         this.flowEngineService = flowEngineService;
+        this.workflowEngineService = workflowEngineService;
+        this.triggerRegistry = triggerRegistry;
     }
     async getCredentials(shopId) {
         const account = await this.prisma.whatsAppBusinessAccount.findFirst({
@@ -356,6 +362,46 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
                 phone: contact.phone,
             },
         });
+        let workflowFired = false;
+        const waitingInstances = await this.prisma.workflowInstance.findMany({
+            where: { shopId, contactId: contact.id, status: 'waiting' }
+        });
+        for (const instance of waitingInstances) {
+            await this.prisma.workflowInstance.update({
+                where: { id: instance.id },
+                data: { status: 'active', resumeToken: null }
+            });
+            const version = await this.prisma.workflowVersion.findUnique({ where: { id: instance.workflowVersionId } });
+            if (version) {
+                const graph = version.graph;
+                const edges = graph.edges?.filter((e) => e.source === instance.currentNodeId) || [];
+                await this.prisma.workflowInstance.update({
+                    where: { id: instance.id },
+                    data: { previousNodeId: instance.currentNodeId, lastExecutedNodeId: instance.currentNodeId, executionVersion: { increment: 1 } }
+                });
+                for (const edge of edges) {
+                    await this.workflowEngineService.enqueueNodeExecution(instance.id, edge.target);
+                }
+                workflowFired = true;
+                this.logger.log(`[Workflow] Resumed waiting instance ${instance.id} for contact ${contact.phone}`);
+            }
+        }
+        if (messageData.type === 'text' && !workflowFired) {
+            try {
+                const trigger = this.triggerRegistry.get('incomingMessage');
+                if (trigger && trigger.evaluate) {
+                    await trigger.evaluate({
+                        shopId,
+                        contactId: contact.id,
+                        messageText: messageData.text.body,
+                        messageType: 'text'
+                    });
+                }
+            }
+            catch (e) {
+                this.logger.error(`[Workflow] Failed to evaluate triggers: ${e.message}`);
+            }
+        }
         let automationFired = false;
         if (messageData.type === 'text') {
             const incomingText = messageData.text.body.trim().toLowerCase();
@@ -767,11 +813,15 @@ exports.WhatsappService = WhatsappService;
 exports.WhatsappService = WhatsappService = WhatsappService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(5, (0, common_1.Inject)((0, common_1.forwardRef)(() => flow_engine_service_1.FlowEngineService))),
+    __param(6, (0, common_1.Inject)((0, common_1.forwardRef)(() => workflow_engine_service_1.WorkflowEngineService))),
+    __param(7, (0, common_1.Inject)((0, common_1.forwardRef)(() => trigger_registry_1.TriggerRegistry))),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         axios_1.HttpService,
         crypto_service_1.CryptoService,
         chat_gateway_1.ChatGateway,
         chatbot_service_1.ChatbotService,
-        flow_engine_service_1.FlowEngineService])
+        flow_engine_service_1.FlowEngineService,
+        workflow_engine_service_1.WorkflowEngineService,
+        trigger_registry_1.TriggerRegistry])
 ], WhatsappService);
 //# sourceMappingURL=whatsapp.service.js.map

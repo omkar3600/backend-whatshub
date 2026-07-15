@@ -17,6 +17,7 @@ export interface ExecutionResult {
   error?: string;
   delayMs?: number; // For pause
   resumeToken?: string; // For wait
+  branch?: string; // For condition nodes (e.g., 'true' or 'false')
 }
 
 export interface INodeExecutor {

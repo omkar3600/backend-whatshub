@@ -164,7 +164,10 @@ let WorkflowEngineService = WorkflowEngineService_1 = class WorkflowEngineServic
             });
             return;
         }
-        const edges = graph.edges?.filter((e) => e.source === nodeId) || [];
+        let edges = graph.edges?.filter((e) => e.source === nodeId) || [];
+        if (result.branch) {
+            edges = edges.filter((e) => e.sourceHandle === result.branch);
+        }
         if (edges.length === 0) {
             await this.prisma.workflowInstance.update({
                 where: { id: instance.id },

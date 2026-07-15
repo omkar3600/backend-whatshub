@@ -12,10 +12,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.WorkflowsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const workflow_publishing_service_1 = require("./engine/workflow-publishing.service");
 let WorkflowsService = class WorkflowsService {
     prisma;
-    constructor(prisma) {
+    publishingService;
+    constructor(prisma, publishingService) {
         this.prisma = prisma;
+        this.publishingService = publishingService;
     }
     async listWorkflows(shopId) {
         return this.prisma.workflow.findMany({
@@ -92,6 +95,7 @@ let WorkflowsService = class WorkflowsService {
         if (!latestVersion || latestVersion.status === 'published') {
             return workflow;
         }
+        this.publishingService.validateGraph(latestVersion.graph);
         await this.prisma.workflowVersion.update({
             where: { id: latestVersion.id },
             data: { status: 'published' }
@@ -110,6 +114,7 @@ let WorkflowsService = class WorkflowsService {
 exports.WorkflowsService = WorkflowsService;
 exports.WorkflowsService = WorkflowsService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        workflow_publishing_service_1.WorkflowPublishingService])
 ], WorkflowsService);
 //# sourceMappingURL=workflows.service.js.map
