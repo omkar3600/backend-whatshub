@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Param, Get, Put, Delete, Query } from '@nestjs/common';
+import { Controller, Post, Body, Param, Get, Put, Delete, Query, BadRequestException } from '@nestjs/common';
 import { WorkflowsService } from './workflows.service';
 import { WorkflowEngineService } from './engine/workflow-engine.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -25,8 +25,15 @@ export class WorkflowsController {
 
   @Post()
   async createWorkflow(@Body() body: { shopId: string; name: string }) {
-    if (!body.shopId || !body.name) throw new Error('shopId and name are required');
-    return this.workflowsService.createWorkflow(body.shopId, body.name);
+    if (!body.shopId || !body.name) {
+      throw new BadRequestException('shopId and name are required');
+    }
+    try {
+      return await this.workflowsService.createWorkflow(body.shopId, body.name);
+    } catch (error) {
+      console.error('Failed to create workflow:', error);
+      throw new BadRequestException(error.message || 'Failed to create workflow');
+    }
   }
 
   @Put(':id/version')
