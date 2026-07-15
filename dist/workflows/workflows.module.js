@@ -78,7 +78,7 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
             wait_reply_node_1.WaitReplyExecutor,
             incoming_message_trigger_1.IncomingMessageTrigger,
         ],
-        exports: [workflow_engine_service_1.WorkflowEngineService]
+        exports: [workflow_engine_service_1.WorkflowEngineService, trigger_registry_1.TriggerRegistry]
     }),
     __metadata("design:paramtypes", [node_executor_registry_1.NodeExecutorRegistry,
         send_message_node_1.SendMessageExecutor,

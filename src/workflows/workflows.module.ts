@@ -40,7 +40,7 @@ import { WhatsappModule } from '../whatsapp/whatsapp.module';
     WaitReplyExecutor,
     IncomingMessageTrigger,
   ],
-  exports: [WorkflowEngineService]
+  exports: [WorkflowEngineService, TriggerRegistry]
 })
 export class WorkflowsModule implements OnModuleInit {
   constructor(
