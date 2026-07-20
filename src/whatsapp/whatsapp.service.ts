@@ -829,15 +829,17 @@ export class WhatsappService {
         try {
             const payload: any = {
                 messaging_product: 'whatsapp',
-                about: data.about,
-                address: data.address,
-                description: data.description,
-                email: data.email,
-                websites: data.websites,
-                vertical: data.vertical
             };
-            
-            Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
+
+            // Meta only accepts 'about' not 'description'
+            if (data.about !== undefined && data.about !== '') payload.about = data.about;
+            else if (data.description !== undefined && data.description !== '') payload.about = data.description;
+
+            if (data.address !== undefined && data.address !== '') payload.address = data.address;
+            if (data.email !== undefined && data.email !== '') payload.email = data.email;
+            // Only send websites if non-empty array
+            if (Array.isArray(data.websites) && data.websites.length > 0) payload.websites = data.websites;
+            if (data.vertical !== undefined && data.vertical !== '') payload.vertical = data.vertical;
 
             const response = await firstValueFrom(
                 this.httpService.post(`${this.graphApiBase}/${creds.phoneNumberId}/whatsapp_business_profile`, payload, {
@@ -846,8 +848,9 @@ export class WhatsappService {
             );
             return response.data;
         } catch (error: any) {
-            this.logger.error(`Failed to update business profile: ${error.response?.data?.error?.message || error.message}`);
-            throw error;
+            const metaMsg = error.response?.data?.error?.message || error.message || 'Failed to update profile';
+            this.logger.error(`Failed to update business profile: ${metaMsg}`);
+            throw new (require('@nestjs/common').BadRequestException)(metaMsg);
         }
     }
 
