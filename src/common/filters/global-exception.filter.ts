@@ -22,10 +22,22 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const message =
-      exception instanceof HttpException
-        ? exception.getResponse()
-        : 'Internal server error';
+    // Always extract a plain string message
+    let message: string;
+    if (exception instanceof HttpException) {
+      const resp = exception.getResponse();
+      if (typeof resp === 'string') {
+        message = resp;
+      } else if (typeof resp === 'object' && resp !== null) {
+        const r = resp as any;
+        const raw = r.message ?? r.error ?? 'An error occurred';
+        message = Array.isArray(raw) ? raw.join(', ') : String(raw);
+      } else {
+        message = 'An error occurred';
+      }
+    } else {
+      message = 'Internal server error';
+    }
 
     // Log the exception
     if (status >= 500) {
@@ -34,7 +46,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         exception instanceof Error ? exception.stack : JSON.stringify(exception)
       );
     } else {
-      this.logger.warn(`[${request.method}] ${request.url} - ${status} - ${JSON.stringify(message)}`);
+      this.logger.warn(`[${request.method}] ${request.url} - ${status} - ${message}`);
     }
 
     // Do not leak stack traces or internal errors to client in production

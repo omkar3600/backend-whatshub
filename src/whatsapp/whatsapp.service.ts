@@ -848,9 +848,10 @@ export class WhatsappService {
             );
             return response.data;
         } catch (error: any) {
-            const metaMsg = error.response?.data?.error?.message || error.message || 'Failed to update profile';
+            const metaMsg: string = error.response?.data?.error?.message || error.message || 'Failed to update profile';
             this.logger.error(`Failed to update business profile: ${metaMsg}`);
-            throw new (require('@nestjs/common').BadRequestException)(metaMsg);
+            const { HttpException, HttpStatus } = require('@nestjs/common');
+            throw new HttpException(metaMsg, HttpStatus.BAD_REQUEST);
         }
     }
 
