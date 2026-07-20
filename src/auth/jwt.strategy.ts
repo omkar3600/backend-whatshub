@@ -17,7 +17,10 @@ const cookieExtractor = (req: any) => {
 export class JwtStrategy extends PassportStrategy(Strategy) {
     constructor(private prisma: PrismaService, private configService: ConfigService) {
         super({
-            jwtFromRequest: ExtractJwt.fromExtractors([cookieExtractor]),
+            jwtFromRequest: ExtractJwt.fromExtractors([
+                ExtractJwt.fromAuthHeaderAsBearerToken(),
+                cookieExtractor
+            ]),
             ignoreExpiration: false,
             secretOrKey: configService.get<string>('JWT_SECRET') || process.env.JWT_SECRET || 'default_secret',
         });
