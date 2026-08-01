@@ -20,11 +20,11 @@ export declare class ConversationsController {
         updatedAt: Date;
         shopId: string;
         phoneNumberId: string | null;
+        contactId: string;
         lastMessageAt: Date;
         lastContactMessageAt: Date | null;
         unreadCount: number;
         aiPaused: boolean;
-        contactId: string;
     })[]>;
     getConversation(user: any, id: string): Promise<{
         contact: {
@@ -44,11 +44,11 @@ export declare class ConversationsController {
         updatedAt: Date;
         shopId: string;
         phoneNumberId: string | null;
+        contactId: string;
         lastMessageAt: Date;
         lastContactMessageAt: Date | null;
         unreadCount: number;
         aiPaused: boolean;
-        contactId: string;
     }>;
     findOrCreate(user: any, contactId: string): Promise<{
         contact: {
@@ -68,11 +68,11 @@ export declare class ConversationsController {
         updatedAt: Date;
         shopId: string;
         phoneNumberId: string | null;
+        contactId: string;
         lastMessageAt: Date;
         lastContactMessageAt: Date | null;
         unreadCount: number;
         aiPaused: boolean;
-        contactId: string;
     }>;
     markAsRead(user: any, id: string): Promise<{
         id: string;
@@ -80,10 +80,10 @@ export declare class ConversationsController {
         updatedAt: Date;
         shopId: string;
         phoneNumberId: string | null;
+        contactId: string;
         lastMessageAt: Date;
         lastContactMessageAt: Date | null;
         unreadCount: number;
         aiPaused: boolean;
-        contactId: string;
     }>;
 }

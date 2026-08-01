@@ -18,14 +18,29 @@ let GlobalExceptionFilter = GlobalExceptionFilter_1 = class GlobalExceptionFilte
         const status = exception instanceof common_1.HttpException
             ? exception.getStatus()
             : common_1.HttpStatus.INTERNAL_SERVER_ERROR;
-        const message = exception instanceof common_1.HttpException
-            ? exception.getResponse()
-            : 'Internal server error';
+        let message;
+        if (exception instanceof common_1.HttpException) {
+            const resp = exception.getResponse();
+            if (typeof resp === 'string') {
+                message = resp;
+            }
+            else if (typeof resp === 'object' && resp !== null) {
+                const r = resp;
+                const raw = r.message ?? r.error ?? 'An error occurred';
+                message = Array.isArray(raw) ? raw.join(', ') : String(raw);
+            }
+            else {
+                message = 'An error occurred';
+            }
+        }
+        else {
+            message = 'Internal server error';
+        }
         if (status >= 500) {
             this.logger.error(`[${request.method}] ${request.url} - ${status}`, exception instanceof Error ? exception.stack : JSON.stringify(exception));
         }
         else {
-            this.logger.warn(`[${request.method}] ${request.url} - ${status} - ${JSON.stringify(message)}`);
+            this.logger.warn(`[${request.method}] ${request.url} - ${status} - ${message}`);
         }
         const isProduction = process.env.NODE_ENV === 'production';
         response.status(status).json({

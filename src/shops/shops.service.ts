@@ -55,20 +55,18 @@ export class ShopsService {
 
         // Global Campaign Funnel
         let globalSent = 0, globalDelivered = 0, globalRead = 0, globalFailed = 0;
-        const allCampaigns = await this.prisma.campaign.findMany({
-            where: { shopId, status: 'completed' },
-            select: { stats: true }
+        const allCampaignContacts = await this.prisma.campaignContact.findMany({
+            where: { campaign: { shopId } },
+            select: { status: true }
         });
         
-        allCampaigns.forEach(c => {
-            const st = c.stats as any;
-            if (st) {
-                globalSent += (st.sent || 0);
-                globalDelivered += (st.delivered || 0);
-                globalRead += (st.read || 0);
-                globalFailed += (st.failed || 0);
-            }
-        });
+        for (const c of allCampaignContacts) {
+            const s = c.status;
+            if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(s)) globalSent++;
+            if (['delivered', 'read', 'replied', 'clicked'].includes(s)) globalDelivered++;
+            if (['read', 'replied', 'clicked'].includes(s)) globalRead++;
+            if (s === 'failed') globalFailed++;
+        }
 
         // Message Volume Chart (Last 7 Days)
         const sevenDaysAgo = new Date();

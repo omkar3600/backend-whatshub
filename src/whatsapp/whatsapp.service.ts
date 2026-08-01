@@ -664,6 +664,41 @@ export class WhatsappService {
                             },
                         });
                         this.logger.log(`[Campaign] Updated CampaignContact wamid:${messageId} → ${status}`);
+
+                        // Sync Campaign.stats JSON so DB queries (such as Dashboard Overview) stay up-to-date
+                        const campaignContacts = await this.prisma.campaignContact.findMany({
+                            where: { campaignId: existing.campaignId },
+                            select: { status: true }
+                        });
+                        let sent = 0, delivered = 0, read = 0, clicked = 0, replied = 0, failed = 0;
+                        for (const c of campaignContacts) {
+                            if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(c.status)) sent++;
+                            if (['delivered', 'read', 'replied', 'clicked'].includes(c.status)) delivered++;
+                            if (['read', 'replied', 'clicked'].includes(c.status)) read++;
+                            if (c.status === 'replied') replied++;
+                            if (c.status === 'clicked') clicked++;
+                            if (c.status === 'failed') failed++;
+                        }
+                        const camp = await this.prisma.campaign.findUnique({
+                            where: { id: existing.campaignId },
+                            select: { stats: true }
+                        });
+                        const currentMeta = (camp?.stats as any) || {};
+                        await this.prisma.campaign.update({
+                            where: { id: existing.campaignId },
+                            data: {
+                                stats: {
+                                    ...currentMeta,
+                                    total: campaignContacts.length,
+                                    sent,
+                                    delivered,
+                                    read,
+                                    clicked,
+                                    replied,
+                                    failed,
+                                }
+                            }
+                        });
                     }
                 }
             } catch (e) {

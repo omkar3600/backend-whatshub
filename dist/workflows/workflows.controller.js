@@ -37,9 +37,16 @@ let WorkflowsController = class WorkflowsController {
         return this.workflowsService.getWorkflow(shopId, id);
     }
     async createWorkflow(body) {
-        if (!body.shopId || !body.name)
-            throw new Error('shopId and name are required');
-        return this.workflowsService.createWorkflow(body.shopId, body.name);
+        if (!body.shopId || !body.name) {
+            throw new common_1.BadRequestException('shopId and name are required');
+        }
+        try {
+            return await this.workflowsService.createWorkflow(body.shopId, body.name);
+        }
+        catch (error) {
+            console.error('Failed to create workflow:', error);
+            throw new common_1.BadRequestException(error.message || 'Failed to create workflow');
+        }
     }
     async updateWorkflowGraph(id, body) {
         if (!body.shopId || !body.graph)

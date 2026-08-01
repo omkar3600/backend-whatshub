@@ -33,8 +33,7 @@ let AuthController = class AuthController {
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
-        const { access_token, ...safeResult } = result;
-        return safeResult;
+        return result;
     }
     async logout(res) {
         res.clearCookie('token', {

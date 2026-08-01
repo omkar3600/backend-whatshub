@@ -79,17 +79,30 @@ let CampaignsService = class CampaignsService {
         });
         return campaigns.map(c => {
             const configMeta = c.stats || {};
-            if (c.status === 'completed' || c.status === 'aborted') {
-                return {
-                    ...c,
-                    contacts: undefined,
-                    stats: configMeta,
-                };
+            let sentCount = 0;
+            let deliveredCount = 0;
+            let readCount = 0;
+            let clickedCount = 0;
+            let repliedCount = 0;
+            let failedCount = 0;
+            let pendingCount = 0;
+            for (const contact of c.contacts) {
+                const s = contact.status;
+                if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(s))
+                    sentCount++;
+                if (['delivered', 'read', 'replied', 'clicked'].includes(s))
+                    deliveredCount++;
+                if (['read', 'replied', 'clicked'].includes(s))
+                    readCount++;
+                if (s === 'replied')
+                    repliedCount++;
+                if (s === 'clicked')
+                    clickedCount++;
+                if (s === 'failed')
+                    failedCount++;
+                if (s === 'pending')
+                    pendingCount++;
             }
-            const statusCounts = c.contacts.reduce((acc, contact) => {
-                acc[contact.status] = (acc[contact.status] || 0) + 1;
-                return acc;
-            }, {});
             return {
                 ...c,
                 contacts: undefined,
@@ -97,12 +110,13 @@ let CampaignsService = class CampaignsService {
                     sendDelay: configMeta.sendDelay,
                     excludeUnsubscribed: configMeta.excludeUnsubscribed,
                     total: c.contacts.length,
-                    sent: statusCounts['sent'] || 0,
-                    delivered: statusCounts['delivered'] || 0,
-                    read: statusCounts['read'] || 0,
-                    clicked: statusCounts['clicked'] || 0,
-                    failed: statusCounts['failed'] || 0,
-                    pending: statusCounts['pending'] || 0,
+                    sent: sentCount,
+                    delivered: deliveredCount,
+                    read: readCount,
+                    replied: repliedCount,
+                    clicked: clickedCount,
+                    failed: failedCount,
+                    pending: pendingCount,
                 },
             };
         });
@@ -167,15 +181,14 @@ let CampaignsService = class CampaignsService {
         if (!campaign)
             throw new common_1.NotFoundException('Campaign not found');
         const allContacts = campaign.contacts;
-        const readPhones = new Set(allContacts.filter(c => c.status === 'read' || c.status === 'replied').map(c => c.phone));
         const byStatus = {
-            sent: allContacts.filter(c => c.status === 'sent'),
-            delivered: allContacts.filter(c => c.status === 'delivered'),
-            read: allContacts.filter(c => c.status === 'read'),
+            sent: allContacts.filter(c => ['sent', 'delivered', 'read', 'replied', 'clicked'].includes(c.status)),
+            delivered: allContacts.filter(c => ['delivered', 'read', 'replied', 'clicked'].includes(c.status)),
+            read: allContacts.filter(c => ['read', 'replied', 'clicked'].includes(c.status)),
             replied: allContacts.filter(c => c.status === 'replied'),
             clicked: allContacts.filter(c => c.status === 'clicked'),
             failed: allContacts.filter(c => c.status === 'failed'),
-            unread: allContacts.filter(c => ['delivered', 'sent'].includes(c.status) && !readPhones.has(c.phone)),
+            unread: allContacts.filter(c => ['sent', 'delivered'].includes(c.status)),
         };
         const stats = {
             total: allContacts.length,

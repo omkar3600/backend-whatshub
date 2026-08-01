@@ -8,6 +8,7 @@ export declare class AuthController {
         message: string;
     }>;
     login(body: LoginDto, res: Response): Promise<{
+        access_token: string;
         user: {
             id: string;
             username: string;

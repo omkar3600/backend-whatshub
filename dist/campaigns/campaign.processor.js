@@ -155,6 +155,7 @@ let CampaignProcessor = class CampaignProcessor extends bullmq_1.WorkerHost {
                         });
                         await this.prisma.message.create({
                             data: {
+                                id: wamid || undefined,
                                 shopId: campaign.shopId,
                                 conversationId: conversation.id,
                                 direction: 'outbound',
@@ -199,11 +200,40 @@ let CampaignProcessor = class CampaignProcessor extends bullmq_1.WorkerHost {
                 }
             }
         }
+        const finalContacts = await this.prisma.campaignContact.findMany({
+            where: { campaignId },
+            select: { status: true }
+        });
+        let finalSent = 0, finalDelivered = 0, finalRead = 0, finalClicked = 0, finalReplied = 0, finalFailed = 0;
+        for (const fc of finalContacts) {
+            const s = fc.status;
+            if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(s))
+                finalSent++;
+            if (['delivered', 'read', 'replied', 'clicked'].includes(s))
+                finalDelivered++;
+            if (['read', 'replied', 'clicked'].includes(s))
+                finalRead++;
+            if (s === 'replied')
+                finalReplied++;
+            if (s === 'clicked')
+                finalClicked++;
+            if (s === 'failed')
+                finalFailed++;
+        }
         await this.prisma.campaign.update({
             where: { id: campaignId },
             data: {
                 status: aborted ? 'aborted' : 'completed',
-                stats: { ...campaignMeta, sent, delivered: 0, read: 0, clicked: 0, failed },
+                stats: {
+                    ...campaignMeta,
+                    total: finalContacts.length,
+                    sent: finalSent,
+                    delivered: finalDelivered,
+                    read: finalRead,
+                    clicked: finalClicked,
+                    replied: finalReplied,
+                    failed: finalFailed,
+                },
                 failureHistory: failureHistory
             }
         });

@@ -59,19 +59,21 @@ let ShopsService = ShopsService_1 = class ShopsService {
             select: { id: true, name: true, status: true, stats: true, createdAt: true }
         });
         let globalSent = 0, globalDelivered = 0, globalRead = 0, globalFailed = 0;
-        const allCampaigns = await this.prisma.campaign.findMany({
-            where: { shopId, status: 'completed' },
-            select: { stats: true }
+        const allCampaignContacts = await this.prisma.campaignContact.findMany({
+            where: { campaign: { shopId } },
+            select: { status: true }
         });
-        allCampaigns.forEach(c => {
-            const st = c.stats;
-            if (st) {
-                globalSent += (st.sent || 0);
-                globalDelivered += (st.delivered || 0);
-                globalRead += (st.read || 0);
-                globalFailed += (st.failed || 0);
-            }
-        });
+        for (const c of allCampaignContacts) {
+            const s = c.status;
+            if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(s))
+                globalSent++;
+            if (['delivered', 'read', 'replied', 'clicked'].includes(s))
+                globalDelivered++;
+            if (['read', 'replied', 'clicked'].includes(s))
+                globalRead++;
+            if (s === 'failed')
+                globalFailed++;
+        }
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
         sevenDaysAgo.setHours(0, 0, 0, 0);

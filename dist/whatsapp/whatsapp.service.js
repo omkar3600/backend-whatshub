@@ -571,6 +571,45 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
                             },
                         });
                         this.logger.log(`[Campaign] Updated CampaignContact wamid:${messageId} → ${status}`);
+                        const campaignContacts = await this.prisma.campaignContact.findMany({
+                            where: { campaignId: existing.campaignId },
+                            select: { status: true }
+                        });
+                        let sent = 0, delivered = 0, read = 0, clicked = 0, replied = 0, failed = 0;
+                        for (const c of campaignContacts) {
+                            if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(c.status))
+                                sent++;
+                            if (['delivered', 'read', 'replied', 'clicked'].includes(c.status))
+                                delivered++;
+                            if (['read', 'replied', 'clicked'].includes(c.status))
+                                read++;
+                            if (c.status === 'replied')
+                                replied++;
+                            if (c.status === 'clicked')
+                                clicked++;
+                            if (c.status === 'failed')
+                                failed++;
+                        }
+                        const camp = await this.prisma.campaign.findUnique({
+                            where: { id: existing.campaignId },
+                            select: { stats: true }
+                        });
+                        const currentMeta = camp?.stats || {};
+                        await this.prisma.campaign.update({
+                            where: { id: existing.campaignId },
+                            data: {
+                                stats: {
+                                    ...currentMeta,
+                                    total: campaignContacts.length,
+                                    sent,
+                                    delivered,
+                                    read,
+                                    clicked,
+                                    replied,
+                                    failed,
+                                }
+                            }
+                        });
                     }
                 }
             }
@@ -714,22 +753,29 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
         try {
             const payload = {
                 messaging_product: 'whatsapp',
-                about: data.about,
-                address: data.address,
-                description: data.description,
-                email: data.email,
-                websites: data.websites,
-                vertical: data.vertical
             };
-            Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
+            if (data.about !== undefined && data.about !== '')
+                payload.about = data.about;
+            else if (data.description !== undefined && data.description !== '')
+                payload.about = data.description;
+            if (data.address !== undefined && data.address !== '')
+                payload.address = data.address;
+            if (data.email !== undefined && data.email !== '')
+                payload.email = data.email;
+            if (Array.isArray(data.websites) && data.websites.length > 0)
+                payload.websites = data.websites;
+            if (data.vertical !== undefined && data.vertical !== '')
+                payload.vertical = data.vertical;
             const response = await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${this.graphApiBase}/${creds.phoneNumberId}/whatsapp_business_profile`, payload, {
                 headers: { Authorization: `Bearer ${creds.accessToken}` }
             }));
             return response.data;
         }
         catch (error) {
-            this.logger.error(`Failed to update business profile: ${error.response?.data?.error?.message || error.message}`);
-            throw error;
+            const metaMsg = error.response?.data?.error?.message || error.message || 'Failed to update profile';
+            this.logger.error(`Failed to update business profile: ${metaMsg}`);
+            const { HttpException, HttpStatus } = require('@nestjs/common');
+            throw new HttpException(metaMsg, HttpStatus.BAD_REQUEST);
         }
     }
     async uploadProfilePicture(shopId, file) {

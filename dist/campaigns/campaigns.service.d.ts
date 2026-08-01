@@ -23,7 +23,18 @@ export declare class CampaignsService {
     }>;
     getCampaigns(shopId: string): Promise<{
         contacts: undefined;
-        stats: any;
+        stats: {
+            sendDelay: any;
+            excludeUnsubscribed: any;
+            total: number;
+            sent: number;
+            delivered: number;
+            read: number;
+            replied: number;
+            clicked: number;
+            failed: number;
+            pending: number;
+        };
         template: {
             id: string;
             status: string;
@@ -124,8 +135,8 @@ export declare class CampaignsService {
                 id: string;
                 status: string;
                 updatedAt: Date;
-                contactId: string | null;
                 campaignId: string;
+                contactId: string | null;
                 wamid: string | null;
                 failReason: string | null;
                 sentAt: Date;
@@ -164,8 +175,8 @@ export declare class CampaignsService {
                 id: string;
                 status: string;
                 updatedAt: Date;
-                contactId: string | null;
                 campaignId: string;
+                contactId: string | null;
                 wamid: string | null;
                 failReason: string | null;
                 sentAt: Date;
@@ -176,8 +187,8 @@ export declare class CampaignsService {
                 id: string;
                 status: string;
                 updatedAt: Date;
-                contactId: string | null;
                 campaignId: string;
+                contactId: string | null;
                 wamid: string | null;
                 failReason: string | null;
                 sentAt: Date;
@@ -188,8 +199,8 @@ export declare class CampaignsService {
                 id: string;
                 status: string;
                 updatedAt: Date;
-                contactId: string | null;
                 campaignId: string;
+                contactId: string | null;
                 wamid: string | null;
                 failReason: string | null;
                 sentAt: Date;
@@ -200,8 +211,8 @@ export declare class CampaignsService {
                 id: string;
                 status: string;
                 updatedAt: Date;
-                contactId: string | null;
                 campaignId: string;
+                contactId: string | null;
                 wamid: string | null;
                 failReason: string | null;
                 sentAt: Date;
@@ -212,8 +223,8 @@ export declare class CampaignsService {
                 id: string;
                 status: string;
                 updatedAt: Date;
-                contactId: string | null;
                 campaignId: string;
+                contactId: string | null;
                 wamid: string | null;
                 failReason: string | null;
                 sentAt: Date;
@@ -224,8 +235,8 @@ export declare class CampaignsService {
                 id: string;
                 status: string;
                 updatedAt: Date;
-                contactId: string | null;
                 campaignId: string;
+                contactId: string | null;
                 wamid: string | null;
                 failReason: string | null;
                 sentAt: Date;
@@ -236,8 +247,8 @@ export declare class CampaignsService {
                 id: string;
                 status: string;
                 updatedAt: Date;
-                contactId: string | null;
                 campaignId: string;
+                contactId: string | null;
                 wamid: string | null;
                 failReason: string | null;
                 sentAt: Date;
