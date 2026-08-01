@@ -207,7 +207,7 @@ let CampaignProcessor = class CampaignProcessor extends bullmq_1.WorkerHost {
         let finalSent = 0, finalDelivered = 0, finalRead = 0, finalClicked = 0, finalReplied = 0, finalFailed = 0;
         for (const fc of finalContacts) {
             const s = fc.status;
-            if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(s))
+            if (['sent', 'delivered', 'read', 'replied', 'clicked', 'failed'].includes(s))
                 finalSent++;
             if (['delivered', 'read', 'replied', 'clicked'].includes(s))
                 finalDelivered++;

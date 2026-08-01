@@ -62,7 +62,7 @@ export class ShopsService {
         
         for (const c of allCampaignContacts) {
             const s = c.status;
-            if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(s)) globalSent++;
+            if (['sent', 'delivered', 'read', 'replied', 'clicked', 'failed'].includes(s)) globalSent++;
             if (['delivered', 'read', 'replied', 'clicked'].includes(s)) globalDelivered++;
             if (['read', 'replied', 'clicked'].includes(s)) globalRead++;
             if (s === 'failed') globalFailed++;

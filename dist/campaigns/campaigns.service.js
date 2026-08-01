@@ -88,7 +88,7 @@ let CampaignsService = class CampaignsService {
             let pendingCount = 0;
             for (const contact of c.contacts) {
                 const s = contact.status;
-                if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(s))
+                if (['sent', 'delivered', 'read', 'replied', 'clicked', 'failed'].includes(s))
                     sentCount++;
                 if (['delivered', 'read', 'replied', 'clicked'].includes(s))
                     deliveredCount++;
@@ -203,7 +203,7 @@ let CampaignsService = class CampaignsService {
         const allContactsList = Array.from(allContactsMap.values());
         const byStatus = {
             all: allContactsList,
-            sent: allContactsList.filter(c => ['sent', 'delivered', 'read', 'replied', 'clicked'].includes(c.status)),
+            sent: allContactsList.filter(c => ['sent', 'delivered', 'read', 'replied', 'clicked', 'failed'].includes(c.status)),
             delivered: allContactsList.filter(c => ['delivered', 'read', 'replied', 'clicked'].includes(c.status)),
             read: allContactsList.filter(c => ['read', 'replied', 'clicked'].includes(c.status)),
             replied: allContactsList.filter(c => c.status === 'replied'),

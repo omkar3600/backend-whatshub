@@ -324,7 +324,7 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
                         });
                         let sent = 0, delivered = 0, read = 0, clicked = 0, replied = 0, failed = 0;
                         for (const c of campaignContacts) {
-                            if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(c.status))
+                            if (['sent', 'delivered', 'read', 'replied', 'clicked', 'failed'].includes(c.status))
                                 sent++;
                             if (['delivered', 'read', 'replied', 'clicked'].includes(c.status))
                                 delivered++;

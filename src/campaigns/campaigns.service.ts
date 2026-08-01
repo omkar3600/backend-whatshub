@@ -87,7 +87,7 @@ export class CampaignsService {
 
             for (const contact of c.contacts) {
                 const s = contact.status;
-                if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(s)) sentCount++;
+                if (['sent', 'delivered', 'read', 'replied', 'clicked', 'failed'].includes(s)) sentCount++;
                 if (['delivered', 'read', 'replied', 'clicked'].includes(s)) deliveredCount++;
                 if (['read', 'replied', 'clicked'].includes(s)) readCount++;
                 if (s === 'replied') repliedCount++;
@@ -216,7 +216,7 @@ export class CampaignsService {
 
         const byStatus = {
             all: allContactsList,
-            sent: allContactsList.filter(c => ['sent', 'delivered', 'read', 'replied', 'clicked'].includes(c.status)),
+            sent: allContactsList.filter(c => ['sent', 'delivered', 'read', 'replied', 'clicked', 'failed'].includes(c.status)),
             delivered: allContactsList.filter(c => ['delivered', 'read', 'replied', 'clicked'].includes(c.status)),
             read: allContactsList.filter(c => ['read', 'replied', 'clicked'].includes(c.status)),
             replied: allContactsList.filter(c => c.status === 'replied'),

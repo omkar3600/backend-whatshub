@@ -65,7 +65,7 @@ let ShopsService = ShopsService_1 = class ShopsService {
         });
         for (const c of allCampaignContacts) {
             const s = c.status;
-            if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(s))
+            if (['sent', 'delivered', 'read', 'replied', 'clicked', 'failed'].includes(s))
                 globalSent++;
             if (['delivered', 'read', 'replied', 'clicked'].includes(s))
                 globalDelivered++;
