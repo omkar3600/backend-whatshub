@@ -131,15 +131,19 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
         if (body.object === 'whatsapp_business_account') {
             for (const entry of body.entry) {
                 const wabaId = entry.id;
-                const shopId = await this.getShopByWabaId(wabaId);
-                if (!shopId) {
-                    this.logger.warn(`Received webhook for unknown WABA ID: ${wabaId}`);
-                    await this.logWebhookAudit(null, null, 'unknown_waba', null, body, 'failed', `Unknown WABA ID: ${wabaId}`);
-                    continue;
-                }
                 for (const change of entry.changes || []) {
                     const value = change.value;
                     const phoneNumberId = value?.metadata?.phone_number_id;
+                    let shopId = await this.getShopByWabaId(wabaId);
+                    if (!shopId && phoneNumberId) {
+                        const creds = await this.getCredentialsByPhoneNumberId(phoneNumberId);
+                        shopId = creds?.shopId || null;
+                    }
+                    if (!shopId) {
+                        this.logger.warn(`Received webhook for unknown WABA ID: ${wabaId} / Phone ID: ${phoneNumberId}`);
+                        await this.logWebhookAudit(null, phoneNumberId, 'unknown_waba', null, body, 'failed', `Unknown WABA/Phone ID: ${wabaId}/${phoneNumberId}`);
+                        continue;
+                    }
                     try {
                         if (value.messages) {
                             await this.handleIncomingMessage(shopId, phoneNumberId, value.contacts[0], value.messages[0]);
@@ -236,6 +240,136 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
             },
             data: { status }
         });
+    }
+    async handleMessageStatus(shopId, statusData) {
+        const { id: messageId, status, recipient_id: recipientPhone } = statusData;
+        let failReason = null;
+        if (status === 'failed' && statusData.errors && statusData.errors.length > 0) {
+            failReason = statusData.errors[0].title || statusData.errors[0].message || 'Unknown error';
+        }
+        let message = null;
+        try {
+            message = await this.prisma.message.update({
+                where: { id: messageId },
+                data: { status },
+            });
+            if (message) {
+                this.chatGateway.notifyMessageStatus(shopId, {
+                    conversationId: message.conversationId,
+                    messageId: messageId,
+                    status: status,
+                });
+            }
+        }
+        catch (e) {
+            this.logger.warn(`Status update failed for message ${messageId}. It might not exist.`);
+        }
+        if (['delivered', 'read', 'sent', 'replied', 'failed'].includes(status)) {
+            try {
+                const statusRank = { failed: -1, pending: 0, sent: 1, delivered: 2, read: 3, clicked: 4, replied: 5 };
+                const incomingRank = statusRank[status] ?? 0;
+                let existing = await this.prisma.campaignContact.findFirst({
+                    where: { wamid: messageId },
+                });
+                if (!existing && recipientPhone) {
+                    const cleanPhone = recipientPhone.replace(/\D/g, '');
+                    const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+                    existing = await this.prisma.campaignContact.findFirst({
+                        where: {
+                            OR: [
+                                { phone: cleanPhone },
+                                { phone: `+${cleanPhone}` },
+                                { phone: { endsWith: cleanPhone } },
+                            ],
+                            sentAt: { gte: fortyEightHoursAgo },
+                            campaign: { shopId },
+                        },
+                        orderBy: { sentAt: 'desc' },
+                    });
+                }
+                if (existing) {
+                    const existingRank = statusRank[existing.status] ?? 0;
+                    if (status === 'failed' || incomingRank > existingRank) {
+                        await this.prisma.campaignContact.update({
+                            where: { id: existing.id },
+                            data: {
+                                status,
+                                ...(failReason ? { failReason } : {}),
+                                ...(existing.wamid ? {} : { wamid: messageId }),
+                            },
+                        });
+                        this.logger.log(`[Campaign] Updated CampaignContact wamid:${messageId} phone:${recipientPhone} → ${status}`);
+                        if (status === 'failed' && failReason) {
+                            const camp = await this.prisma.campaign.findUnique({
+                                where: { id: existing.campaignId },
+                                select: { failureHistory: true }
+                            });
+                            const history = camp?.failureHistory || [];
+                            if (!history.some(h => h.phone === existing.phone)) {
+                                history.push({
+                                    phone: existing.phone,
+                                    name: existing.name,
+                                    reason: failReason,
+                                    timestamp: new Date()
+                                });
+                                await this.prisma.campaign.update({
+                                    where: { id: existing.campaignId },
+                                    data: { failureHistory: history }
+                                });
+                            }
+                        }
+                        const campaignContacts = await this.prisma.campaignContact.findMany({
+                            where: { campaignId: existing.campaignId },
+                            select: { status: true }
+                        });
+                        let sent = 0, delivered = 0, read = 0, clicked = 0, replied = 0, failed = 0;
+                        for (const c of campaignContacts) {
+                            if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(c.status))
+                                sent++;
+                            if (['delivered', 'read', 'replied', 'clicked'].includes(c.status))
+                                delivered++;
+                            if (['read', 'replied', 'clicked'].includes(c.status))
+                                read++;
+                            if (c.status === 'replied')
+                                replied++;
+                            if (c.status === 'clicked')
+                                clicked++;
+                            if (c.status === 'failed')
+                                failed++;
+                        }
+                        const camp = await this.prisma.campaign.findUnique({
+                            where: { id: existing.campaignId },
+                            select: { stats: true }
+                        });
+                        const currentMeta = camp?.stats || {};
+                        await this.prisma.campaign.update({
+                            where: { id: existing.campaignId },
+                            data: {
+                                stats: {
+                                    ...currentMeta,
+                                    total: campaignContacts.length,
+                                    sent,
+                                    delivered,
+                                    read,
+                                    clicked,
+                                    replied,
+                                    failed,
+                                }
+                            }
+                        });
+                        this.chatGateway.server.to(shopId).emit('campaignContactUpdated', {
+                            campaignId: existing.campaignId,
+                            contactId: existing.id,
+                            phone: existing.phone,
+                            status: status,
+                        });
+                    }
+                }
+            }
+            catch (e) {
+                this.logger.warn(`Failed to update CampaignContact for wamid ${messageId}: ${e}`);
+            }
+        }
     }
     async handleIncomingMessage(shopId, phoneNumberId, contactData, messageData) {
         const contact = await this.prisma.contact.upsert({
@@ -527,94 +661,6 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
             }
             else {
                 this.logger.log(`[Chatbot] AI paused for conversation ${conversation.id} — skipping.`);
-            }
-        }
-    }
-    async handleMessageStatus(shopId, statusData) {
-        const { id: messageId, status, recipient_id: recipientPhone } = statusData;
-        let failReason = null;
-        if (status === 'failed' && statusData.errors && statusData.errors.length > 0) {
-            failReason = statusData.errors[0].title || statusData.errors[0].message || 'Unknown error';
-        }
-        let message = null;
-        try {
-            message = await this.prisma.message.update({
-                where: { id: messageId },
-                data: { status },
-            });
-            if (message) {
-                this.chatGateway.notifyMessageStatus(shopId, {
-                    conversationId: message.conversationId,
-                    messageId: messageId,
-                    status: status,
-                });
-            }
-        }
-        catch (e) {
-            this.logger.warn(`Status update failed for message ${messageId}. It might not exist.`);
-        }
-        if (['delivered', 'read', 'sent', 'replied', 'failed'].includes(status)) {
-            try {
-                const statusRank = { failed: -1, pending: 0, sent: 1, delivered: 2, read: 3, clicked: 4, replied: 5 };
-                const incomingRank = statusRank[status] ?? 0;
-                const existing = await this.prisma.campaignContact.findFirst({
-                    where: { wamid: messageId },
-                });
-                if (existing) {
-                    const existingRank = statusRank[existing.status] ?? 0;
-                    if (status === 'failed' || incomingRank > existingRank) {
-                        await this.prisma.campaignContact.update({
-                            where: { id: existing.id },
-                            data: {
-                                status,
-                                ...(failReason ? { failReason } : {})
-                            },
-                        });
-                        this.logger.log(`[Campaign] Updated CampaignContact wamid:${messageId} → ${status}`);
-                        const campaignContacts = await this.prisma.campaignContact.findMany({
-                            where: { campaignId: existing.campaignId },
-                            select: { status: true }
-                        });
-                        let sent = 0, delivered = 0, read = 0, clicked = 0, replied = 0, failed = 0;
-                        for (const c of campaignContacts) {
-                            if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(c.status))
-                                sent++;
-                            if (['delivered', 'read', 'replied', 'clicked'].includes(c.status))
-                                delivered++;
-                            if (['read', 'replied', 'clicked'].includes(c.status))
-                                read++;
-                            if (c.status === 'replied')
-                                replied++;
-                            if (c.status === 'clicked')
-                                clicked++;
-                            if (c.status === 'failed')
-                                failed++;
-                        }
-                        const camp = await this.prisma.campaign.findUnique({
-                            where: { id: existing.campaignId },
-                            select: { stats: true }
-                        });
-                        const currentMeta = camp?.stats || {};
-                        await this.prisma.campaign.update({
-                            where: { id: existing.campaignId },
-                            data: {
-                                stats: {
-                                    ...currentMeta,
-                                    total: campaignContacts.length,
-                                    sent,
-                                    delivered,
-                                    read,
-                                    clicked,
-                                    replied,
-                                    failed,
-                                }
-                            }
-                        });
-                    }
-                }
-            }
-            catch (e) {
-                this.logger.warn(`Failed to update CampaignContact for wamid ${messageId}: ${e}`);
             }
         }
     }

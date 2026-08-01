@@ -32,8 +32,8 @@ export declare class WhatsappService {
     processWebhookEvent(body: any): Promise<void>;
     private handlePhoneNumberNameUpdate;
     private handleTemplateStatusUpdate;
-    private handleIncomingMessage;
     private handleMessageStatus;
+    private handleIncomingMessage;
     markMessageAsRead(shopId: string, messageId: string): Promise<void>;
     sendOutboundMessage(shopId: string, toPhone: string, type: string, content: any, mediaUrl?: string): Promise<any>;
     private logWebhookAudit;
