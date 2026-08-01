@@ -180,18 +180,39 @@ let CampaignsService = class CampaignsService {
         });
         if (!campaign)
             throw new common_1.NotFoundException('Campaign not found');
-        const allContacts = campaign.contacts;
+        const allContactsMap = new Map();
+        for (const c of campaign.contacts) {
+            allContactsMap.set(c.phone, c);
+        }
+        const failHist = campaign.failureHistory || [];
+        for (const fh of failHist) {
+            if (fh.phone && !allContactsMap.has(fh.phone)) {
+                allContactsMap.set(fh.phone, {
+                    id: `fh-${fh.phone}`,
+                    campaignId,
+                    contactId: null,
+                    phone: fh.phone,
+                    name: fh.name || fh.phone,
+                    status: 'failed',
+                    failReason: fh.reason || 'Failed to send',
+                    sentAt: fh.timestamp || campaign.createdAt,
+                    updatedAt: fh.timestamp || campaign.createdAt,
+                });
+            }
+        }
+        const allContactsList = Array.from(allContactsMap.values());
         const byStatus = {
-            sent: allContacts.filter(c => ['sent', 'delivered', 'read', 'replied', 'clicked'].includes(c.status)),
-            delivered: allContacts.filter(c => ['delivered', 'read', 'replied', 'clicked'].includes(c.status)),
-            read: allContacts.filter(c => ['read', 'replied', 'clicked'].includes(c.status)),
-            replied: allContacts.filter(c => c.status === 'replied'),
-            clicked: allContacts.filter(c => c.status === 'clicked'),
-            failed: allContacts.filter(c => c.status === 'failed'),
-            unread: allContacts.filter(c => ['sent', 'delivered'].includes(c.status)),
+            all: allContactsList,
+            sent: allContactsList.filter(c => ['sent', 'delivered', 'read', 'replied', 'clicked'].includes(c.status)),
+            delivered: allContactsList.filter(c => ['delivered', 'read', 'replied', 'clicked'].includes(c.status)),
+            read: allContactsList.filter(c => ['read', 'replied', 'clicked'].includes(c.status)),
+            replied: allContactsList.filter(c => c.status === 'replied'),
+            clicked: allContactsList.filter(c => c.status === 'clicked'),
+            failed: allContactsList.filter(c => c.status === 'failed'),
+            unread: allContactsList.filter(c => ['sent', 'delivered'].includes(c.status)),
         };
         const stats = {
-            total: allContacts.length,
+            total: allContactsList.length,
             sent: byStatus.sent.length,
             delivered: byStatus.delivered.length,
             read: byStatus.read.length,
@@ -231,13 +252,18 @@ let CampaignsService = class CampaignsService {
     async resendFailed(shopId, campaignId) {
         const original = await this.prisma.campaign.findFirst({
             where: { id: campaignId, shopId },
-            include: { template: true }
+            include: { template: true, contacts: { where: { status: 'failed' } } }
         });
-        if (!original || !original.failureHistory) {
-            throw new common_1.NotFoundException('Campaign or failure history not found');
+        if (!original) {
+            throw new common_1.NotFoundException('Campaign not found');
         }
-        const failedList = original.failureHistory;
-        if (failedList.length === 0)
+        const failedPhones = new Set();
+        original.contacts.forEach(c => failedPhones.add(c.phone));
+        const failHist = original.failureHistory || [];
+        failHist.forEach(f => { if (f.phone)
+            failedPhones.add(f.phone); });
+        const phonesList = Array.from(failedPhones);
+        if (phonesList.length === 0)
             return { message: 'No failed contacts to resend' };
         const retryCampaign = await this.prisma.campaign.create({
             data: {
@@ -247,7 +273,7 @@ let CampaignsService = class CampaignsService {
                 status: 'processing',
                 scheduledAt: new Date(),
                 templateParams: original.templateParams,
-                targetPhones: (failedList.map(f => f.phone))
+                targetPhones: phonesList
             }
         });
         await this.campaignsQueue.add('processCampaign', {

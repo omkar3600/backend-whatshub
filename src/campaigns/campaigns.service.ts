@@ -187,19 +187,46 @@ export class CampaignsService {
 
         if (!campaign) throw new NotFoundException('Campaign not found');
 
-        const allContacts = campaign.contacts;
+        const allContactsMap = new Map<string, any>();
+
+        // 1. Add all CampaignContact entries
+        for (const c of campaign.contacts) {
+            allContactsMap.set(c.phone, c);
+        }
+
+        // 2. Also merge any failures recorded in campaign.failureHistory
+        const failHist = (campaign.failureHistory as any[]) || [];
+        for (const fh of failHist) {
+            if (fh.phone && !allContactsMap.has(fh.phone)) {
+                allContactsMap.set(fh.phone, {
+                    id: `fh-${fh.phone}`,
+                    campaignId,
+                    contactId: null,
+                    phone: fh.phone,
+                    name: fh.name || fh.phone,
+                    status: 'failed',
+                    failReason: fh.reason || 'Failed to send',
+                    sentAt: fh.timestamp || campaign.createdAt,
+                    updatedAt: fh.timestamp || campaign.createdAt,
+                });
+            }
+        }
+
+        const allContactsList = Array.from(allContactsMap.values());
+
         const byStatus = {
-            sent: allContacts.filter(c => ['sent', 'delivered', 'read', 'replied', 'clicked'].includes(c.status)),
-            delivered: allContacts.filter(c => ['delivered', 'read', 'replied', 'clicked'].includes(c.status)),
-            read: allContacts.filter(c => ['read', 'replied', 'clicked'].includes(c.status)),
-            replied: allContacts.filter(c => c.status === 'replied'),
-            clicked: allContacts.filter(c => c.status === 'clicked'),
-            failed: allContacts.filter(c => c.status === 'failed'),
-            unread: allContacts.filter(c => ['sent', 'delivered'].includes(c.status)),
+            all: allContactsList,
+            sent: allContactsList.filter(c => ['sent', 'delivered', 'read', 'replied', 'clicked'].includes(c.status)),
+            delivered: allContactsList.filter(c => ['delivered', 'read', 'replied', 'clicked'].includes(c.status)),
+            read: allContactsList.filter(c => ['read', 'replied', 'clicked'].includes(c.status)),
+            replied: allContactsList.filter(c => c.status === 'replied'),
+            clicked: allContactsList.filter(c => c.status === 'clicked'),
+            failed: allContactsList.filter(c => c.status === 'failed'),
+            unread: allContactsList.filter(c => ['sent', 'delivered'].includes(c.status)),
         };
 
         const stats = {
-            total: allContacts.length,
+            total: allContactsList.length,
             sent: byStatus.sent.length,
             delivered: byStatus.delivered.length,
             read: byStatus.read.length,
@@ -247,15 +274,24 @@ export class CampaignsService {
     async resendFailed(shopId: string, campaignId: string) {
         const original = await this.prisma.campaign.findFirst({
             where: { id: campaignId, shopId },
-            include: { template: true }
+            include: { template: true, contacts: { where: { status: 'failed' } } }
         });
 
-        if (!original || !original.failureHistory) {
-            throw new NotFoundException('Campaign or failure history not found');
+        if (!original) {
+            throw new NotFoundException('Campaign not found');
         }
 
-        const failedList = original.failureHistory as any[];
-        if (failedList.length === 0) return { message: 'No failed contacts to resend' };
+        const failedPhones = new Set<string>();
+
+        // 1. Collect from CampaignContact entries with status === 'failed'
+        original.contacts.forEach(c => failedPhones.add(c.phone));
+
+        // 2. Collect from failureHistory JSON array
+        const failHist = (original.failureHistory as any[]) || [];
+        failHist.forEach(f => { if (f.phone) failedPhones.add(f.phone); });
+
+        const phonesList = Array.from(failedPhones);
+        if (phonesList.length === 0) return { message: 'No failed contacts to resend' };
 
         const retryCampaign = await this.prisma.campaign.create({
             data: {
@@ -265,7 +301,7 @@ export class CampaignsService {
                 status: 'processing',
                 scheduledAt: new Date(),
                 templateParams: original.templateParams as any,
-                targetPhones: (failedList.map(f => f.phone)) as any
+                targetPhones: phonesList
             }
         });
 

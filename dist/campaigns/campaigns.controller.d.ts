@@ -112,90 +112,14 @@ export declare class CampaignsController {
             unread: number;
         };
         contacts: {
-            sent: {
-                name: string;
-                phone: string;
-                id: string;
-                status: string;
-                updatedAt: Date;
-                campaignId: string;
-                contactId: string | null;
-                wamid: string | null;
-                failReason: string | null;
-                sentAt: Date;
-            }[];
-            delivered: {
-                name: string;
-                phone: string;
-                id: string;
-                status: string;
-                updatedAt: Date;
-                campaignId: string;
-                contactId: string | null;
-                wamid: string | null;
-                failReason: string | null;
-                sentAt: Date;
-            }[];
-            read: {
-                name: string;
-                phone: string;
-                id: string;
-                status: string;
-                updatedAt: Date;
-                campaignId: string;
-                contactId: string | null;
-                wamid: string | null;
-                failReason: string | null;
-                sentAt: Date;
-            }[];
-            replied: {
-                name: string;
-                phone: string;
-                id: string;
-                status: string;
-                updatedAt: Date;
-                campaignId: string;
-                contactId: string | null;
-                wamid: string | null;
-                failReason: string | null;
-                sentAt: Date;
-            }[];
-            clicked: {
-                name: string;
-                phone: string;
-                id: string;
-                status: string;
-                updatedAt: Date;
-                campaignId: string;
-                contactId: string | null;
-                wamid: string | null;
-                failReason: string | null;
-                sentAt: Date;
-            }[];
-            failed: {
-                name: string;
-                phone: string;
-                id: string;
-                status: string;
-                updatedAt: Date;
-                campaignId: string;
-                contactId: string | null;
-                wamid: string | null;
-                failReason: string | null;
-                sentAt: Date;
-            }[];
-            unread: {
-                name: string;
-                phone: string;
-                id: string;
-                status: string;
-                updatedAt: Date;
-                campaignId: string;
-                contactId: string | null;
-                wamid: string | null;
-                failReason: string | null;
-                sentAt: Date;
-            }[];
+            all: any[];
+            sent: any[];
+            delivered: any[];
+            read: any[];
+            replied: any[];
+            clicked: any[];
+            failed: any[];
+            unread: any[];
         };
     }>;
     addTagsToContacts(user: any, id: string, body: any): Promise<{
