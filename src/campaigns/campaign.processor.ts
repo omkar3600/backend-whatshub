@@ -2,6 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
+import { normalizePhone } from '../common/utils/phone-normalizer';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -61,7 +62,7 @@ export class CampaignProcessor extends WorkerHost {
         const targetFilters = campaign.targetFilters as any;
         const campaignMeta = (campaign.stats as any) || {};
         const excludeUnsubscribed = campaignMeta.excludeUnsubscribed ?? false;
-        const sendDelay: number = campaignMeta.sendDelay ?? 300;
+        const sendDelay: number = campaignMeta.sendDelay ?? 50;
 
         const failureHistory: { phone: string; name: string; reason: string; timestamp: Date }[] = [];
         let aborted = false;
@@ -72,12 +73,20 @@ export class CampaignProcessor extends WorkerHost {
             let targetList: { phone: string; name: string; contactId?: string | null }[] = [];
 
             if (targetPhones && targetPhones.length > 0) {
+                const normalizedTargetPhones = targetPhones.map(p => normalizePhone(p) || p);
                 const contacts = await this.prisma.contact.findMany({
-                    where: { shopId: campaign.shopId, phone: { in: targetPhones } }
+                    where: { shopId: campaign.shopId }
                 });
-                const contactMap = new Map(contacts.map(c => [c.phone, c]));
+                const contactMap = new Map<string, any>();
+                for (const c of contacts) {
+                    const normKey = normalizePhone(c.phone) || c.phone;
+                    contactMap.set(normKey, c);
+                }
 
-                for (const phone of targetPhones) {
+                const seenPhones = new Set<string>();
+                for (const phone of normalizedTargetPhones) {
+                    if (seenPhones.has(phone)) continue;
+                    seenPhones.add(phone);
                     const matched = contactMap.get(phone);
                     targetList.push({
                         phone,

@@ -289,7 +289,8 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
                 }
                 if (existing) {
                     const existingRank = statusRank[existing.status] ?? 0;
-                    if (status === 'failed' || incomingRank > existingRank) {
+                    const shouldUpdate = status === 'failed' ? (existingRank < 3) : (incomingRank > existingRank);
+                    if (shouldUpdate) {
                         await this.prisma.campaignContact.update({
                             where: { id: existing.id },
                             data: {
