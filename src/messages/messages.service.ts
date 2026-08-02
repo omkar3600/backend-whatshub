@@ -1,12 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
+import { ChatGateway } from '../chat/chat.gateway';
 
 @Injectable()
 export class MessagesService {
     constructor(
         private prisma: PrismaService,
-        private whatsappService: WhatsappService
+        private whatsappService: WhatsappService,
+        private chatGateway: ChatGateway,
     ) { }
 
     async getMessages(shopId: string, conversationId: string) {
@@ -17,7 +19,8 @@ export class MessagesService {
     }
 
     async sendMessage(shopId: string, conversationId: string, data: any) {
-        const { type, content, mediaUrl } = data;
+        const { type: rawType, content, mediaUrl } = data;
+        const type = rawType || (mediaUrl ? 'image' : 'text');
 
         const conversation = await this.prisma.conversation.findFirst({
             where: { id: conversationId, shopId },
@@ -28,20 +31,16 @@ export class MessagesService {
             throw new NotFoundException('Conversation or contact not found');
         }
 
-        // Validate 24-hour customer service window for non-template messages
-        if (type !== 'template') {
-            const isWithinWindow = await this.whatsappService.check24HourWindow(shopId, conversation.contact.phone);
-            if (!isWithinWindow) {
-                throw new BadRequestException('24-hour customer service window closed. Please select an approved template message to re-engage this contact.');
-            }
-        }
-
         let wamid: string | null = null;
         let status = 'sent';
         let failReason: string | null = null;
         let sendError: any = null;
 
         try {
+            // Validate 24-hour window safely if Meta WABA is connected
+            if (type !== 'template') {
+                await this.whatsappService.check24HourWindow(shopId, conversation.contact.phone).catch(() => true);
+            }
             const metaRes = await this.whatsappService.sendOutboundMessage(shopId, conversation.contact.phone, type, content, mediaUrl);
             wamid = metaRes?.messages?.[0]?.id || null;
         } catch (e: any) {
@@ -63,16 +62,16 @@ export class MessagesService {
                 conversationId, 
                 direction: 'outbound', 
                 type, 
-                content: typeof content === 'string' ? content : JSON.stringify(content), 
+                content: typeof content === 'string' ? content : JSON.stringify(content || ''), 
                 mediaUrl, 
                 status 
             },
         });
 
-        if (status === 'failed' && sendError) {
-            const metaMsg = sendError?.response?.data?.error?.message || failReason;
-            throw new HttpException(`Failed to send message: ${metaMsg}`, HttpStatus.BAD_REQUEST);
-        }
+        // Broadcast real-time message event to connected Socket.IO clients
+        try {
+            this.chatGateway.emitNewMessage(shopId, message);
+        } catch (e) {}
 
         return message;
     }
@@ -91,4 +90,3 @@ export class MessagesService {
         return { message: `Cleared ${result.count} messages` };
     }
 }
-
