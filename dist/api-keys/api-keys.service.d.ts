@@ -3,18 +3,19 @@ export declare class ApiKeysService {
     private readonly prisma;
     constructor(prisma: PrismaService);
     private hashKey;
+    private parseScopes;
     createApiKey(shopId: string, name: string, scopes?: string[]): Promise<{
         apiKey: {
             id: string;
             name: string;
-            scopes: any;
+            scopes: string[];
             status: string;
             createdAt: Date;
         };
         rawKey: string;
     }>;
     listApiKeys(shopId: string): Promise<{
-        scopes: any;
+        scopes: string[];
         name: string;
         id: string;
         status: string;

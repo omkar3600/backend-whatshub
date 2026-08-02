@@ -19,6 +19,12 @@ const common_1 = require("@nestjs/common");
 let ChatGateway = class ChatGateway {
     server;
     handleJoin(shopId, client) {
+        if (!shopId)
+            return;
+        const authShopId = client.handshake.auth?.shopId || client.data?.user?.shopId;
+        if (authShopId && authShopId !== shopId && client.data?.user?.role !== 'admin') {
+            return;
+        }
         client.join(shopId);
     }
     notifyNewMessage(shopId, message) {

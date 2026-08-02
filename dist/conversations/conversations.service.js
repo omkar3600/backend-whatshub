@@ -60,8 +60,9 @@ let ConversationsService = class ConversationsService {
         return convo;
     }
     async markAsRead(shopId, id) {
+        await this.getConversation(shopId, id);
         const updated = await this.prisma.conversation.update({
-            where: { id, shopId },
+            where: { id },
             data: { unreadCount: 0 },
         });
         this.chatGateway.notifyRead(shopId, id);

@@ -241,14 +241,16 @@ let ContactsService = ContactsService_1 = class ContactsService {
         return contact;
     }
     async updateContact(shopId, id, data) {
+        await this.getContact(shopId, id);
         const { name, phone, tags, city, notes } = data;
         const contact = await this.prisma.contact.update({
-            where: { id, shopId },
+            where: { id },
             data: { name, phone, tags, city, notes },
         });
         return contact;
     }
     async deleteContact(shopId, id) {
+        await this.getContact(shopId, id);
         const conversations = await this.prisma.conversation.findMany({ where: { shopId, contactId: id } });
         const convIds = conversations.map(c => c.id);
         if (convIds.length > 0) {
@@ -257,7 +259,7 @@ let ContactsService = ContactsService_1 = class ContactsService {
         }
         await this.prisma.campaignContact.updateMany({ where: { contactId: id }, data: { contactId: null } });
         return this.prisma.contact.delete({
-            where: { id, shopId },
+            where: { id },
         });
     }
     async deleteBulk(shopId, ids) {

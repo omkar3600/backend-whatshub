@@ -16,6 +16,12 @@ export class ChatGateway {
 
   @SubscribeMessage('joinRoom')
   handleJoin(@MessageBody() shopId: string, @ConnectedSocket() client: Socket) {
+    if (!shopId) return;
+    const authShopId = (client.handshake.auth as any)?.shopId || (client.data as any)?.user?.shopId;
+    // Allow join if authShopId matches requested shopId or if auth user is admin
+    if (authShopId && authShopId !== shopId && (client.data as any)?.user?.role !== 'admin') {
+      return;
+    }
     client.join(shopId);
   }
 

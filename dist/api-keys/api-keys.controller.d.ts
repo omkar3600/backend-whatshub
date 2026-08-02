@@ -9,14 +9,14 @@ export declare class ApiKeysController {
         apiKey: {
             id: string;
             name: string;
-            scopes: any;
+            scopes: string[];
             status: string;
             createdAt: Date;
         };
         rawKey: string;
     }>;
     listApiKeys(user: any): Promise<{
-        scopes: any;
+        scopes: string[];
         name: string;
         id: string;
         status: string;

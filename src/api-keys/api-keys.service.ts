@@ -10,6 +10,20 @@ export class ApiKeysService {
     return crypto.createHash('sha256').update(key).digest('hex');
   }
 
+  private parseScopes(scopesField: any): string[] {
+    if (!scopesField) return [];
+    if (Array.isArray(scopesField)) return scopesField;
+    if (typeof scopesField === 'string') {
+      try {
+        const parsed = JSON.parse(scopesField);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }
+
   async createApiKey(shopId: string, name: string, scopes: string[] = []) {
     const rawKey = 'wh_' + crypto.randomBytes(32).toString('hex');
     const keyHash = this.hashKey(rawKey);
@@ -19,7 +33,7 @@ export class ApiKeysService {
         shopId,
         name,
         keyHash,
-        scopes: JSON.stringify(scopes),
+        scopes: scopes as any,
       },
     });
 
@@ -27,7 +41,7 @@ export class ApiKeysService {
       apiKey: {
         id: apiKey.id,
         name: apiKey.name,
-        scopes: apiKey.scopes ? JSON.parse(apiKey.scopes as string) : [],
+        scopes: this.parseScopes(apiKey.scopes),
         status: apiKey.status,
         createdAt: apiKey.createdAt,
       },
@@ -52,7 +66,7 @@ export class ApiKeysService {
 
     return keys.map(k => ({
       ...k,
-      scopes: k.scopes ? JSON.parse(k.scopes as string) : []
+      scopes: this.parseScopes(k.scopes)
     }));
   }
 

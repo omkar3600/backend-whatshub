@@ -131,6 +131,16 @@ let CampaignsService = class CampaignsService {
         if (campaign.status === 'processing') {
             throw new Error('Cannot delete a processing campaign. Abort it first.');
         }
+        try {
+            const delayedJobs = await this.campaignsQueue.getDelayed();
+            for (const job of delayedJobs) {
+                if (job.data?.campaignId === campaignId) {
+                    await job.remove().catch(() => { });
+                }
+            }
+        }
+        catch (err) {
+        }
         return this.prisma.campaign.delete({
             where: { id: campaignId }
         });

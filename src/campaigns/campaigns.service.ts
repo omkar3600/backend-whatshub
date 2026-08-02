@@ -127,8 +127,18 @@ export class CampaignsService {
             throw new Error('Cannot delete a processing campaign. Abort it first.');
         }
 
-        // Ideally we should also remove the job from BullMQ if it's scheduled
-        // For simplicity, we just delete it from DB and the processor will ignore it if it doesn't find it
+        // Remove any delayed scheduled job from BullMQ queue
+        try {
+            const delayedJobs = await this.campaignsQueue.getDelayed();
+            for (const job of delayedJobs) {
+                if (job.data?.campaignId === campaignId) {
+                    await job.remove().catch(() => {});
+                }
+            }
+        } catch (err) {
+            // Ignore queue retrieval error if Redis is unavailable
+        }
+
         return this.prisma.campaign.delete({
             where: { id: campaignId }
         });

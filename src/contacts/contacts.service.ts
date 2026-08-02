@@ -228,9 +228,10 @@ export class ContactsService {
     }
 
     async updateContact(shopId: string, id: string, data: any) {
+        await this.getContact(shopId, id);
         const { name, phone, tags, city, notes } = data;
         const contact = await this.prisma.contact.update({
-            where: { id, shopId },
+            where: { id },
             data: { name, phone, tags, city, notes },
         });
 
@@ -238,6 +239,7 @@ export class ContactsService {
     }
 
     async deleteContact(shopId: string, id: string) {
+        await this.getContact(shopId, id);
         // Delete dependent records first
         const conversations = await this.prisma.conversation.findMany({ where: { shopId, contactId: id } });
         const convIds = conversations.map(c => c.id);
@@ -249,7 +251,7 @@ export class ContactsService {
         await this.prisma.campaignContact.updateMany({ where: { contactId: id }, data: { contactId: null } });
         
         return this.prisma.contact.delete({
-            where: { id, shopId },
+            where: { id },
         });
     }
 
