@@ -43,7 +43,7 @@ export class ShopsService {
         const oldContacts = await this.prisma.contact.count({
             where: { shopId, createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo } }
         });
-        const contactGrowth = oldContacts === 0 ? 100 : Math.round(((newContacts - oldContacts) / oldContacts) * 100);
+        const contactGrowth = oldContacts === 0 ? (newContacts > 0 ? 100 : 0) : Math.round(((newContacts - oldContacts) / oldContacts) * 100);
 
         // Fetch Recent Campaigns
         const recentCampaigns = await this.prisma.campaign.findMany({
@@ -62,7 +62,7 @@ export class ShopsService {
         
         for (const c of allCampaignContacts) {
             const s = c.status;
-            if (['sent', 'delivered', 'read', 'replied', 'clicked', 'failed'].includes(s)) globalSent++;
+            if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(s)) globalSent++;
             if (['delivered', 'read', 'replied', 'clicked'].includes(s)) globalDelivered++;
             if (['read', 'replied', 'clicked'].includes(s)) globalRead++;
             if (s === 'failed') globalFailed++;

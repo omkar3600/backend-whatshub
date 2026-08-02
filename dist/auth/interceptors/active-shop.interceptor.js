@@ -11,12 +11,17 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ActiveShopInterceptor = void 0;
 const common_1 = require("@nestjs/common");
+const rxjs_1 = require("rxjs");
+const operators_1 = require("rxjs/operators");
 const core_1 = require("@nestjs/core");
 const bypass_shop_status_decorator_1 = require("../decorators/bypass-shop-status.decorator");
+const prisma_service_1 = require("../../prisma/prisma.service");
 let ActiveShopInterceptor = class ActiveShopInterceptor {
     reflector;
-    constructor(reflector) {
+    prisma;
+    constructor(reflector, prisma) {
         this.reflector = reflector;
+        this.prisma = prisma;
     }
     intercept(context, next) {
         const isBypassed = this.reflector.getAllAndOverride(bypass_shop_status_decorator_1.IS_PUBLIC_SHOP_STATUS_KEY, [
@@ -29,17 +34,34 @@ let ActiveShopInterceptor = class ActiveShopInterceptor {
         const req = context.switchToHttp().getRequest();
         const user = req.user;
         if (user && user.role !== 'admin') {
-            if (user.shopStatus && user.shopStatus !== 'active') {
-                throw new common_1.ForbiddenException({
-                    code: 'ACCOUNT_SUSPENDED',
-                    message: 'Your account has been temporarily seized. Contact administrator for more.'
-                });
-            }
-            if (user.subscriptionExpiry && new Date(user.subscriptionExpiry) < new Date()) {
-                throw new common_1.ForbiddenException({
-                    code: 'SUBSCRIPTION_EXPIRED',
-                    message: 'Your subscription date is over.'
-                });
+            const userId = user.sub || user.id;
+            const shopId = user.shopId;
+            if (userId || shopId) {
+                return (0, rxjs_1.from)(this.prisma.shop.findFirst({
+                    where: {
+                        OR: [
+                            ...(shopId ? [{ id: shopId }] : []),
+                            ...(userId ? [{ ownerId: userId }] : [])
+                        ]
+                    },
+                    include: { subscription: true }
+                })).pipe((0, operators_1.mergeMap)((shop) => {
+                    const shopStatus = shop?.status || user.shopStatus;
+                    const subExpiry = shop?.subscription?.expiryDate || user.subscriptionExpiry;
+                    if (shopStatus && shopStatus !== 'active') {
+                        throw new common_1.ForbiddenException({
+                            code: 'ACCOUNT_SUSPENDED',
+                            message: 'Your account has been temporarily seized. Contact administrator for more.'
+                        });
+                    }
+                    if (subExpiry && new Date(subExpiry) < new Date()) {
+                        throw new common_1.ForbiddenException({
+                            code: 'SUBSCRIPTION_EXPIRED',
+                            message: 'Your subscription date is over.'
+                        });
+                    }
+                    return next.handle();
+                }));
             }
         }
         return next.handle();
@@ -48,6 +70,7 @@ let ActiveShopInterceptor = class ActiveShopInterceptor {
 exports.ActiveShopInterceptor = ActiveShopInterceptor;
 exports.ActiveShopInterceptor = ActiveShopInterceptor = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [core_1.Reflector])
+    __metadata("design:paramtypes", [core_1.Reflector,
+        prisma_service_1.PrismaService])
 ], ActiveShopInterceptor);
 //# sourceMappingURL=active-shop.interceptor.js.map

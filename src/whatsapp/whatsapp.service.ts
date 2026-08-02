@@ -2,6 +2,7 @@ import { Injectable, Logger, Inject, forwardRef, BadRequestException } from '@ne
 import { PrismaService } from '../prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
 import { CryptoService } from '../common/services/crypto.service';
+import { normalizePhone } from '../common/utils/phone-normalizer';
 import { firstValueFrom } from 'rxjs';
 import { ChatGateway } from '../chat/chat.gateway';
 import { ChatbotService } from '../chatbot/chatbot.service';
@@ -311,7 +312,7 @@ export class WhatsappService {
 
                 // 2. Fallback lookup: by recipient phone number within last 48 hours
                 if (!existing && recipientPhone) {
-                    const cleanPhone = recipientPhone.replace(/\D/g, '');
+                    const cleanPhone = normalizePhone(recipientPhone);
                     const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
                     existing = await this.prisma.campaignContact.findFirst({
@@ -319,7 +320,6 @@ export class WhatsappService {
                             OR: [
                                 { phone: cleanPhone },
                                 { phone: `+${cleanPhone}` },
-                                { phone: { endsWith: cleanPhone } },
                             ],
                             sentAt: { gte: fortyEightHoursAgo },
                             campaign: { shopId },
@@ -366,14 +366,15 @@ export class WhatsappService {
                             where: { campaignId: existing.campaignId },
                             select: { status: true }
                         });
-                        let sent = 0, delivered = 0, read = 0, clicked = 0, replied = 0, failed = 0;
+                        let sent = 0, delivered = 0, read = 0, clicked = 0, replied = 0, failed = 0, pending = 0;
                         for (const c of campaignContacts) {
-                            if (['sent', 'delivered', 'read', 'replied', 'clicked', 'failed'].includes(c.status)) sent++;
+                            if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(c.status)) sent++;
                             if (['delivered', 'read', 'replied', 'clicked'].includes(c.status)) delivered++;
                             if (['read', 'replied', 'clicked'].includes(c.status)) read++;
                             if (c.status === 'replied') replied++;
                             if (c.status === 'clicked') clicked++;
                             if (c.status === 'failed') failed++;
+                            if (c.status === 'pending') pending++;
                         }
                         const camp = await this.prisma.campaign.findUnique({
                             where: { id: existing.campaignId },
@@ -386,6 +387,7 @@ export class WhatsappService {
                                 stats: {
                                     ...currentMeta,
                                     total: campaignContacts.length,
+                                    pending,
                                     sent,
                                     delivered,
                                     read,
@@ -618,9 +620,14 @@ export class WhatsappService {
             try {
                 // Find the most recent CampaignContact for this phone within the last 48 hours
                 const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+                const normPhone = normalizePhone(contact.phone);
                 const recentCampaignContact = await this.prisma.campaignContact.findFirst({
                     where: {
-                        phone: contact.phone,
+                        OR: [
+                            { phone: contact.phone },
+                            { phone: normPhone },
+                            { phone: `+${normPhone}` },
+                        ],
                         sentAt: { gte: fortyEightHoursAgo },
                         campaign: { shopId }
                     },
@@ -656,7 +663,17 @@ export class WhatsappService {
                 if (!keywordString) continue;
                 
                 const keywords = keywordString.split(',').map((k: string) => k.trim()).filter(Boolean);
-                const isMatch = keywords.some((kw: string) => incomingText.includes(kw) || kw === incomingText);
+                const isMatch = keywords.some((kw: string) => {
+                    if (kw === incomingText) return true;
+                    if (kw.length <= 3) return incomingText === kw;
+                    try {
+                        const escaped = kw.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                        const regex = new RegExp(`(?:^|\\s|\\b)${escaped}(?:$|\\s|\\b)`, 'i');
+                        return regex.test(incomingText);
+                    } catch {
+                        return incomingText === kw;
+                    }
+                });
 
                 if (isMatch) {
                     this.logger.log(`[Automation] MATCH! Keyword="${keywordString}" → sending reply to ${contactData.wa_id}`);
@@ -777,6 +794,28 @@ export class WhatsappService {
         }
     }
 
+    /**
+     * Check if a contact is within the 24-hour customer service window.
+     */
+    async check24HourWindow(shopId: string, toPhone: string): Promise<boolean> {
+        const clean = normalizePhone(toPhone);
+        const contact = await this.prisma.contact.findFirst({
+            where: { shopId, OR: [{ phone: clean }, { phone: `+${clean}` }] }
+        });
+        if (!contact) return true; // New contact, window not restricted yet
+
+        const conversation = await this.prisma.conversation.findUnique({
+            where: { shopId_contactId: { shopId, contactId: contact.id } }
+        });
+
+        if (!conversation || !conversation.lastContactMessageAt) {
+            return false; // Contact has never messaged us inbound -> 24h window closed
+        }
+
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        return conversation.lastContactMessageAt >= twentyFourHoursAgo;
+    }
+
     async sendOutboundMessage(shopId: string, toPhone: string, type: string, content: any, mediaUrl?: string) {
         const creds = await this.getCredentials(shopId);
 
@@ -793,19 +832,23 @@ export class WhatsappService {
             payload[type] = { link: mediaUrl };
         } else if (type === 'interactive') {
             const config = content.config || {};
+            const rawButtons = config.buttons || [];
+            // Meta limits: max 3 buttons, max title length 20 chars
+            const sanitizedButtons = rawButtons.slice(0, 3).map((btn: any, idx: number) => {
+                const titleStr = (btn.text || btn.title || 'Click').trim();
+                return {
+                    type: 'reply',
+                    reply: {
+                        id: btn.id || `btn-${idx}`,
+                        title: titleStr.length > 20 ? titleStr.slice(0, 20) : titleStr
+                    }
+                };
+            });
             payload.type = 'interactive';
             payload.interactive = {
                 type: 'button',
                 body: { text: content.text || content.body || '' },
-                action: {
-                    buttons: (config.buttons || []).map((btn: any, idx: number) => ({
-                        type: 'reply',
-                        reply: {
-                            id: btn.id || `btn-${idx}`,
-                            title: btn.text || btn.title || 'Click'
-                        }
-                    }))
-                }
+                action: { buttons: sanitizedButtons }
             };
             if (config.header) {
                 payload.interactive.header = { type: 'text', text: config.header };
@@ -829,28 +872,92 @@ export class WhatsappService {
                 language: { code: templateLanguage }
             };
             if (typeof content !== 'string' && content.components) {
-                payload.template.components = content.components;
+                // Sanitize parameters: replace empty strings / nulls with fallback space ' ' to prevent Meta Error 100
+                const sanitizedComps = (content.components as any[]).map((comp: any) => {
+                    if (comp.parameters && Array.isArray(comp.parameters)) {
+                        const newParams = comp.parameters.map((p: any) => {
+                            if (p.type === 'text') {
+                                return { ...p, text: p.text && String(p.text).trim() !== '' ? p.text : ' ' };
+                            }
+                            return p;
+                        });
+                        return { ...comp, parameters: newParams };
+                    }
+                    return comp;
+                });
+                payload.template.components = sanitizedComps;
             }
         }
 
         const url = `${this.graphApiBase}/${creds.phoneNumberId}/messages`;
 
-        try {
-            const response = await firstValueFrom(
-                this.httpService.post(url, payload, {
-                    headers: {
-                        Authorization: `Bearer ${creds.accessToken}`,
-                        'Content-Type': 'application/json',
-                    },
-                })
-            );
-            return response.data;
-        } catch (error: unknown) {
-            const axiosErr = error as any;
-            const detail = axiosErr?.response?.data || (error instanceof Error ? error.message : String(error));
-            this.logger.error('Error sending WhatsApp message', detail);
-            throw error;
+        const maxRetries = 3;
+        let attempt = 0;
+        let lastError: any = null;
+
+        while (attempt < maxRetries) {
+            try {
+                const response = await firstValueFrom(
+                    this.httpService.post(url, payload, {
+                        headers: {
+                            Authorization: `Bearer ${creds.accessToken}`,
+                            'Content-Type': 'application/json',
+                        },
+                    })
+                );
+                return response.data;
+            } catch (error: unknown) {
+                lastError = error;
+                const axiosErr = error as any;
+                const statusCode = axiosErr?.response?.status;
+                const errorCode = axiosErr?.response?.data?.error?.code;
+
+                const isRateLimit = statusCode === 429 || [131048, 130429, 131056].includes(errorCode);
+                const isTransientServerErr = statusCode >= 500 && statusCode <= 504;
+
+                attempt++;
+                if ((isRateLimit || isTransientServerErr) && attempt < maxRetries) {
+                    const delayMs = Math.pow(2, attempt) * 1000; // 2s, 4s
+                    this.logger.warn(`[WhatsApp API] Rate limit or transient error (${errorCode || statusCode}). Retrying attempt ${attempt}/${maxRetries} in ${delayMs}ms...`);
+                    await new Promise(res => setTimeout(res, delayMs));
+                    continue;
+                }
+
+                const detail = axiosErr?.response?.data || (error instanceof Error ? error.message : String(error));
+                this.logger.error('Error sending WhatsApp message', detail);
+                throw error;
+            }
         }
+        throw lastError;
+    }
+
+    async processDeadLetterQueue(): Promise<{ processed: number; resolved: number }> {
+        const pendingEvents = await this.prisma.deadLetterEvent.findMany({
+            where: { status: 'pending', retryCount: { lt: 3 } },
+            take: 50
+        });
+
+        let resolvedCount = 0;
+        for (const event of pendingEvents) {
+            try {
+                await this.processWebhookEvent(event.originalPayload);
+                await this.prisma.deadLetterEvent.update({
+                    where: { id: event.id },
+                    data: { status: 'resolved', resolvedAt: new Date() }
+                });
+                resolvedCount++;
+            } catch (e: any) {
+                await this.prisma.deadLetterEvent.update({
+                    where: { id: event.id },
+                    data: {
+                        retryCount: { increment: 1 },
+                        lastAttemptAt: new Date(),
+                        errorMessage: e.message || 'Retry failed'
+                    }
+                });
+            }
+        }
+        return { processed: pendingEvents.length, resolved: resolvedCount };
     }
 
     // ─── Audit Logging ─────────────────────────────────────────────────────

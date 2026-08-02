@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const bullmq_1 = require("@nestjs/bullmq");
 const bullmq_2 = require("bullmq");
 const prisma_service_1 = require("../prisma/prisma.service");
+const phone_normalizer_1 = require("../common/utils/phone-normalizer");
 let CampaignsService = class CampaignsService {
     prisma;
     campaignsQueue;
@@ -88,7 +89,7 @@ let CampaignsService = class CampaignsService {
             let pendingCount = 0;
             for (const contact of c.contacts) {
                 const s = contact.status;
-                if (['sent', 'delivered', 'read', 'replied', 'clicked', 'failed'].includes(s))
+                if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(s))
                     sentCount++;
                 if (['delivered', 'read', 'replied', 'clicked'].includes(s))
                     deliveredCount++;
@@ -143,6 +144,10 @@ let CampaignsService = class CampaignsService {
         if (campaign.status !== 'processing') {
             throw new Error('Can only abort processing campaigns');
         }
+        await this.prisma.campaignContact.updateMany({
+            where: { campaignId, status: 'pending' },
+            data: { status: 'aborted' }
+        });
         return this.prisma.campaign.update({
             where: { id: campaignId },
             data: { status: 'aborted' }
@@ -182,28 +187,33 @@ let CampaignsService = class CampaignsService {
             throw new common_1.NotFoundException('Campaign not found');
         const allContactsMap = new Map();
         for (const c of campaign.contacts) {
-            allContactsMap.set(c.phone, c);
+            const key = (0, phone_normalizer_1.normalizePhone)(c.phone) || c.phone;
+            allContactsMap.set(key, c);
         }
         const failHist = campaign.failureHistory || [];
         for (const fh of failHist) {
-            if (fh.phone && !allContactsMap.has(fh.phone)) {
-                allContactsMap.set(fh.phone, {
-                    id: `fh-${fh.phone}`,
-                    campaignId,
-                    contactId: null,
-                    phone: fh.phone,
-                    name: fh.name || fh.phone,
-                    status: 'failed',
-                    failReason: fh.reason || 'Failed to send',
-                    sentAt: fh.timestamp || campaign.createdAt,
-                    updatedAt: fh.timestamp || campaign.createdAt,
-                });
+            if (fh.phone) {
+                const key = (0, phone_normalizer_1.normalizePhone)(fh.phone) || fh.phone;
+                if (!allContactsMap.has(key)) {
+                    allContactsMap.set(key, {
+                        id: `fh-${key}`,
+                        campaignId,
+                        contactId: null,
+                        phone: fh.phone,
+                        name: fh.name || fh.phone,
+                        status: 'failed',
+                        failReason: fh.reason || 'Failed to send',
+                        sentAt: fh.timestamp || campaign.createdAt,
+                        updatedAt: fh.timestamp || campaign.createdAt,
+                    });
+                }
             }
         }
         const allContactsList = Array.from(allContactsMap.values());
         const byStatus = {
             all: allContactsList,
-            sent: allContactsList.filter(c => ['sent', 'delivered', 'read', 'replied', 'clicked', 'failed'].includes(c.status)),
+            pending: allContactsList.filter(c => c.status === 'pending'),
+            sent: allContactsList.filter(c => ['sent', 'delivered', 'read', 'replied', 'clicked'].includes(c.status)),
             delivered: allContactsList.filter(c => ['delivered', 'read', 'replied', 'clicked'].includes(c.status)),
             read: allContactsList.filter(c => ['read', 'replied', 'clicked'].includes(c.status)),
             replied: allContactsList.filter(c => c.status === 'replied'),
@@ -213,6 +223,7 @@ let CampaignsService = class CampaignsService {
         };
         const stats = {
             total: allContactsList.length,
+            pending: byStatus.pending.length,
             sent: byStatus.sent.length,
             delivered: byStatus.delivered.length,
             read: byStatus.read.length,

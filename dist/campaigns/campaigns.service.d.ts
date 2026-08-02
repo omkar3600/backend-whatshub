@@ -160,6 +160,7 @@ export declare class CampaignsService {
         };
         stats: {
             total: number;
+            pending: number;
             sent: number;
             delivered: number;
             read: number;
@@ -170,6 +171,7 @@ export declare class CampaignsService {
         };
         contacts: {
             all: any[];
+            pending: any[];
             sent: any[];
             delivered: any[];
             read: any[];

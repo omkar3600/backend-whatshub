@@ -99,8 +99,11 @@ export class ChatbotService {
         parts.push(`The customer you are speaking to right now is named: ${contactName}.`);
 
         if (businessInfo && businessInfo.trim()) {
+            const truncatedInfo = businessInfo.trim().length > 10000 
+                ? businessInfo.trim().slice(0, 10000) + '... (truncated)' 
+                : businessInfo.trim();
             parts.push(`\n[BUSINESS KNOWLEDGE BASE]`);
-            parts.push(businessInfo.trim());
+            parts.push(truncatedInfo);
             parts.push(`\n[CRITICAL INSTRUCTIONS]`);
             parts.push(`1. You must answer the customer's questions strictly using the facts inside the [BUSINESS KNOWLEDGE BASE] provided above.`);
             parts.push(`2. If the customer asks a question or makes a request that is NOT covered by the [BUSINESS KNOWLEDGE BASE], you must politely state that you do not have that information and a human agent will assist them shortly.`);

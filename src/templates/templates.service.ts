@@ -153,6 +153,13 @@ export class TemplatesService {
             throw new NotFoundException('Template not found');
         }
 
+        const activeCampaign = await this.prisma.campaign.findFirst({
+            where: { templateId: id, status: { in: ['processing', 'scheduled'] } }
+        });
+        if (activeCampaign) {
+            throw new BadRequestException(`Cannot delete template because campaign "${activeCampaign.name}" is currently ${activeCampaign.status}. Please abort the campaign first.`);
+        }
+
         // Delete from Meta
         try {
             const creds = await this.getCredentials(shopId);

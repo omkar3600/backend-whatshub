@@ -103,6 +103,7 @@ export declare class CampaignsController {
         };
         stats: {
             total: number;
+            pending: number;
             sent: number;
             delivered: number;
             read: number;
@@ -113,6 +114,7 @@ export declare class CampaignsController {
         };
         contacts: {
             all: any[];
+            pending: any[];
             sent: any[];
             delivered: any[];
             read: any[];

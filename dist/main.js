@@ -46,6 +46,14 @@ const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const global_exception_filter_1 = require("./common/filters/global-exception.filter");
 async function bootstrap() {
     const logger = new common_1.Logger('Bootstrap');
+    if (!process.env.JWT_SECRET) {
+        if (process.env.NODE_ENV === 'production') {
+            throw new Error('FATAL: JWT_SECRET environment variable is missing in production!');
+        }
+        else {
+            logger.warn('[Security] JWT_SECRET is not set. Defaulting to fallback key for development.');
+        }
+    }
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
         rawBody: true,
     });

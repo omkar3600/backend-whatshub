@@ -142,6 +142,12 @@ let TemplatesService = TemplatesService_1 = class TemplatesService {
         if (!template) {
             throw new common_1.NotFoundException('Template not found');
         }
+        const activeCampaign = await this.prisma.campaign.findFirst({
+            where: { templateId: id, status: { in: ['processing', 'scheduled'] } }
+        });
+        if (activeCampaign) {
+            throw new common_1.BadRequestException(`Cannot delete template because campaign "${activeCampaign.name}" is currently ${activeCampaign.status}. Please abort the campaign first.`);
+        }
         try {
             const creds = await this.getCredentials(shopId);
             const url = `${this.graphApiBase}/${creds.businessAccountId}/message_templates`;

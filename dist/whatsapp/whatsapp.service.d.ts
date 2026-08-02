@@ -35,7 +35,12 @@ export declare class WhatsappService {
     private handleMessageStatus;
     private handleIncomingMessage;
     markMessageAsRead(shopId: string, messageId: string): Promise<void>;
+    check24HourWindow(shopId: string, toPhone: string): Promise<boolean>;
     sendOutboundMessage(shopId: string, toPhone: string, type: string, content: any, mediaUrl?: string): Promise<any>;
+    processDeadLetterQueue(): Promise<{
+        processed: number;
+        resolved: number;
+    }>;
     private logWebhookAudit;
     getBusinessProfile(shopId: string): Promise<any>;
     updateBusinessProfile(shopId: string, data: any): Promise<any>;

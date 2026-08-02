@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
+import { normalizePhone } from '../common/utils/phone-normalizer';
 
 @Injectable()
 export class CampaignsService {
@@ -87,7 +88,7 @@ export class CampaignsService {
 
             for (const contact of c.contacts) {
                 const s = contact.status;
-                if (['sent', 'delivered', 'read', 'replied', 'clicked', 'failed'].includes(s)) sentCount++;
+                if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(s)) sentCount++;
                 if (['delivered', 'read', 'replied', 'clicked'].includes(s)) deliveredCount++;
                 if (['read', 'replied', 'clicked'].includes(s)) readCount++;
                 if (s === 'replied') repliedCount++;
@@ -143,6 +144,12 @@ export class CampaignsService {
             throw new Error('Can only abort processing campaigns');
         }
 
+        // Mark remaining pending contacts as aborted
+        await this.prisma.campaignContact.updateMany({
+            where: { campaignId, status: 'pending' },
+            data: { status: 'aborted' }
+        });
+
         return this.prisma.campaign.update({
             where: { id: campaignId },
             data: { status: 'aborted' }
@@ -189,26 +196,30 @@ export class CampaignsService {
 
         const allContactsMap = new Map<string, any>();
 
-        // 1. Add all CampaignContact entries
+        // 1. Add all CampaignContact entries (normalized key to prevent duplicate format entries)
         for (const c of campaign.contacts) {
-            allContactsMap.set(c.phone, c);
+            const key = normalizePhone(c.phone) || c.phone;
+            allContactsMap.set(key, c);
         }
 
         // 2. Also merge any failures recorded in campaign.failureHistory
         const failHist = (campaign.failureHistory as any[]) || [];
         for (const fh of failHist) {
-            if (fh.phone && !allContactsMap.has(fh.phone)) {
-                allContactsMap.set(fh.phone, {
-                    id: `fh-${fh.phone}`,
-                    campaignId,
-                    contactId: null,
-                    phone: fh.phone,
-                    name: fh.name || fh.phone,
-                    status: 'failed',
-                    failReason: fh.reason || 'Failed to send',
-                    sentAt: fh.timestamp || campaign.createdAt,
-                    updatedAt: fh.timestamp || campaign.createdAt,
-                });
+            if (fh.phone) {
+                const key = normalizePhone(fh.phone) || fh.phone;
+                if (!allContactsMap.has(key)) {
+                    allContactsMap.set(key, {
+                        id: `fh-${key}`,
+                        campaignId,
+                        contactId: null,
+                        phone: fh.phone,
+                        name: fh.name || fh.phone,
+                        status: 'failed',
+                        failReason: fh.reason || 'Failed to send',
+                        sentAt: fh.timestamp || campaign.createdAt,
+                        updatedAt: fh.timestamp || campaign.createdAt,
+                    });
+                }
             }
         }
 
@@ -216,7 +227,8 @@ export class CampaignsService {
 
         const byStatus = {
             all: allContactsList,
-            sent: allContactsList.filter(c => ['sent', 'delivered', 'read', 'replied', 'clicked', 'failed'].includes(c.status)),
+            pending: allContactsList.filter(c => c.status === 'pending'),
+            sent: allContactsList.filter(c => ['sent', 'delivered', 'read', 'replied', 'clicked'].includes(c.status)),
             delivered: allContactsList.filter(c => ['delivered', 'read', 'replied', 'clicked'].includes(c.status)),
             read: allContactsList.filter(c => ['read', 'replied', 'clicked'].includes(c.status)),
             replied: allContactsList.filter(c => c.status === 'replied'),
@@ -227,6 +239,7 @@ export class CampaignsService {
 
         const stats = {
             total: allContactsList.length,
+            pending: byStatus.pending.length,
             sent: byStatus.sent.length,
             delivered: byStatus.delivered.length,
             read: byStatus.read.length,

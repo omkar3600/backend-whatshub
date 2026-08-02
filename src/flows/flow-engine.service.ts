@@ -268,8 +268,8 @@ export class FlowEngineService {
 
                 if (content || mediaUrl) {
                     await this.whatsappService.sendOutboundMessage(shopId, toPhone, type.toLowerCase(), content, mediaUrl);
-                    // Also save to database (Non-blocking)
-                    this.saveOutboundMessage(shopId, session.contactId, type.toLowerCase(), content || 'Media', session.flowId);
+                    // Also save to database
+                    await this.saveOutboundMessage(shopId, session.contactId, type.toLowerCase(), content || 'Media', session.flowId);
                 }
                 return this.moveToNextNative(nodeId, session, definition, shopId, toPhone, depth + 1);
 
@@ -365,7 +365,7 @@ export class FlowEngineService {
                     const reply = chatCompletion.choices[0]?.message?.content || 'Sorry, I could not process that.';
                     
                     await this.whatsappService.sendOutboundMessage(shopId, toPhone, 'text', reply);
-                    this.saveOutboundMessage(shopId, session.contactId, 'text', reply, session.flowId);
+                    await this.saveOutboundMessage(shopId, session.contactId, 'text', reply, session.flowId);
                     
                 } catch (e) {
                     this.logger.error(`AI execution error: ${e.message}`);
@@ -439,22 +439,25 @@ export class FlowEngineService {
     }
 
     private async saveOutboundMessage(shopId: string, contactId: string, type: string, content: string, flowId: string) {
-        // Just enough to show in the chat window history
-        const conversation = await this.prisma.conversation.findUnique({
-            where: { shopId_contactId: { shopId, contactId } }
-        });
-        if (!conversation) return;
+        try {
+            const conversation = await this.prisma.conversation.findUnique({
+                where: { shopId_contactId: { shopId, contactId } }
+            });
+            if (!conversation) return;
 
-        await this.prisma.message.create({
-            data: {
-                shopId,
-                conversationId: conversation.id,
-                direction: 'outbound',
-                type,
-                content: content || '',
-                status: 'sent'
-            }
-        });
+            await this.prisma.message.create({
+                data: {
+                    shopId,
+                    conversationId: conversation.id,
+                    direction: 'outbound',
+                    type,
+                    content: content || '',
+                    status: 'sent'
+                }
+            });
+        } catch (err: any) {
+            this.logger.error(`[Flow] Failed to save outbound message: ${err.message}`);
+        }
     }
 
     // --- Original Simulation Logic (Preserved) ---

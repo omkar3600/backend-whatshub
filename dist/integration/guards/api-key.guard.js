@@ -69,10 +69,13 @@ let ApiKeyGuard = class ApiKeyGuard {
         if (apiKey.expiresAt && apiKey.expiresAt < new Date()) {
             throw new common_1.UnauthorizedException('API Key has expired');
         }
-        this.prisma.apiKey.update({
-            where: { id: apiKey.id },
-            data: { lastUsedAt: new Date() }
-        }).catch(console.error);
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        if (!apiKey.lastUsedAt || apiKey.lastUsedAt < fiveMinutesAgo) {
+            this.prisma.apiKey.update({
+                where: { id: apiKey.id },
+                data: { lastUsedAt: new Date() }
+            }).catch(() => { });
+        }
         request.shop = apiKey.shop;
         request.apiKey = apiKey;
         return true;

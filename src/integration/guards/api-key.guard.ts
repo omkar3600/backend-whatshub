@@ -30,11 +30,14 @@ export class ApiKeyGuard implements CanActivate {
       throw new UnauthorizedException('API Key has expired');
     }
 
-    // Update lastUsedAt asynchronously
-    this.prisma.apiKey.update({
-      where: { id: apiKey.id },
-      data: { lastUsedAt: new Date() }
-    }).catch(console.error);
+    // Update lastUsedAt asynchronously (throttled to once per 5 minutes)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    if (!apiKey.lastUsedAt || apiKey.lastUsedAt < fiveMinutesAgo) {
+      this.prisma.apiKey.update({
+        where: { id: apiKey.id },
+        data: { lastUsedAt: new Date() }
+      }).catch(() => {});
+    }
 
     // Attach shop to request for controllers to use
     request.shop = apiKey.shop;

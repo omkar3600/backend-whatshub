@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
 
@@ -19,29 +19,42 @@ export class MessagesService {
     async sendMessage(shopId: string, conversationId: string, data: any) {
         const { type, content, mediaUrl } = data;
 
+        const conversation = await this.prisma.conversation.findFirst({
+            where: { id: conversationId, shopId },
+            include: { contact: true }
+        });
+
+        if (!conversation || !conversation.contact) {
+            throw new NotFoundException('Conversation or contact not found');
+        }
+
+        // Validate 24-hour customer service window for non-template messages
+        if (type !== 'template') {
+            const isWithinWindow = await this.whatsappService.check24HourWindow(shopId, conversation.contact.phone);
+            if (!isWithinWindow) {
+                throw new BadRequestException('24-hour customer service window closed. Please select an approved template message to re-engage this contact.');
+            }
+        }
+
+        let wamid: string | null = null;
+        let status = 'sent';
+        let failReason: string | null = null;
+        let sendError: any = null;
+
+        try {
+            const metaRes = await this.whatsappService.sendOutboundMessage(shopId, conversation.contact.phone, type, content, mediaUrl);
+            wamid = metaRes?.messages?.[0]?.id || null;
+        } catch (e: any) {
+            status = 'failed';
+            sendError = e;
+            const metaError = e?.response?.data?.error?.message;
+            failReason = metaError || (e instanceof Error ? e.message : String(e));
+        }
+
         await this.prisma.conversation.update({
             where: { id: conversationId },
             data: { lastMessageAt: new Date() },
         });
-
-        const conversation = await this.prisma.conversation.findUnique({
-            where: { id: conversationId },
-            include: { contact: true }
-        });
-
-        let wamid = null;
-        let status = 'sent';
-
-        try {
-            if (conversation?.contact?.phone) {
-                const metaRes = await this.whatsappService.sendOutboundMessage(shopId, conversation.contact.phone, type, content, mediaUrl);
-                wamid = metaRes?.messages?.[0]?.id;
-            } else {
-                status = 'failed';
-            }
-        } catch (e) {
-            status = 'failed';
-        }
 
         const message = await this.prisma.message.create({
             data: { 
@@ -50,11 +63,16 @@ export class MessagesService {
                 conversationId, 
                 direction: 'outbound', 
                 type, 
-                content, 
+                content: typeof content === 'string' ? content : JSON.stringify(content), 
                 mediaUrl, 
                 status 
             },
         });
+
+        if (status === 'failed' && sendError) {
+            const metaMsg = sendError?.response?.data?.error?.message || failReason;
+            throw new HttpException(`Failed to send message: ${metaMsg}`, HttpStatus.BAD_REQUEST);
+        }
 
         return message;
     }
