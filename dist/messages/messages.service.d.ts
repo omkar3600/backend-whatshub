@@ -1,9 +1,11 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
+import { ChatGateway } from '../chat/chat.gateway';
 export declare class MessagesService {
     private prisma;
     private whatsappService;
-    constructor(prisma: PrismaService, whatsappService: WhatsappService);
+    private chatGateway;
+    constructor(prisma: PrismaService, whatsappService: WhatsappService, chatGateway: ChatGateway);
     getMessages(shopId: string, conversationId: string): Promise<{
         id: string;
         status: string;

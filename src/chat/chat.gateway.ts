@@ -1,6 +1,7 @@
-import { WebSocketGateway, WebSocketServer, SubscribeMessage, MessageBody, ConnectedSocket } from '@nestjs/websockets';
+import { WebSocketGateway, WebSocketServer, SubscribeMessage, MessageBody, ConnectedSocket, OnGatewayConnection } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import * as jwt from 'jsonwebtoken';
 
 @WebSocketGateway({
   cors: {
@@ -8,19 +9,62 @@ import { Injectable } from '@nestjs/common';
   },
 })
 @Injectable()
-export class ChatGateway {
+export class ChatGateway implements OnGatewayConnection {
+  private readonly logger = new Logger(ChatGateway.name);
+
   @WebSocketServer()
   server: Server;
+
+  handleConnection(client: Socket) {
+    try {
+      const token =
+        client.handshake.auth?.token ||
+        client.handshake.headers?.authorization?.replace('Bearer ', '') ||
+        this.extractTokenFromCookie(client.handshake.headers?.cookie);
+
+      if (token) {
+        const secret = process.env.JWT_SECRET || 'default_secret';
+        const decoded = jwt.verify(token, secret) as any;
+        client.data.user = {
+          id: decoded.sub,
+          shopId: decoded.shopId,
+          role: decoded.role,
+        };
+      }
+    } catch (err: any) {
+      this.logger.debug(`Socket authentication failed: ${err.message}`);
+    }
+  }
+
+  private extractTokenFromCookie(cookieHeader?: string): string | null {
+    if (!cookieHeader) return null;
+    const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+      const [key, value] = cookie.trim().split('=');
+      acc[key] = value;
+      return acc;
+    }, {} as Record<string, string>);
+    return cookies['token'] || null;
+  }
 
   @SubscribeMessage('joinRoom')
   handleJoin(@MessageBody() shopId: string, @ConnectedSocket() client: Socket) {
     if (!shopId) return;
-    const authShopId = (client.handshake.auth as any)?.shopId || (client.data as any)?.user?.shopId;
-    // Allow join if authShopId matches requested shopId or if auth user is admin
-    if (authShopId && authShopId !== shopId && (client.data as any)?.user?.role !== 'admin') {
+
+    const user = client.data?.user;
+    if (!user) {
+      this.logger.warn(`Unauthenticated socket tried to join room ${shopId}`);
       return;
     }
+
+    // STRICT MULTI-TENANT ISOLATION: Only allow joining user's own shop room or if user is admin.
+    // Client-supplied handshake.auth.shopId is explicitly ignored to prevent identity forgery.
+    if (user.role !== 'admin' && user.shopId !== shopId) {
+      this.logger.warn(`Unauthorized socket join attempt by shopId=${user.shopId} to target shopId=${shopId}`);
+      return;
+    }
+
     client.join(shopId);
+    this.logger.log(`Socket ${client.id} joined room ${shopId}`);
   }
 
   notifyNewMessage(shopId: string, message: any) {

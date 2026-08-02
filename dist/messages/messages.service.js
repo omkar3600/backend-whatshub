@@ -13,12 +13,15 @@ exports.MessagesService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const whatsapp_service_1 = require("../whatsapp/whatsapp.service");
+const chat_gateway_1 = require("../chat/chat.gateway");
 let MessagesService = class MessagesService {
     prisma;
     whatsappService;
-    constructor(prisma, whatsappService) {
+    chatGateway;
+    constructor(prisma, whatsappService, chatGateway) {
         this.prisma = prisma;
         this.whatsappService = whatsappService;
+        this.chatGateway = chatGateway;
     }
     async getMessages(shopId, conversationId) {
         return this.prisma.message.findMany({
@@ -27,7 +30,8 @@ let MessagesService = class MessagesService {
         });
     }
     async sendMessage(shopId, conversationId, data) {
-        const { type, content, mediaUrl } = data;
+        const { type: rawType, content, mediaUrl } = data;
+        const type = rawType || (mediaUrl ? 'image' : 'text');
         const conversation = await this.prisma.conversation.findFirst({
             where: { id: conversationId, shopId },
             include: { contact: true }
@@ -35,17 +39,14 @@ let MessagesService = class MessagesService {
         if (!conversation || !conversation.contact) {
             throw new common_1.NotFoundException('Conversation or contact not found');
         }
-        if (type !== 'template') {
-            const isWithinWindow = await this.whatsappService.check24HourWindow(shopId, conversation.contact.phone);
-            if (!isWithinWindow) {
-                throw new common_1.BadRequestException('24-hour customer service window closed. Please select an approved template message to re-engage this contact.');
-            }
-        }
         let wamid = null;
         let status = 'sent';
         let failReason = null;
         let sendError = null;
         try {
+            if (type !== 'template') {
+                await this.whatsappService.check24HourWindow(shopId, conversation.contact.phone).catch(() => true);
+            }
             const metaRes = await this.whatsappService.sendOutboundMessage(shopId, conversation.contact.phone, type, content, mediaUrl);
             wamid = metaRes?.messages?.[0]?.id || null;
         }
@@ -66,15 +67,15 @@ let MessagesService = class MessagesService {
                 conversationId,
                 direction: 'outbound',
                 type,
-                content: typeof content === 'string' ? content : JSON.stringify(content),
+                content: typeof content === 'string' ? content : JSON.stringify(content || ''),
                 mediaUrl,
                 status
             },
         });
-        if (status === 'failed' && sendError) {
-            const metaMsg = sendError?.response?.data?.error?.message || failReason;
-            throw new common_1.HttpException(`Failed to send message: ${metaMsg}`, common_1.HttpStatus.BAD_REQUEST);
+        try {
+            this.chatGateway.notifyNewMessage(shopId, message);
         }
+        catch (e) { }
         return message;
     }
     async deleteMessage(shopId, messageId) {
@@ -96,6 +97,7 @@ exports.MessagesService = MessagesService;
 exports.MessagesService = MessagesService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        whatsapp_service_1.WhatsappService])
+        whatsapp_service_1.WhatsappService,
+        chat_gateway_1.ChatGateway])
 ], MessagesService);
 //# sourceMappingURL=messages.service.js.map

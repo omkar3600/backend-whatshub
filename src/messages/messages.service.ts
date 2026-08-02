@@ -70,7 +70,7 @@ export class MessagesService {
 
         // Broadcast real-time message event to connected Socket.IO clients
         try {
-            this.chatGateway.emitNewMessage(shopId, message);
+            this.chatGateway.notifyNewMessage(shopId, message);
         } catch (e) {}
 
         return message;
