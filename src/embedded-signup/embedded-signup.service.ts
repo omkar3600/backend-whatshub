@@ -183,7 +183,7 @@ export class EmbeddedSignupService {
 
             // Step 7: Subscribe WABA to webhooks
             try {
-                await this.subscribeToWebhooks(wabaId, accessToken);
+                await this.subscribeToWebhooks(wabaId, accessToken, businessId);
                 await this.logOnboardingEvent(shop.id, 'webhook_subscribed', { wabaId });
             } catch (e) {
                 this.logger.error(`Failed to subscribe to webhooks: ${e.message}`);
@@ -398,7 +398,7 @@ export class EmbeddedSignupService {
         const wabaId = account.wabaId || account.businessAccountId;
 
         try {
-            await this.subscribeToWebhooks(wabaId, accessToken);
+            await this.subscribeToWebhooks(wabaId, accessToken, account.businessAccountId);
             await this.logOnboardingEvent(shop.id, 'webhook_resubscribed', { wabaId });
             return { success: true, message: `Successfully subscribed WABA ${wabaId} to webhooks` };
         } catch (err: any) {
@@ -514,40 +514,32 @@ export class EmbeddedSignupService {
         return response.data?.data || [];
     }
 
-    private async subscribeToWebhooks(wabaId: string, accessToken: string): Promise<void> {
+    private async subscribeToWebhooks(wabaId: string, accessToken: string, altId?: string): Promise<void> {
         const proof = this.getAppSecretProof(accessToken);
-        try {
-            await firstValueFrom(
-                this.httpService.post(
-                    `${this.graphApiBase}/${wabaId}/subscribed_apps`,
-                    null,
-                    {
-                        params: { access_token: accessToken, appsecret_proof: proof },
-                    },
-                ),
-            );
-            this.logger.log(`Subscribed WABA ${wabaId} to webhooks with user token`);
-        } catch (err: any) {
-            const appId = process.env.META_APP_ID;
-            const appSecret = process.env.META_APP_SECRET;
-            if (appId && appSecret) {
-                this.logger.warn(
-                    `User token subscription failed for WABA ${wabaId}: ${err.response?.data?.error?.message || err.message}. Retrying with App Access Token...`,
-                );
-                const appAccessToken = `${appId}|${appSecret}`;
+        const candidateIds = Array.from(new Set([wabaId, altId].filter(Boolean))) as string[];
+
+        let lastError: any = null;
+        for (const targetId of candidateIds) {
+            try {
                 await firstValueFrom(
                     this.httpService.post(
-                        `${this.graphApiBase}/${wabaId}/subscribed_apps`,
+                        `${this.graphApiBase}/${targetId}/subscribed_apps`,
                         null,
                         {
-                            params: { access_token: appAccessToken },
+                            params: { access_token: accessToken, appsecret_proof: proof },
                         },
                     ),
                 );
-                this.logger.log(`Subscribed WABA ${wabaId} to webhooks using App Access Token`);
-            } else {
-                throw err;
+                this.logger.log(`Successfully subscribed target ID ${targetId} to webhooks`);
+                return;
+            } catch (err: any) {
+                lastError = err;
+                this.logger.warn(`Failed to subscribe target ID ${targetId} to webhooks: ${err.response?.data?.error?.message || err.message}`);
             }
+        }
+
+        if (lastError) {
+            throw lastError;
         }
     }
 
