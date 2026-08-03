@@ -61,8 +61,13 @@ export declare class EmbeddedSignupService {
         success: boolean;
         message: string;
     }>;
+    syncWebhooks(userId: string, wabaAccountId: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
     private exchangeCodeForToken;
     private debugToken;
+    private getAppSecretProof;
     private fetchOwnedWabas;
     private fetchWabaDetails;
     private fetchPhoneNumbers;

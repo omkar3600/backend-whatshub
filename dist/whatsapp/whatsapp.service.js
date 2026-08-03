@@ -20,6 +20,7 @@ const axios_1 = require("@nestjs/axios");
 const crypto_service_1 = require("../common/services/crypto.service");
 const phone_normalizer_1 = require("../common/utils/phone-normalizer");
 const rxjs_1 = require("rxjs");
+const crypto_1 = require("crypto");
 const chat_gateway_1 = require("../chat/chat.gateway");
 const chatbot_service_1 = require("../chatbot/chatbot.service");
 const flow_engine_service_1 = require("../flows/flow-engine.service");
@@ -718,6 +719,12 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
         const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
         return conversation.lastContactMessageAt >= twentyFourHoursAgo;
     }
+    getAppSecretProof(accessToken) {
+        const appSecret = process.env.META_APP_SECRET;
+        if (!appSecret)
+            return undefined;
+        return (0, crypto_1.createHmac)('sha256', appSecret).update(accessToken).digest('hex');
+    }
     async sendOutboundMessage(shopId, toPhone, type, content, mediaUrl) {
         const creds = await this.getCredentials(shopId);
         const payload = {
@@ -790,6 +797,7 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
             }
         }
         const url = `${this.graphApiBase}/${creds.phoneNumberId}/messages`;
+        const proof = this.getAppSecretProof(creds.accessToken);
         const maxRetries = 3;
         let attempt = 0;
         let lastError = null;
@@ -800,6 +808,7 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
                         Authorization: `Bearer ${creds.accessToken}`,
                         'Content-Type': 'application/json',
                     },
+                    params: proof ? { appsecret_proof: proof } : {},
                 }));
                 return response.data;
             }

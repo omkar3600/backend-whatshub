@@ -59,7 +59,7 @@ __decorate([
 ], WebhooksController.prototype, "handleWebhook", null);
 exports.WebhooksController = WebhooksController = WebhooksController_1 = __decorate([
     (0, throttler_1.SkipThrottle)(),
-    (0, common_1.Controller)('webhooks/whatsapp'),
+    (0, common_1.Controller)(['webhooks/whatsapp', 'api/webhooks/whatsapp']),
     __metadata("design:paramtypes", [whatsapp_service_1.WhatsappService])
 ], WebhooksController);
 //# sourceMappingURL=webhooks.controller.js.map

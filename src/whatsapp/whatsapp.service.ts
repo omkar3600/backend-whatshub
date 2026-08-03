@@ -4,6 +4,7 @@ import { HttpService } from '@nestjs/axios';
 import { CryptoService } from '../common/services/crypto.service';
 import { normalizePhone } from '../common/utils/phone-normalizer';
 import { firstValueFrom } from 'rxjs';
+import { createHmac } from 'crypto';
 import { ChatGateway } from '../chat/chat.gateway';
 import { ChatbotService } from '../chatbot/chatbot.service';
 import { FlowEngineService } from '../flows/flow-engine.service';
@@ -817,6 +818,12 @@ export class WhatsappService {
         return conversation.lastContactMessageAt >= twentyFourHoursAgo;
     }
 
+    private getAppSecretProof(accessToken: string): string | undefined {
+        const appSecret = process.env.META_APP_SECRET;
+        if (!appSecret) return undefined;
+        return createHmac('sha256', appSecret).update(accessToken).digest('hex');
+    }
+
     async sendOutboundMessage(shopId: string, toPhone: string, type: string, content: any, mediaUrl?: string) {
         const creds = await this.getCredentials(shopId);
 
@@ -891,6 +898,7 @@ export class WhatsappService {
         }
 
         const url = `${this.graphApiBase}/${creds.phoneNumberId}/messages`;
+        const proof = this.getAppSecretProof(creds.accessToken);
 
         const maxRetries = 3;
         let attempt = 0;
@@ -904,6 +912,7 @@ export class WhatsappService {
                             Authorization: `Bearer ${creds.accessToken}`,
                             'Content-Type': 'application/json',
                         },
+                        params: proof ? { appsecret_proof: proof } : {},
                     })
                 );
                 return response.data;

@@ -4,7 +4,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { WebhookSignatureGuard } from '../../common/guards/webhook-signature.guard';
 
 @SkipThrottle()
-@Controller('webhooks/whatsapp')
+@Controller(['webhooks/whatsapp', 'api/webhooks/whatsapp'])
 export class WebhooksController {
     private readonly logger = new Logger(WebhooksController.name);
 

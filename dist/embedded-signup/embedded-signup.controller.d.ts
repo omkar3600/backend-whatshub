@@ -57,6 +57,10 @@ export declare class EmbeddedSignupController {
         success: boolean;
         message: string;
     }>;
+    syncWebhooks(req: any, wabaAccountId: string): Promise<{
+        success: boolean;
+        message: string;
+    }>;
     getOnboardingLogs(req: any): Promise<{
         id: string;
         createdAt: Date;

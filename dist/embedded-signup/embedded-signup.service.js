@@ -16,6 +16,7 @@ const prisma_service_1 = require("../prisma/prisma.service");
 const axios_1 = require("@nestjs/axios");
 const crypto_service_1 = require("../common/services/crypto.service");
 const rxjs_1 = require("rxjs");
+const crypto_1 = require("crypto");
 let EmbeddedSignupService = EmbeddedSignupService_1 = class EmbeddedSignupService {
     prisma;
     httpService;
@@ -321,6 +322,21 @@ let EmbeddedSignupService = EmbeddedSignupService_1 = class EmbeddedSignupServic
         await this.logOnboardingEvent(shop.id, 'reconnected', { wabaAccountId });
         return { success: true, message: 'WhatsApp Business Account reconnected successfully' };
     }
+    async syncWebhooks(userId, wabaAccountId) {
+        const shop = await this.prisma.shop.findUnique({ where: { ownerId: userId } });
+        if (!shop)
+            throw new common_1.NotFoundException('Shop not found');
+        const account = await this.prisma.whatsAppBusinessAccount.findFirst({
+            where: { id: wabaAccountId, shopId: shop.id },
+        });
+        if (!account)
+            throw new common_1.NotFoundException('WhatsApp Business Account not found');
+        const accessToken = this.cryptoService.decrypt(account.accessToken);
+        const wabaId = account.wabaId || account.businessAccountId;
+        await this.subscribeToWebhooks(wabaId, accessToken);
+        await this.logOnboardingEvent(shop.id, 'webhook_resubscribed', { wabaId });
+        return { success: true, message: `Successfully subscribed WABA ${wabaId} to webhooks` };
+    }
     async exchangeCodeForToken(code, redirectUri) {
         const appId = process.env.META_APP_ID;
         const appSecret = process.env.META_APP_SECRET;
@@ -354,14 +370,21 @@ let EmbeddedSignupService = EmbeddedSignupService_1 = class EmbeddedSignupServic
         }));
         return response.data;
     }
+    getAppSecretProof(accessToken) {
+        const appSecret = process.env.META_APP_SECRET;
+        if (!appSecret)
+            return undefined;
+        return (0, crypto_1.createHmac)('sha256', appSecret).update(accessToken).digest('hex');
+    }
     async fetchOwnedWabas(accessToken) {
         try {
+            const proof = this.getAppSecretProof(accessToken);
             const meResp = await (0, rxjs_1.firstValueFrom)(this.httpService.get(`${this.graphApiBase}/me`, {
-                params: { access_token: accessToken, fields: 'id,name' },
+                params: { access_token: accessToken, appsecret_proof: proof, fields: 'id,name' },
             }));
             const businessId = meResp.data.id;
             const wabaResp = await (0, rxjs_1.firstValueFrom)(this.httpService.get(`${this.graphApiBase}/${businessId}/owned_whatsapp_business_accounts`, {
-                params: { access_token: accessToken },
+                params: { access_token: accessToken, appsecret_proof: proof },
             }));
             return wabaResp.data?.data || [];
         }
@@ -371,35 +394,42 @@ let EmbeddedSignupService = EmbeddedSignupService_1 = class EmbeddedSignupServic
         }
     }
     async fetchWabaDetails(wabaId, accessToken) {
+        const proof = this.getAppSecretProof(accessToken);
         const response = await (0, rxjs_1.firstValueFrom)(this.httpService.get(`${this.graphApiBase}/${wabaId}`, {
             params: {
                 access_token: accessToken,
+                appsecret_proof: proof,
                 fields: 'id,name,currency,timezone_id,business,owner_business_info,message_template_namespace',
             },
         }));
         return response.data;
     }
     async fetchPhoneNumbers(wabaId, accessToken) {
+        const proof = this.getAppSecretProof(accessToken);
         const response = await (0, rxjs_1.firstValueFrom)(this.httpService.get(`${this.graphApiBase}/${wabaId}/phone_numbers`, {
             params: {
                 access_token: accessToken,
+                appsecret_proof: proof,
                 fields: 'id,display_phone_number,verified_name,quality_rating,messaging_limit_tier,code_verification_status',
             },
         }));
         return response.data?.data || [];
     }
     async subscribeToWebhooks(wabaId, accessToken) {
+        const proof = this.getAppSecretProof(accessToken);
         await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${this.graphApiBase}/${wabaId}/subscribed_apps`, null, {
-            params: { access_token: accessToken },
+            params: { access_token: accessToken, appsecret_proof: proof },
         }));
         this.logger.log(`Subscribed WABA ${wabaId} to webhooks`);
     }
     async registerPhoneNumber(phoneNumberId, accessToken) {
+        const proof = this.getAppSecretProof(accessToken);
         await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${this.graphApiBase}/${phoneNumberId}/register`, { messaging_product: 'whatsapp', pin: require('crypto').randomInt(100000, 999999).toString() }, {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
             },
+            params: { appsecret_proof: proof },
         }));
         this.logger.log(`Registered phone number ${phoneNumberId} for messaging`);
     }

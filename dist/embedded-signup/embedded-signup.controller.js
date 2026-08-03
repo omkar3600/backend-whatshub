@@ -42,6 +42,10 @@ let EmbeddedSignupController = EmbeddedSignupController_1 = class EmbeddedSignup
         this.logger.log(`Reconnecting WABA ${wabaAccountId} for user ${req.user.id}`);
         return this.signupService.reconnectWaba(req.user.id, wabaAccountId, dto.code, dto.redirectUri);
     }
+    async syncWebhooks(req, wabaAccountId) {
+        this.logger.log(`Syncing webhooks for WABA ${wabaAccountId} for user ${req.user.id}`);
+        return this.signupService.syncWebhooks(req.user.id, wabaAccountId);
+    }
     async getOnboardingLogs(req) {
         this.logger.log(`Fetching onboarding logs for user ${req.user.id}`);
         return this.signupService.getOnboardingLogs(req.user.id);
@@ -86,6 +90,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, signup_callback_dto_1.SignupCallbackDto]),
     __metadata("design:returntype", Promise)
 ], EmbeddedSignupController.prototype, "reconnectWaba", null);
+__decorate([
+    (0, common_1.Post)('sync-webhooks/:wabaAccountId'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('wabaAccountId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], EmbeddedSignupController.prototype, "syncWebhooks", null);
 __decorate([
     (0, common_1.Get)('onboarding-logs'),
     __param(0, (0, common_1.Req)()),

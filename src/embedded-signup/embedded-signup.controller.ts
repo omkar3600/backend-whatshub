@@ -59,6 +59,12 @@ export class EmbeddedSignupController {
         return this.signupService.reconnectWaba(req.user.id, wabaAccountId, dto.code, dto.redirectUri);
     }
 
+    @Post('sync-webhooks/:wabaAccountId')
+    async syncWebhooks(@Req() req: any, @Param('wabaAccountId') wabaAccountId: string) {
+        this.logger.log(`Syncing webhooks for WABA ${wabaAccountId} for user ${req.user.id}`);
+        return this.signupService.syncWebhooks(req.user.id, wabaAccountId);
+    }
+
     @Get('onboarding-logs')
     async getOnboardingLogs(@Req() req: any) {
         this.logger.log(`Fetching onboarding logs for user ${req.user.id}`);
