@@ -431,10 +431,27 @@ let EmbeddedSignupService = EmbeddedSignupService_1 = class EmbeddedSignupServic
     }
     async subscribeToWebhooks(wabaId, accessToken) {
         const proof = this.getAppSecretProof(accessToken);
-        await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${this.graphApiBase}/${wabaId}/subscribed_apps`, null, {
-            params: { access_token: accessToken, appsecret_proof: proof },
-        }));
-        this.logger.log(`Subscribed WABA ${wabaId} to webhooks`);
+        try {
+            await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${this.graphApiBase}/${wabaId}/subscribed_apps`, null, {
+                params: { access_token: accessToken, appsecret_proof: proof },
+            }));
+            this.logger.log(`Subscribed WABA ${wabaId} to webhooks with user token`);
+        }
+        catch (err) {
+            const appId = process.env.META_APP_ID;
+            const appSecret = process.env.META_APP_SECRET;
+            if (appId && appSecret) {
+                this.logger.warn(`User token subscription failed for WABA ${wabaId}: ${err.response?.data?.error?.message || err.message}. Retrying with App Access Token...`);
+                const appAccessToken = `${appId}|${appSecret}`;
+                await (0, rxjs_1.firstValueFrom)(this.httpService.post(`${this.graphApiBase}/${wabaId}/subscribed_apps`, null, {
+                    params: { access_token: appAccessToken },
+                }));
+                this.logger.log(`Subscribed WABA ${wabaId} to webhooks using App Access Token`);
+            }
+            else {
+                throw err;
+            }
+        }
     }
     async registerPhoneNumber(phoneNumberId, accessToken) {
         const proof = this.getAppSecretProof(accessToken);

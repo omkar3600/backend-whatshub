@@ -516,16 +516,39 @@ export class EmbeddedSignupService {
 
     private async subscribeToWebhooks(wabaId: string, accessToken: string): Promise<void> {
         const proof = this.getAppSecretProof(accessToken);
-        await firstValueFrom(
-            this.httpService.post(
-                `${this.graphApiBase}/${wabaId}/subscribed_apps`,
-                null,
-                {
-                    params: { access_token: accessToken, appsecret_proof: proof },
-                },
-            ),
-        );
-        this.logger.log(`Subscribed WABA ${wabaId} to webhooks`);
+        try {
+            await firstValueFrom(
+                this.httpService.post(
+                    `${this.graphApiBase}/${wabaId}/subscribed_apps`,
+                    null,
+                    {
+                        params: { access_token: accessToken, appsecret_proof: proof },
+                    },
+                ),
+            );
+            this.logger.log(`Subscribed WABA ${wabaId} to webhooks with user token`);
+        } catch (err: any) {
+            const appId = process.env.META_APP_ID;
+            const appSecret = process.env.META_APP_SECRET;
+            if (appId && appSecret) {
+                this.logger.warn(
+                    `User token subscription failed for WABA ${wabaId}: ${err.response?.data?.error?.message || err.message}. Retrying with App Access Token...`,
+                );
+                const appAccessToken = `${appId}|${appSecret}`;
+                await firstValueFrom(
+                    this.httpService.post(
+                        `${this.graphApiBase}/${wabaId}/subscribed_apps`,
+                        null,
+                        {
+                            params: { access_token: appAccessToken },
+                        },
+                    ),
+                );
+                this.logger.log(`Subscribed WABA ${wabaId} to webhooks using App Access Token`);
+            } else {
+                throw err;
+            }
+        }
     }
 
     private async registerPhoneNumber(phoneNumberId: string, accessToken: string): Promise<void> {
