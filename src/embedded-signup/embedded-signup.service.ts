@@ -391,6 +391,7 @@ export class EmbeddedSignupService {
                 ],
                 shopId: shop.id,
             },
+            include: { phoneNumbers: true },
         });
         if (!account) throw new NotFoundException('WhatsApp Business Account not found');
 
@@ -399,8 +400,18 @@ export class EmbeddedSignupService {
 
         try {
             await this.subscribeToWebhooks(wabaId, accessToken, account.businessAccountId);
+            
+            // Also ensure all linked phone numbers are registered with Meta Cloud API
+            for (const phone of account.phoneNumbers || []) {
+                try {
+                    await this.registerPhoneNumber(phone.phoneNumberId, accessToken);
+                } catch (pe: any) {
+                    this.logger.warn(`Phone registration for ${phone.phoneNumberId} returned: ${pe.message}`);
+                }
+            }
+
             await this.logOnboardingEvent(shop.id, 'webhook_resubscribed', { wabaId });
-            return { success: true, message: `Successfully subscribed WABA ${wabaId} to webhooks` };
+            return { success: true, message: `Successfully subscribed WABA ${wabaId} and registered phone numbers with Meta` };
         } catch (err: any) {
             const metaError = err.response?.data?.error?.message || err.message || 'Failed to subscribe to Meta webhooks';
             this.logger.error(`Failed to subscribe WABA ${wabaId} to webhooks: ${metaError}`);
