@@ -383,17 +383,29 @@ export class EmbeddedSignupService {
         if (!shop) throw new NotFoundException('Shop not found');
 
         const account = await this.prisma.whatsAppBusinessAccount.findFirst({
-            where: { id: wabaAccountId, shopId: shop.id },
+            where: {
+                OR: [
+                    { id: wabaAccountId },
+                    { wabaId: wabaAccountId },
+                    { businessAccountId: wabaAccountId },
+                ],
+                shopId: shop.id,
+            },
         });
         if (!account) throw new NotFoundException('WhatsApp Business Account not found');
 
         const accessToken = this.cryptoService.decrypt(account.accessToken);
         const wabaId = account.wabaId || account.businessAccountId;
 
-        await this.subscribeToWebhooks(wabaId, accessToken);
-        await this.logOnboardingEvent(shop.id, 'webhook_resubscribed', { wabaId });
-
-        return { success: true, message: `Successfully subscribed WABA ${wabaId} to webhooks` };
+        try {
+            await this.subscribeToWebhooks(wabaId, accessToken);
+            await this.logOnboardingEvent(shop.id, 'webhook_resubscribed', { wabaId });
+            return { success: true, message: `Successfully subscribed WABA ${wabaId} to webhooks` };
+        } catch (err: any) {
+            const metaError = err.response?.data?.error?.message || err.message || 'Failed to subscribe to Meta webhooks';
+            this.logger.error(`Failed to subscribe WABA ${wabaId} to webhooks: ${metaError}`);
+            throw new BadRequestException(`Meta API Error: ${metaError}`);
+        }
     }
 
     // ─── Private Helper Methods ────────────────────────────────────────────
