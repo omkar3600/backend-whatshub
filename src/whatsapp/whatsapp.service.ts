@@ -2,6 +2,7 @@ import { Injectable, Logger, Inject, forwardRef, BadRequestException } from '@ne
 import { PrismaService } from '../prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
 import { CryptoService } from '../common/services/crypto.service';
+import { SystemConfigService } from '../admin/system-config.service';
 import { normalizePhone } from '../common/utils/phone-normalizer';
 import { firstValueFrom } from 'rxjs';
 import { createHmac } from 'crypto';
@@ -22,12 +23,15 @@ interface WhatsAppCredentials {
 @Injectable()
 export class WhatsappService {
     private readonly logger = new Logger(WhatsappService.name);
+    // NOTE: graphApiBase is now dynamic — use getGraphApiBase() instead of this field
+    // for calls that should respect runtime META_API_VERSION changes.
     private readonly graphApiBase = `https://graph.facebook.com/${process.env.META_API_VERSION || 'v18.0'}`;
 
     constructor(
         private prisma: PrismaService,
         private httpService: HttpService,
         private cryptoService: CryptoService,
+        private systemConfigService: SystemConfigService,
         private chatGateway: ChatGateway,
         private chatbotService: ChatbotService,
         @Inject(forwardRef(() => FlowEngineService))
@@ -37,6 +41,12 @@ export class WhatsappService {
         @Inject(forwardRef(() => TriggerRegistry))
         private triggerRegistry: TriggerRegistry
     ) { }
+
+    /** Returns the Graph API base URL, respecting DB override of META_API_VERSION. */
+    private async getGraphApiBase(): Promise<string> {
+        const version = await this.systemConfigService.get('META_API_VERSION', process.env.META_API_VERSION || 'v18.0');
+        return `https://graph.facebook.com/${version}`;
+    }
 
     /**
      * Get decrypted credentials for a shop.
@@ -127,7 +137,7 @@ export class WhatsappService {
     async verifyWebhook(mode: string, token: string, challenge: string) {
         if (mode !== 'subscribe') return null;
 
-        const WEBHOOK_VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN;
+        const WEBHOOK_VERIFY_TOKEN = await this.systemConfigService.get('WEBHOOK_VERIFY_TOKEN', process.env.WEBHOOK_VERIFY_TOKEN);
         if (WEBHOOK_VERIFY_TOKEN && token === WEBHOOK_VERIFY_TOKEN) {
             this.logger.log('Webhook verified successfully.');
             return challenge;
@@ -818,8 +828,8 @@ export class WhatsappService {
         return conversation.lastContactMessageAt >= twentyFourHoursAgo;
     }
 
-    private getAppSecretProof(accessToken: string): string | undefined {
-        const appSecret = process.env.META_APP_SECRET;
+    private async getAppSecretProof(accessToken: string): Promise<string | undefined> {
+        const appSecret = await this.systemConfigService.get('META_APP_SECRET', process.env.META_APP_SECRET);
         if (!appSecret) return undefined;
         return createHmac('sha256', appSecret).update(accessToken).digest('hex');
     }
@@ -898,7 +908,7 @@ export class WhatsappService {
         }
 
         const url = `${this.graphApiBase}/${creds.phoneNumberId}/messages`;
-        const proof = this.getAppSecretProof(creds.accessToken);
+        const proof = await this.getAppSecretProof(creds.accessToken);
 
         const maxRetries = 3;
         let attempt = 0;

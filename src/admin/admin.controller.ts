@@ -1,5 +1,6 @@
-import { Controller, Post, Get, Put, Body, Param, UseGuards, Delete, Query } from '@nestjs/common';
+import { Controller, Post, Get, Put, Body, Param, UseGuards, Delete, Query, Request } from '@nestjs/common';
 import { AdminService } from './admin.service';
+import { SystemConfigService } from './system-config.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -8,7 +9,10 @@ import { Roles } from '../auth/decorators/roles.decorator';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin')
 export class AdminController {
-    constructor(private readonly adminService: AdminService) { }
+    constructor(
+        private readonly adminService: AdminService,
+        private readonly systemConfigService: SystemConfigService,
+    ) { }
 
     @Post('shops')
     async createShop(@Body() body: any) {
@@ -95,5 +99,31 @@ export class AdminController {
     @Post('shops/:shopId/whatsapp-credentials')
     async setWhatsAppCredentials(@Param('shopId') shopId: string, @Body() body: any) {
         return this.adminService.setWhatsAppCredentials(shopId, body);
+    }
+
+    // ─── Platform Config Endpoints ───────────────────────────────────────
+
+    /** Returns all platform config keys (secrets are masked). */
+    @Get('platform-config')
+    async getPlatformConfig() {
+        return this.systemConfigService.getAll();
+    }
+
+    /** Upsert a platform config key. */
+    @Put('platform-config/:key')
+    async setPlatformConfig(
+        @Param('key') key: string,
+        @Body() body: { value: string; isSecret?: boolean },
+        @Request() req: any,
+    ) {
+        await this.systemConfigService.set(key, body.value, body.isSecret ?? false, req.user?.id);
+        return { message: `Config key "${key}" updated successfully` };
+    }
+
+    /** Delete a platform config key (reverts to env var). */
+    @Delete('platform-config/:key')
+    async deletePlatformConfig(@Param('key') key: string) {
+        await this.systemConfigService.delete(key);
+        return { message: `Config key "${key}" removed (will fall back to env var)` };
     }
 }

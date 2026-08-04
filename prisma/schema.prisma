@@ -537,3 +537,14 @@ model WorkflowTemplate {
 
   @@index([category])
 }
+
+/// Global platform configuration managed via the Admin panel.
+/// Values here override the corresponding environment variables at runtime.
+model SystemConfig {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  isSecret  Boolean  @default(false) // If true, mask in the UI
+  updatedAt DateTime @updatedAt
+  updatedBy String?  // admin user id that last changed it
+}

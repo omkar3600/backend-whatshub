@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { ChatGateway } from '../chat/chat.gateway';
 
 @Injectable()
 export class MessagesService {
+    private readonly logger = new Logger(MessagesService.name);
+
     constructor(
         private prisma: PrismaService,
         private whatsappService: WhatsappService,
@@ -71,7 +73,20 @@ export class MessagesService {
         // Broadcast real-time message event to connected Socket.IO clients
         try {
             this.chatGateway.notifyNewMessage(shopId, message);
-        } catch (e) {}
+        } catch (e: any) {
+            this.logger.warn(`[Socket] Failed to notify newMessage for shop ${shopId}: ${e?.message}`);
+        }
+
+        // Bug 3 fix: If the Meta API call failed, surface the real error to the caller
+        // The message is already saved (as 'failed') so the record exists for audit.
+        if (sendError) {
+            const metaMsg = sendError?.response?.data?.error?.message;
+            const reason = metaMsg || (sendError instanceof Error ? sendError.message : String(sendError));
+            throw new HttpException(
+                { message: 'Message saved but failed to send via WhatsApp', reason, messageId: message.id },
+                HttpStatus.BAD_GATEWAY,
+            );
+        }
 
         return message;
     }
