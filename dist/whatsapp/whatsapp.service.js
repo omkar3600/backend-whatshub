@@ -24,7 +24,6 @@ const rxjs_1 = require("rxjs");
 const crypto_1 = require("crypto");
 const chat_gateway_1 = require("../chat/chat.gateway");
 const chatbot_service_1 = require("../chatbot/chatbot.service");
-const flow_engine_service_1 = require("../flows/flow-engine.service");
 const workflow_engine_service_1 = require("../workflows/engine/workflow-engine.service");
 const trigger_registry_1 = require("../workflows/engine/registries/trigger.registry");
 const bullmq_1 = require("@nestjs/bullmq");
@@ -36,20 +35,18 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
     systemConfigService;
     chatGateway;
     chatbotService;
-    flowEngineService;
     workflowEngineService;
     triggerRegistry;
     aiQueue;
     logger = new common_1.Logger(WhatsappService_1.name);
     graphApiBase = `https://graph.facebook.com/${process.env.META_API_VERSION || 'v18.0'}`;
-    constructor(prisma, httpService, cryptoService, systemConfigService, chatGateway, chatbotService, flowEngineService, workflowEngineService, triggerRegistry, aiQueue) {
+    constructor(prisma, httpService, cryptoService, systemConfigService, chatGateway, chatbotService, workflowEngineService, triggerRegistry, aiQueue) {
         this.prisma = prisma;
         this.httpService = httpService;
         this.cryptoService = cryptoService;
         this.systemConfigService = systemConfigService;
         this.chatGateway = chatGateway;
         this.chatbotService = chatbotService;
-        this.flowEngineService = flowEngineService;
         this.workflowEngineService = workflowEngineService;
         this.triggerRegistry = triggerRegistry;
         this.aiQueue = aiQueue;
@@ -650,14 +647,7 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
                 }
             }
         }
-        let flowFired = false;
-        if (!automationFired && messageData.type === 'text') {
-            flowFired = await this.flowEngineService.processIncomingMessage(shopId, contact.phone, messageData.text.body);
-            if (flowFired) {
-                this.logger.log(`[Flow] Flow triggered/continued for ${contact.phone}`);
-            }
-        }
-        if (!automationFired && !flowFired && messageData.type === 'text') {
+        if (!automationFired && !workflowFired && messageData.type === 'text') {
             const conv = await this.prisma.conversation.findUnique({
                 where: { id: conversation.id },
                 select: { aiPaused: true },
@@ -1041,17 +1031,15 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
 exports.WhatsappService = WhatsappService;
 exports.WhatsappService = WhatsappService = WhatsappService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __param(6, (0, common_1.Inject)((0, common_1.forwardRef)(() => flow_engine_service_1.FlowEngineService))),
-    __param(7, (0, common_1.Inject)((0, common_1.forwardRef)(() => workflow_engine_service_1.WorkflowEngineService))),
-    __param(8, (0, common_1.Inject)((0, common_1.forwardRef)(() => trigger_registry_1.TriggerRegistry))),
-    __param(9, (0, bullmq_1.InjectQueue)('ai-agent-queue')),
+    __param(6, (0, common_1.Inject)((0, common_1.forwardRef)(() => workflow_engine_service_1.WorkflowEngineService))),
+    __param(7, (0, common_1.Inject)((0, common_1.forwardRef)(() => trigger_registry_1.TriggerRegistry))),
+    __param(8, (0, bullmq_1.InjectQueue)('ai-agent-queue')),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         axios_1.HttpService,
         crypto_service_1.CryptoService,
         system_config_service_1.SystemConfigService,
         chat_gateway_1.ChatGateway,
         chatbot_service_1.ChatbotService,
-        flow_engine_service_1.FlowEngineService,
         workflow_engine_service_1.WorkflowEngineService,
         trigger_registry_1.TriggerRegistry,
         bullmq_2.Queue])

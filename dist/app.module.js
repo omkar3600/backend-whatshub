@@ -33,7 +33,6 @@ const chatbot_module_1 = require("./chatbot/chatbot.module");
 const embedded_signup_module_1 = require("./embedded-signup/embedded-signup.module");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
-const flows_module_1 = require("./flows/flows.module");
 const api_keys_module_1 = require("./api-keys/api-keys.module");
 const integration_module_1 = require("./integration/integration.module");
 const workflows_module_1 = require("./workflows/workflows.module");
@@ -77,7 +76,6 @@ exports.AppModule = AppModule = __decorate([
             users_module_1.UsersModule,
             chatbot_module_1.ChatbotModule,
             embedded_signup_module_1.EmbeddedSignupModule,
-            flows_module_1.FlowsModule,
             api_keys_module_1.ApiKeysModule,
             integration_module_1.IntegrationModule,
             workflows_module_1.WorkflowsModule,

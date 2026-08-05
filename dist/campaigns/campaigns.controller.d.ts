@@ -39,9 +39,9 @@ export declare class CampaignsController {
             createdAt: Date;
             updatedAt: Date;
             shopId: string;
-            category: string;
             templateName: string;
             language: string;
+            category: string;
             components: import("@prisma/client/runtime/library").JsonValue;
         };
         name: string;
@@ -67,9 +67,9 @@ export declare class CampaignsController {
                 createdAt: Date;
                 updatedAt: Date;
                 shopId: string;
-                category: string;
                 templateName: string;
                 language: string;
+                category: string;
                 components: import("@prisma/client/runtime/library").JsonValue;
             };
             contacts: {

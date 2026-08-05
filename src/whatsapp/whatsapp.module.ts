@@ -4,7 +4,6 @@ import { WebhooksController } from './webhooks/webhooks.controller';
 import { WhatsappController } from './whatsapp.controller';
 import { HttpModule } from '@nestjs/axios';
 import { ChatbotModule } from '../chatbot/chatbot.module';
-import { FlowsModule } from '../flows/flows.module';
 import { ChatModule } from '../chat/chat.module';
 import { WorkflowsModule } from '../workflows/workflows.module';
 import { BullModule } from '@nestjs/bullmq';
@@ -13,7 +12,6 @@ import { BullModule } from '@nestjs/bullmq';
   imports: [
     HttpModule,
     ChatbotModule,
-    forwardRef(() => FlowsModule),
     ChatModule,
     forwardRef(() => WorkflowsModule),
     BullModule.registerQueue({ name: 'ai-agent-queue' }),

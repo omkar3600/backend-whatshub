@@ -8,7 +8,6 @@ import { firstValueFrom } from 'rxjs';
 import { createHmac } from 'crypto';
 import { ChatGateway } from '../chat/chat.gateway';
 import { ChatbotService } from '../chatbot/chatbot.service';
-import { FlowEngineService } from '../flows/flow-engine.service';
 import { WorkflowEngineService } from '../workflows/engine/workflow-engine.service';
 import { TriggerRegistry } from '../workflows/engine/registries/trigger.registry';
 
@@ -37,8 +36,6 @@ export class WhatsappService {
         private systemConfigService: SystemConfigService,
         private chatGateway: ChatGateway,
         private chatbotService: ChatbotService,
-        @Inject(forwardRef(() => FlowEngineService))
-        private flowEngineService: FlowEngineService,
         @Inject(forwardRef(() => WorkflowEngineService))
         private workflowEngineService: WorkflowEngineService,
         @Inject(forwardRef(() => TriggerRegistry))
@@ -734,17 +731,8 @@ export class WhatsappService {
             }
         }
 
-        // --- Flows ---
-        let flowFired = false;
-        if (!automationFired && messageData.type === 'text') {
-            flowFired = await this.flowEngineService.processIncomingMessage(shopId, contact.phone, messageData.text.body);
-            if (flowFired) {
-                this.logger.log(`[Flow] Flow triggered/continued for ${contact.phone}`);
-            }
-        }
-
         // --- AI Agent ---
-        if (!automationFired && !flowFired && messageData.type === 'text') {
+        if (!automationFired && !workflowFired && messageData.type === 'text') {
             const conv = await this.prisma.conversation.findUnique({
                 where: { id: conversation.id },
                 select: { aiPaused: true },

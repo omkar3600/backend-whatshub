@@ -24,7 +24,6 @@ import { ChatbotModule } from './chatbot/chatbot.module';
 import { EmbeddedSignupModule } from './embedded-signup/embedded-signup.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { FlowsModule } from './flows/flows.module';
 import { ApiKeysModule } from './api-keys/api-keys.module';
 import { IntegrationModule } from './integration/integration.module';
 import { WorkflowsModule } from './workflows/workflows.module';
@@ -66,7 +65,6 @@ import { AiModule } from './ai/ai.module';
     UsersModule,
     ChatbotModule,
     EmbeddedSignupModule,
-    FlowsModule,
     ApiKeysModule,
     IntegrationModule,
     WorkflowsModule,

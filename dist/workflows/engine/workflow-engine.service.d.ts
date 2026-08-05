@@ -15,11 +15,11 @@ export declare class WorkflowEngineService {
         updatedAt: Date;
         shopId: string;
         contactId: string;
-        currentNodeId: string | null;
-        variables: import("@prisma/client/runtime/library").JsonValue;
         workflowId: string;
+        currentNodeId: string | null;
         previousNodeId: string | null;
         lastExecutedNodeId: string | null;
+        variables: import("@prisma/client/runtime/library").JsonValue;
         resumeToken: string | null;
         executionVersion: number;
         entryTime: Date;
