@@ -383,24 +383,48 @@ export class AdminService {
         const { businessAccountId, phoneNumberId, accessToken } = data;
         const encryptedToken = this.cryptoService.encrypt(accessToken);
 
-        const account = await this.prisma.whatsAppBusinessAccount.create({
-            data: {
-                shopId,
-                businessAccountId,
-                accessToken: encryptedToken,
-                status: 'active',
-                onboardingSource: 'manual',
-            },
+        let existingAccount = await this.prisma.whatsAppBusinessAccount.findFirst({
+            where: { shopId },
         });
 
-        if (phoneNumberId) {
-            await this.prisma.whatsAppPhoneNumber.create({
+        let account: any;
+        if (existingAccount) {
+            account = await this.prisma.whatsAppBusinessAccount.update({
+                where: { id: existingAccount.id },
                 data: {
+                    businessAccountId,
+                    accessToken: encryptedToken,
+                    status: 'active',
+                    onboardingSource: 'manual',
+                },
+            });
+        } else {
+            account = await this.prisma.whatsAppBusinessAccount.create({
+                data: {
+                    shopId,
+                    businessAccountId,
+                    accessToken: encryptedToken,
+                    status: 'active',
+                    onboardingSource: 'manual',
+                },
+            });
+        }
+
+        if (phoneNumberId) {
+            await this.prisma.whatsAppPhoneNumber.upsert({
+                where: { phoneNumberId },
+                create: {
                     shopId,
                     wabaAccountId: account.id,
                     phoneNumberId,
                     isDefault: true,
                     status: 'active',
+                },
+                update: {
+                    shopId,
+                    wabaAccountId: account.id,
+                    status: 'active',
+                    isDefault: true,
                 },
             });
         }
