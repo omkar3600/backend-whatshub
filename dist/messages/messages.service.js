@@ -8,16 +8,18 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var MessagesService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MessagesService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const whatsapp_service_1 = require("../whatsapp/whatsapp.service");
 const chat_gateway_1 = require("../chat/chat.gateway");
-let MessagesService = class MessagesService {
+let MessagesService = MessagesService_1 = class MessagesService {
     prisma;
     whatsappService;
     chatGateway;
+    logger = new common_1.Logger(MessagesService_1.name);
     constructor(prisma, whatsappService, chatGateway) {
         this.prisma = prisma;
         this.whatsappService = whatsappService;
@@ -75,7 +77,20 @@ let MessagesService = class MessagesService {
         try {
             this.chatGateway.notifyNewMessage(shopId, message);
         }
-        catch (e) { }
+        catch (e) {
+            this.logger.warn(`[Socket] Failed to notify newMessage for shop ${shopId}: ${e?.message}`);
+        }
+        if (sendError) {
+            const errObj = sendError?.response?.data?.error;
+            const metaMsg = errObj?.message;
+            const metaCode = errObj?.code;
+            const metaDetails = errObj?.error_data?.details;
+            const reason = metaMsg
+                ? `Meta Error (${metaCode || 'API'}): ${metaMsg}${metaDetails ? ` - ${metaDetails}` : ''}`
+                : (sendError instanceof Error ? sendError.message : String(sendError));
+            this.logger.error(`Outbound message failed for shop ${shopId}: ${reason}`);
+            throw new common_1.HttpException({ message: 'Message saved but failed to send via WhatsApp', reason, messageId: message.id }, common_1.HttpStatus.BAD_GATEWAY);
+        }
         return message;
     }
     async deleteMessage(shopId, messageId) {
@@ -94,7 +109,7 @@ let MessagesService = class MessagesService {
     }
 };
 exports.MessagesService = MessagesService;
-exports.MessagesService = MessagesService = __decorate([
+exports.MessagesService = MessagesService = MessagesService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         whatsapp_service_1.WhatsappService,

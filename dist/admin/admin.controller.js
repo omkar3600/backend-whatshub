@@ -15,13 +15,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminController = void 0;
 const common_1 = require("@nestjs/common");
 const admin_service_1 = require("./admin.service");
+const system_config_service_1 = require("./system-config.service");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../auth/guards/roles.guard");
 const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 let AdminController = class AdminController {
     adminService;
-    constructor(adminService) {
+    systemConfigService;
+    constructor(adminService, systemConfigService) {
         this.adminService = adminService;
+        this.systemConfigService = systemConfigService;
     }
     async createShop(body) {
         return this.adminService.createShop(body);
@@ -73,6 +76,17 @@ let AdminController = class AdminController {
     }
     async setWhatsAppCredentials(shopId, body) {
         return this.adminService.setWhatsAppCredentials(shopId, body);
+    }
+    async getPlatformConfig() {
+        return this.systemConfigService.getAll();
+    }
+    async setPlatformConfig(key, body, req) {
+        await this.systemConfigService.set(key, body.value, body.isSecret ?? false, req.user?.id);
+        return { message: `Config key "${key}" updated successfully` };
+    }
+    async deletePlatformConfig(key) {
+        await this.systemConfigService.delete(key);
+        return { message: `Config key "${key}" removed (will fall back to env var)` };
     }
 };
 exports.AdminController = AdminController;
@@ -194,10 +208,33 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "setWhatsAppCredentials", null);
+__decorate([
+    (0, common_1.Get)('platform-config'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getPlatformConfig", null);
+__decorate([
+    (0, common_1.Put)('platform-config/:key'),
+    __param(0, (0, common_1.Param)('key')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "setPlatformConfig", null);
+__decorate([
+    (0, common_1.Delete)('platform-config/:key'),
+    __param(0, (0, common_1.Param)('key')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "deletePlatformConfig", null);
 exports.AdminController = AdminController = __decorate([
     (0, common_1.Controller)('admin'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('admin'),
-    __metadata("design:paramtypes", [admin_service_1.AdminService])
+    __metadata("design:paramtypes", [admin_service_1.AdminService,
+        system_config_service_1.SystemConfigService])
 ], AdminController);
 //# sourceMappingURL=admin.controller.js.map

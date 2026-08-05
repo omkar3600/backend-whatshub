@@ -890,21 +890,58 @@ export class WhatsappService {
                 name: templateName,
                 language: { code: templateLanguage }
             };
-            if (typeof content !== 'string' && content.components) {
-                // Sanitize parameters: replace empty strings / nulls with fallback space ' ' to prevent Meta Error 100
-                const sanitizedComps = (content.components as any[]).map((comp: any) => {
-                    if (comp.parameters && Array.isArray(comp.parameters)) {
-                        const newParams = comp.parameters.map((p: any) => {
-                            if (p.type === 'text') {
-                                return { ...p, text: p.text && String(p.text).trim() !== '' ? p.text : ' ' };
+            const components: any[] = [];
+            if (typeof content !== 'string' && Array.isArray(content.components)) {
+                for (const comp of content.components) {
+                    if (!comp || !comp.type) continue;
+                    const compType = String(comp.type).toLowerCase();
+                    const sanitizedComp: any = { type: compType };
+
+                    if (comp.sub_type) {
+                        sanitizedComp.sub_type = String(comp.sub_type).toLowerCase();
+                    }
+                    if (comp.index !== undefined && comp.index !== null) {
+                        sanitizedComp.index = String(comp.index);
+                    }
+                    if (Array.isArray(comp.parameters)) {
+                        sanitizedComp.parameters = comp.parameters.map((p: any) => {
+                            const pType = p.type ? String(p.type).toLowerCase() : 'text';
+                            if (pType === 'text') {
+                                return { ...p, type: 'text', text: p.text && String(p.text).trim() !== '' ? String(p.text).trim() : ' ' };
                             }
                             return p;
                         });
-                        return { ...comp, parameters: newParams };
                     }
-                    return comp;
+                    // Include component if it has parameters or valid button/header attributes
+                    if (sanitizedComp.parameters && sanitizedComp.parameters.length > 0) {
+                        components.push(sanitizedComp);
+                    }
+                }
+            }
+
+            // Auto-inject media header component if mediaUrl is provided and header component is not already in components
+            const hasHeader = components.some(c => c.type === 'header');
+            if (!hasHeader && mediaUrl) {
+                let headerType = 'image';
+                const lowerUrl = mediaUrl.toLowerCase();
+                if (lowerUrl.includes('.mp4') || lowerUrl.includes('.mov') || lowerUrl.includes('.avi') || lowerUrl.includes('/video/')) {
+                    headerType = 'video';
+                } else if (lowerUrl.includes('.pdf') || lowerUrl.includes('.doc') || lowerUrl.includes('.docx') || lowerUrl.includes('/document/')) {
+                    headerType = 'document';
+                }
+                components.unshift({
+                    type: 'header',
+                    parameters: [
+                        {
+                            type: headerType,
+                            [headerType]: { link: mediaUrl }
+                        }
+                    ]
                 });
-                payload.template.components = sanitizedComps;
+            }
+
+            if (components.length > 0) {
+                payload.template.components = components;
             }
         }
 

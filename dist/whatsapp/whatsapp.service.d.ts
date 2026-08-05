@@ -1,6 +1,7 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { HttpService } from '@nestjs/axios';
 import { CryptoService } from '../common/services/crypto.service';
+import { SystemConfigService } from '../admin/system-config.service';
 import { ChatGateway } from '../chat/chat.gateway';
 import { ChatbotService } from '../chatbot/chatbot.service';
 import { FlowEngineService } from '../flows/flow-engine.service';
@@ -17,6 +18,7 @@ export declare class WhatsappService {
     private prisma;
     private httpService;
     private cryptoService;
+    private systemConfigService;
     private chatGateway;
     private chatbotService;
     private flowEngineService;
@@ -24,7 +26,8 @@ export declare class WhatsappService {
     private triggerRegistry;
     private readonly logger;
     private readonly graphApiBase;
-    constructor(prisma: PrismaService, httpService: HttpService, cryptoService: CryptoService, chatGateway: ChatGateway, chatbotService: ChatbotService, flowEngineService: FlowEngineService, workflowEngineService: WorkflowEngineService, triggerRegistry: TriggerRegistry);
+    constructor(prisma: PrismaService, httpService: HttpService, cryptoService: CryptoService, systemConfigService: SystemConfigService, chatGateway: ChatGateway, chatbotService: ChatbotService, flowEngineService: FlowEngineService, workflowEngineService: WorkflowEngineService, triggerRegistry: TriggerRegistry);
+    private getGraphApiBase;
     getCredentials(shopId: string): Promise<WhatsAppCredentials>;
     getCredentialsByPhoneNumberId(phoneNumberId: string): Promise<WhatsAppCredentials | null>;
     getShopByWabaId(wabaId: string): Promise<string | null>;

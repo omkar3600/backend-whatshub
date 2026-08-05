@@ -242,20 +242,6 @@ export declare class AdminService {
     }>;
     setWhatsAppCredentials(shopId: string, data: any): Promise<{
         message: string;
-        account: {
-            businessName: string | null;
-            id: string;
-            status: string;
-            createdAt: Date;
-            updatedAt: Date;
-            shopId: string;
-            businessAccountId: string;
-            wabaId: string | null;
-            accessToken: string;
-            tokenType: string;
-            tokenExpiry: Date | null;
-            webhookVerifyToken: string | null;
-            onboardingSource: string;
-        };
+        account: any;
     }>;
 }

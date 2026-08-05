@@ -18,6 +18,7 @@ const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const axios_1 = require("@nestjs/axios");
 const crypto_service_1 = require("../common/services/crypto.service");
+const system_config_service_1 = require("../admin/system-config.service");
 const phone_normalizer_1 = require("../common/utils/phone-normalizer");
 const rxjs_1 = require("rxjs");
 const crypto_1 = require("crypto");
@@ -30,6 +31,7 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
     prisma;
     httpService;
     cryptoService;
+    systemConfigService;
     chatGateway;
     chatbotService;
     flowEngineService;
@@ -37,15 +39,20 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
     triggerRegistry;
     logger = new common_1.Logger(WhatsappService_1.name);
     graphApiBase = `https://graph.facebook.com/${process.env.META_API_VERSION || 'v18.0'}`;
-    constructor(prisma, httpService, cryptoService, chatGateway, chatbotService, flowEngineService, workflowEngineService, triggerRegistry) {
+    constructor(prisma, httpService, cryptoService, systemConfigService, chatGateway, chatbotService, flowEngineService, workflowEngineService, triggerRegistry) {
         this.prisma = prisma;
         this.httpService = httpService;
         this.cryptoService = cryptoService;
+        this.systemConfigService = systemConfigService;
         this.chatGateway = chatGateway;
         this.chatbotService = chatbotService;
         this.flowEngineService = flowEngineService;
         this.workflowEngineService = workflowEngineService;
         this.triggerRegistry = triggerRegistry;
+    }
+    async getGraphApiBase() {
+        const version = await this.systemConfigService.get('META_API_VERSION', process.env.META_API_VERSION || 'v18.0');
+        return `https://graph.facebook.com/${version}`;
     }
     async getCredentials(shopId) {
         const account = await this.prisma.whatsAppBusinessAccount.findFirst({
@@ -115,7 +122,7 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
     async verifyWebhook(mode, token, challenge) {
         if (mode !== 'subscribe')
             return null;
-        const WEBHOOK_VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN;
+        const WEBHOOK_VERIFY_TOKEN = await this.systemConfigService.get('WEBHOOK_VERIFY_TOKEN', process.env.WEBHOOK_VERIFY_TOKEN);
         if (WEBHOOK_VERIFY_TOKEN && token === WEBHOOK_VERIFY_TOKEN) {
             this.logger.log('Webhook verified successfully.');
             return challenge;
@@ -719,18 +726,19 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
         const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
         return conversation.lastContactMessageAt >= twentyFourHoursAgo;
     }
-    getAppSecretProof(accessToken) {
-        const appSecret = process.env.META_APP_SECRET;
-        if (!appSecret)
+    async getAppSecretProof(accessToken) {
+        const appSecret = await this.systemConfigService.get('META_APP_SECRET', process.env.META_APP_SECRET);
+        if (!appSecret || appSecret.includes('your_meta_app_secret') || appSecret.trim() === '')
             return undefined;
-        return (0, crypto_1.createHmac)('sha256', appSecret).update(accessToken).digest('hex');
+        return (0, crypto_1.createHmac)('sha256', appSecret.trim()).update(accessToken).digest('hex');
     }
     async sendOutboundMessage(shopId, toPhone, type, content, mediaUrl) {
         const creds = await this.getCredentials(shopId);
+        const cleanPhone = (0, phone_normalizer_1.normalizePhone)(toPhone);
         const payload = {
             messaging_product: 'whatsapp',
             recipient_type: 'individual',
-            to: toPhone,
+            to: cleanPhone,
             type: type,
         };
         if (type === 'text') {
@@ -780,24 +788,59 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
                 name: templateName,
                 language: { code: templateLanguage }
             };
-            if (typeof content !== 'string' && content.components) {
-                const sanitizedComps = content.components.map((comp) => {
-                    if (comp.parameters && Array.isArray(comp.parameters)) {
-                        const newParams = comp.parameters.map((p) => {
-                            if (p.type === 'text') {
-                                return { ...p, text: p.text && String(p.text).trim() !== '' ? p.text : ' ' };
+            const components = [];
+            if (typeof content !== 'string' && Array.isArray(content.components)) {
+                for (const comp of content.components) {
+                    if (!comp || !comp.type)
+                        continue;
+                    const compType = String(comp.type).toLowerCase();
+                    const sanitizedComp = { type: compType };
+                    if (comp.sub_type) {
+                        sanitizedComp.sub_type = String(comp.sub_type).toLowerCase();
+                    }
+                    if (comp.index !== undefined && comp.index !== null) {
+                        sanitizedComp.index = String(comp.index);
+                    }
+                    if (Array.isArray(comp.parameters)) {
+                        sanitizedComp.parameters = comp.parameters.map((p) => {
+                            const pType = p.type ? String(p.type).toLowerCase() : 'text';
+                            if (pType === 'text') {
+                                return { ...p, type: 'text', text: p.text && String(p.text).trim() !== '' ? String(p.text).trim() : ' ' };
                             }
                             return p;
                         });
-                        return { ...comp, parameters: newParams };
                     }
-                    return comp;
+                    if (sanitizedComp.parameters && sanitizedComp.parameters.length > 0) {
+                        components.push(sanitizedComp);
+                    }
+                }
+            }
+            const hasHeader = components.some(c => c.type === 'header');
+            if (!hasHeader && mediaUrl) {
+                let headerType = 'image';
+                const lowerUrl = mediaUrl.toLowerCase();
+                if (lowerUrl.includes('.mp4') || lowerUrl.includes('.mov') || lowerUrl.includes('.avi') || lowerUrl.includes('/video/')) {
+                    headerType = 'video';
+                }
+                else if (lowerUrl.includes('.pdf') || lowerUrl.includes('.doc') || lowerUrl.includes('.docx') || lowerUrl.includes('/document/')) {
+                    headerType = 'document';
+                }
+                components.unshift({
+                    type: 'header',
+                    parameters: [
+                        {
+                            type: headerType,
+                            [headerType]: { link: mediaUrl }
+                        }
+                    ]
                 });
-                payload.template.components = sanitizedComps;
+            }
+            if (components.length > 0) {
+                payload.template.components = components;
             }
         }
         const url = `${this.graphApiBase}/${creds.phoneNumberId}/messages`;
-        const proof = this.getAppSecretProof(creds.accessToken);
+        const proof = await this.getAppSecretProof(creds.accessToken);
         const maxRetries = 3;
         let attempt = 0;
         let lastError = null;
@@ -880,8 +923,8 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
         }
     }
     async getBusinessProfile(shopId) {
-        const creds = await this.getCredentials(shopId);
         try {
+            const creds = await this.getCredentials(shopId);
             const response = await (0, rxjs_1.firstValueFrom)(this.httpService.get(`${this.graphApiBase}/${creds.phoneNumberId}/whatsapp_business_profile?fields=about,address,description,email,profile_picture_url,websites,vertical`, {
                 headers: { Authorization: `Bearer ${creds.accessToken}` }
             }));
@@ -898,8 +941,9 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
             };
         }
         catch (error) {
-            this.logger.error(`Failed to fetch business profile: ${error.response?.data?.error?.message || error.message}`);
-            throw error;
+            const metaMsg = error.response?.data?.error?.message || error.message || 'Failed to fetch business profile';
+            this.logger.error(`Failed to fetch business profile for shop ${shopId}: ${metaMsg}`);
+            throw new common_1.BadRequestException(`WhatsApp Profile Error: ${metaMsg}`);
         }
     }
     async updateBusinessProfile(shopId, data) {
@@ -1012,12 +1056,13 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
 exports.WhatsappService = WhatsappService;
 exports.WhatsappService = WhatsappService = WhatsappService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __param(5, (0, common_1.Inject)((0, common_1.forwardRef)(() => flow_engine_service_1.FlowEngineService))),
-    __param(6, (0, common_1.Inject)((0, common_1.forwardRef)(() => workflow_engine_service_1.WorkflowEngineService))),
-    __param(7, (0, common_1.Inject)((0, common_1.forwardRef)(() => trigger_registry_1.TriggerRegistry))),
+    __param(6, (0, common_1.Inject)((0, common_1.forwardRef)(() => flow_engine_service_1.FlowEngineService))),
+    __param(7, (0, common_1.Inject)((0, common_1.forwardRef)(() => workflow_engine_service_1.WorkflowEngineService))),
+    __param(8, (0, common_1.Inject)((0, common_1.forwardRef)(() => trigger_registry_1.TriggerRegistry))),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         axios_1.HttpService,
         crypto_service_1.CryptoService,
+        system_config_service_1.SystemConfigService,
         chat_gateway_1.ChatGateway,
         chatbot_service_1.ChatbotService,
         flow_engine_service_1.FlowEngineService,

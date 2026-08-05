@@ -183,6 +183,8 @@ export class CampaignsService {
                 targetPhones: phones,
                 scheduledAt: new Date(),
                 status: 'processing', // Start immediately
+                templateParams: original.templateParams as any,
+                headerMediaUrl: original.headerMediaUrl,
             },
         });
 
@@ -324,6 +326,7 @@ export class CampaignsService {
                 status: 'processing',
                 scheduledAt: new Date(),
                 templateParams: original.templateParams as any,
+                headerMediaUrl: original.headerMediaUrl,
                 targetPhones: phonesList
             }
         });

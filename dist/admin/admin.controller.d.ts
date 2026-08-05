@@ -1,7 +1,9 @@
 import { AdminService } from './admin.service';
+import { SystemConfigService } from './system-config.service';
 export declare class AdminController {
     private readonly adminService;
-    constructor(adminService: AdminService);
+    private readonly systemConfigService;
+    constructor(adminService: AdminService, systemConfigService: SystemConfigService);
     createShop(body: any): Promise<{
         message: string;
         shop: {
@@ -240,20 +242,22 @@ export declare class AdminController {
     }>;
     setWhatsAppCredentials(shopId: string, body: any): Promise<{
         message: string;
-        account: {
-            businessName: string | null;
-            id: string;
-            status: string;
-            createdAt: Date;
-            updatedAt: Date;
-            shopId: string;
-            businessAccountId: string;
-            wabaId: string | null;
-            accessToken: string;
-            tokenType: string;
-            tokenExpiry: Date | null;
-            webhookVerifyToken: string | null;
-            onboardingSource: string;
-        };
+        account: any;
+    }>;
+    getPlatformConfig(): Promise<{
+        key: string;
+        value: string;
+        isSecret: boolean;
+        updatedAt: Date;
+        updatedBy: string | null;
+    }[]>;
+    setPlatformConfig(key: string, body: {
+        value: string;
+        isSecret?: boolean;
+    }, req: any): Promise<{
+        message: string;
+    }>;
+    deletePlatformConfig(key: string): Promise<{
+        message: string;
     }>;
 }

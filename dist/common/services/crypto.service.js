@@ -57,9 +57,15 @@ let CryptoService = CryptoService_1 = class CryptoService {
             authTagLength: this.authTagLength,
         });
         decipher.setAuthTag(authTag);
-        let decrypted = decipher.update(ciphertext, 'hex', 'utf8');
-        decrypted += decipher.final('utf8');
-        return decrypted;
+        try {
+            let decrypted = decipher.update(ciphertext, 'hex', 'utf8');
+            decrypted += decipher.final('utf8');
+            return decrypted;
+        }
+        catch (err) {
+            this.logger.warn(`Decryption failed (key changed or invalid tag): ${err.message}`);
+            return encrypted;
+        }
     }
     isEncrypted(value) {
         if (!value)

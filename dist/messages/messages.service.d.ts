@@ -5,6 +5,7 @@ export declare class MessagesService {
     private prisma;
     private whatsappService;
     private chatGateway;
+    private readonly logger;
     constructor(prisma: PrismaService, whatsappService: WhatsappService, chatGateway: ChatGateway);
     getMessages(shopId: string, conversationId: string): Promise<{
         id: string;

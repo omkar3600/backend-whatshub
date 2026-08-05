@@ -178,6 +178,8 @@ let CampaignsService = class CampaignsService {
                 targetPhones: phones,
                 scheduledAt: new Date(),
                 status: 'processing',
+                templateParams: original.templateParams,
+                headerMediaUrl: original.headerMediaUrl,
             },
         });
         await this.campaignsQueue.add('processCampaign', { campaignId: campaign.id });
@@ -294,6 +296,7 @@ let CampaignsService = class CampaignsService {
                 status: 'processing',
                 scheduledAt: new Date(),
                 templateParams: original.templateParams,
+                headerMediaUrl: original.headerMediaUrl,
                 targetPhones: phonesList
             }
         });
