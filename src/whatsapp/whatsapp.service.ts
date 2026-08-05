@@ -1011,8 +1011,8 @@ export class WhatsappService {
     // --- Business Profile Settings ---
 
     async getBusinessProfile(shopId: string) {
-        const creds = await this.getCredentials(shopId);
         try {
+            const creds = await this.getCredentials(shopId);
             const response = await firstValueFrom(
                 this.httpService.get(`${this.graphApiBase}/${creds.phoneNumberId}/whatsapp_business_profile?fields=about,address,description,email,profile_picture_url,websites,vertical`, {
                     headers: { Authorization: `Bearer ${creds.accessToken}` }
@@ -1033,8 +1033,9 @@ export class WhatsappService {
                 }
             };
         } catch (error: any) {
-            this.logger.error(`Failed to fetch business profile: ${error.response?.data?.error?.message || error.message}`);
-            throw error;
+            const metaMsg = error.response?.data?.error?.message || error.message || 'Failed to fetch business profile';
+            this.logger.error(`Failed to fetch business profile for shop ${shopId}: ${metaMsg}`);
+            throw new BadRequestException(`WhatsApp Profile Error: ${metaMsg}`);
         }
     }
 
