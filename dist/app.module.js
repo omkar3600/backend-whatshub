@@ -37,6 +37,7 @@ const flows_module_1 = require("./flows/flows.module");
 const api_keys_module_1 = require("./api-keys/api-keys.module");
 const integration_module_1 = require("./integration/integration.module");
 const workflows_module_1 = require("./workflows/workflows.module");
+const ai_module_1 = require("./ai/ai.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -80,6 +81,7 @@ exports.AppModule = AppModule = __decorate([
             api_keys_module_1.ApiKeysModule,
             integration_module_1.IntegrationModule,
             workflows_module_1.WorkflowsModule,
+            ai_module_1.AiModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [

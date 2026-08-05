@@ -13,6 +13,9 @@ export declare class ContactsService {
         shopId: string;
         tags: import("@prisma/client/runtime/library").JsonValue | null;
         notes: string | null;
+        aiSegment: string | null;
+        aiLeadStage: string | null;
+        lastAiInteractionAt: Date | null;
     }>;
     importFromExcel(shopId: string, file: Express.Multer.File): Promise<{
         imported: number;
@@ -34,6 +37,9 @@ export declare class ContactsService {
         shopId: string;
         tags: import("@prisma/client/runtime/library").JsonValue | null;
         notes: string | null;
+        aiSegment: string | null;
+        aiLeadStage: string | null;
+        lastAiInteractionAt: Date | null;
     }[] | {
         data: {
             name: string;
@@ -45,6 +51,9 @@ export declare class ContactsService {
             shopId: string;
             tags: import("@prisma/client/runtime/library").JsonValue | null;
             notes: string | null;
+            aiSegment: string | null;
+            aiLeadStage: string | null;
+            lastAiInteractionAt: Date | null;
         }[];
         total: number;
         page: number;
@@ -60,6 +69,9 @@ export declare class ContactsService {
         shopId: string;
         tags: import("@prisma/client/runtime/library").JsonValue | null;
         notes: string | null;
+        aiSegment: string | null;
+        aiLeadStage: string | null;
+        lastAiInteractionAt: Date | null;
     }>;
     updateContact(shopId: string, id: string, data: any): Promise<{
         name: string;
@@ -71,6 +83,9 @@ export declare class ContactsService {
         shopId: string;
         tags: import("@prisma/client/runtime/library").JsonValue | null;
         notes: string | null;
+        aiSegment: string | null;
+        aiLeadStage: string | null;
+        lastAiInteractionAt: Date | null;
     }>;
     deleteContact(shopId: string, id: string): Promise<{
         name: string;
@@ -82,6 +97,9 @@ export declare class ContactsService {
         shopId: string;
         tags: import("@prisma/client/runtime/library").JsonValue | null;
         notes: string | null;
+        aiSegment: string | null;
+        aiLeadStage: string | null;
+        lastAiInteractionAt: Date | null;
     }>;
     deleteBulk(shopId: string, ids: string[]): Promise<import("@prisma/client").Prisma.BatchPayload>;
     normalizeContacts(shopId: string): Promise<{

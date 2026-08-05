@@ -12,6 +12,9 @@ import { FlowEngineService } from '../flows/flow-engine.service';
 import { WorkflowEngineService } from '../workflows/engine/workflow-engine.service';
 import { TriggerRegistry } from '../workflows/engine/registries/trigger.registry';
 
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+
 interface WhatsAppCredentials {
     shopId: string;
     phoneNumberId: string;
@@ -39,7 +42,9 @@ export class WhatsappService {
         @Inject(forwardRef(() => WorkflowEngineService))
         private workflowEngineService: WorkflowEngineService,
         @Inject(forwardRef(() => TriggerRegistry))
-        private triggerRegistry: TriggerRegistry
+        private triggerRegistry: TriggerRegistry,
+        @InjectQueue('ai-agent-queue')
+        private aiQueue: Queue,
     ) { }
 
     /** Returns the Graph API base URL, respecting DB override of META_API_VERSION. */
@@ -738,51 +743,29 @@ export class WhatsappService {
             }
         }
 
-        // --- AI Chatbot ---
+        // --- AI Agent ---
         if (!automationFired && !flowFired && messageData.type === 'text') {
             const conv = await this.prisma.conversation.findUnique({
                 where: { id: conversation.id },
                 select: { aiPaused: true },
             });
             if (!conv?.aiPaused) {
-                const aiReply = await this.chatbotService.generateResponse(
+                // Enqueue async AI Agent processing job (returns 200 OK webhook immediately)
+                await this.aiQueue.add('process-agent-message', {
                     shopId,
-                    contact.name,
-                    messageData.text.body,
-                    conversation.id,
-                );
-                if (aiReply.text) {
-                    this.logger.log(`[Chatbot] Sending AI reply to ${contactData.wa_id}`);
-                    const metaRes = await this.sendOutboundMessage(shopId, contactData.wa_id, 'text', aiReply.text);
-                    const wamid = metaRes?.messages?.[0]?.id;
+                    contactId: contact.id,
+                    conversationId: conversation.id,
+                    messageText: messageData.text.body,
+                    contactPhone: contactData.wa_id,
+                });
 
-                    const savedAiMsg = await this.prisma.message.create({
-                        data: {
-                            id: wamid || undefined,
-                            shopId,
-                            conversationId: conversation.id,
-                            phoneNumberId: phoneNumberId || undefined,
-                            direction: 'outbound',
-                            type: 'text',
-                            content: aiReply.text,
-                            status: 'sent',
-                        },
-                    });
-                    this.chatGateway.notifyNewMessage(shopId, {
-                        ...savedAiMsg,
-                        contact: { name: contact.name, phone: contact.phone }
-                    });
+                // Enqueue async background intelligence tasks
+                await this.aiQueue.add('score-lead', { shopId, contactId: contact.id, conversationId: conversation.id }, { delay: 2000 });
+                await this.aiQueue.add('update-memory', { shopId, contactId: contact.id, conversationId: conversation.id }, { delay: 5000 });
 
-                    await this.prisma.conversation.update({
-                        where: { id: conversation.id },
-                        data: { lastMessageAt: new Date() },
-                    });
-
-                } else if (aiReply.error) {
-                    this.logger.error(`[Chatbot] Failed to generate AI reply for ${contactData.wa_id}: ${aiReply.error}`);
-                }
+                this.logger.log(`[AI Agent] Enqueued agent processing job for contact ${contact.phone}`);
             } else {
-                this.logger.log(`[Chatbot] AI paused for conversation ${conversation.id} — skipping.`);
+                this.logger.log(`[AI Agent] AI paused for conversation ${conversation.id} — skipping.`);
             }
         }
     }

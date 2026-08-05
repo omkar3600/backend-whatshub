@@ -20,6 +20,14 @@ export declare class ChatbotController {
         temperature: number;
         systemPrompt: string | null;
         businessInfo: string | null;
+        agentMode: boolean;
+        autonomyLevel: number;
+        agentName: string | null;
+        agentPersonality: string | null;
+        allowedTools: import("@prisma/client/runtime/library").JsonValue | null;
+        followupEnabled: boolean;
+        hotLeadThreshold: number;
+        maxIterations: number;
     }>;
     updateConfig(req: any, body: {
         isActive?: boolean;
@@ -39,6 +47,14 @@ export declare class ChatbotController {
         temperature: number;
         systemPrompt: string | null;
         businessInfo: string | null;
+        agentMode: boolean;
+        autonomyLevel: number;
+        agentName: string | null;
+        agentPersonality: string | null;
+        allowedTools: import("@prisma/client/runtime/library").JsonValue | null;
+        followupEnabled: boolean;
+        hotLeadThreshold: number;
+        maxIterations: number;
     }>;
     togglePause(req: any, conversationId: string, paused: boolean): Promise<{
         success: boolean;

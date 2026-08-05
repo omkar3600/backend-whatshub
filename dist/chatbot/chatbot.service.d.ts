@@ -14,6 +14,14 @@ export declare class ChatbotService {
         temperature: number;
         systemPrompt: string | null;
         businessInfo: string | null;
+        agentMode: boolean;
+        autonomyLevel: number;
+        agentName: string | null;
+        agentPersonality: string | null;
+        allowedTools: import("@prisma/client/runtime/library").JsonValue | null;
+        followupEnabled: boolean;
+        hotLeadThreshold: number;
+        maxIterations: number;
     } | null>;
     upsertConfig(shopId: string, data: {
         isActive?: boolean;
@@ -33,6 +41,14 @@ export declare class ChatbotService {
         temperature: number;
         systemPrompt: string | null;
         businessInfo: string | null;
+        agentMode: boolean;
+        autonomyLevel: number;
+        agentName: string | null;
+        agentPersonality: string | null;
+        allowedTools: import("@prisma/client/runtime/library").JsonValue | null;
+        followupEnabled: boolean;
+        hotLeadThreshold: number;
+        maxIterations: number;
     }>;
     generateResponse(shopId: string, contactName: string, userMessage: string, conversationId?: string): Promise<{
         text?: string;

@@ -16,12 +16,20 @@ const chatbot_module_1 = require("../chatbot/chatbot.module");
 const flows_module_1 = require("../flows/flows.module");
 const chat_module_1 = require("../chat/chat.module");
 const workflows_module_1 = require("../workflows/workflows.module");
+const bullmq_1 = require("@nestjs/bullmq");
 let WhatsappModule = class WhatsappModule {
 };
 exports.WhatsappModule = WhatsappModule;
 exports.WhatsappModule = WhatsappModule = __decorate([
     (0, common_1.Module)({
-        imports: [axios_1.HttpModule, chatbot_module_1.ChatbotModule, (0, common_1.forwardRef)(() => flows_module_1.FlowsModule), chat_module_1.ChatModule, (0, common_1.forwardRef)(() => workflows_module_1.WorkflowsModule)],
+        imports: [
+            axios_1.HttpModule,
+            chatbot_module_1.ChatbotModule,
+            (0, common_1.forwardRef)(() => flows_module_1.FlowsModule),
+            chat_module_1.ChatModule,
+            (0, common_1.forwardRef)(() => workflows_module_1.WorkflowsModule),
+            bullmq_1.BullModule.registerQueue({ name: 'ai-agent-queue' }),
+        ],
         providers: [whatsapp_service_1.WhatsappService],
         controllers: [webhooks_controller_1.WebhooksController, whatsapp_controller_1.WhatsappController],
         exports: [whatsapp_service_1.WhatsappService],

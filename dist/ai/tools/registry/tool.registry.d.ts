@@ -1,0 +1,26 @@
+import { OnModuleInit } from '@nestjs/common';
+import { AiTool } from '../tool.interface';
+import { KnowledgeTools } from '../impl/knowledge-tools';
+import { ContactTools } from '../impl/contact-tools';
+import { ConversationTools } from '../impl/conversation-tools';
+import { WhatsAppTools } from '../impl/whatsapp-tools';
+import { CampaignTools } from '../impl/campaign-tools';
+import { LeadTools } from '../impl/lead-tools';
+import { AnalyticsTools } from '../impl/analytics-tools';
+import { HandoffTool } from '../impl/handoff-tool';
+export declare class ToolRegistry implements OnModuleInit {
+    private readonly knowledge;
+    private readonly contacts;
+    private readonly conversations;
+    private readonly whatsapp;
+    private readonly campaigns;
+    private readonly leads;
+    private readonly analytics;
+    private readonly handoff;
+    private tools;
+    constructor(knowledge: KnowledgeTools, contacts: ContactTools, conversations: ConversationTools, whatsapp: WhatsAppTools, campaigns: CampaignTools, leads: LeadTools, analytics: AnalyticsTools, handoff: HandoffTool);
+    onModuleInit(): void;
+    get(name: string): AiTool | undefined;
+    getAll(): AiTool[];
+    getAvailableTools(autonomyLevel: number, allowedTools?: string[] | null): AiTool[];
+}

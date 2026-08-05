@@ -55,6 +55,15 @@ model Shop {
   flows            Flow[]
   apiKeys          ApiKey[]
   workflows        Workflow[]
+  aiAgentConfig    AiAgentConfig?
+  aiMemories       AiMemory[]
+  aiLeadScores     AiLeadScore[]
+  aiActions        AiAction[]
+  aiAuditLogs      AiAuditLog[]
+  aiFollowUps      AiFollowUp[]
+  aiKnowledgeSources AiKnowledgeSource[]
+  aiConversationStates AiConversationState[]
+  aiConversationSummaries AiConversationSummary[]
 }
 
 model Subscription {
@@ -166,6 +175,10 @@ model Contact {
   tags             Json?
   city             String?
   notes            String?
+  // AI Agent fields
+  aiSegment        String?           // AI-assigned customer segment
+  aiLeadStage      String?           // current pipeline stage
+  lastAiInteractionAt DateTime?      // when AI last interacted with this contact
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   shop             Shop              @relation(fields: [shopId], references: [id])
@@ -173,6 +186,11 @@ model Contact {
   campaignContacts CampaignContact[]
   flowSession      FlowSession?
   workflowInstances WorkflowInstance[]
+  aiMemory         AiMemory?
+  aiLeadScore      AiLeadScore?
+  aiConversationStates AiConversationState[]
+  aiFollowUps      AiFollowUp[]
+  aiActions        AiAction[]
 
   @@unique([shopId, phone])
 }
@@ -186,11 +204,13 @@ model Conversation {
   lastContactMessageAt DateTime?
   unreadCount          Int       @default(0)
   aiPaused             Boolean   @default(false)
+  aiState              Json?     // AI agent workflow state for this conversation
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   contact              Contact   @relation(fields: [contactId], references: [id])
   shop                 Shop      @relation(fields: [shopId], references: [id])
   messages             Message[]
+  aiSummaries          AiConversationSummary[]
 
   @@unique([shopId, contactId])
 }
@@ -296,10 +316,19 @@ model ChatbotConfig {
   shopId       String   @unique
   isActive     Boolean  @default(false)
   apiKey       String?
-  model        String   @default("gemini-1.5-flash")
+  model        String   @default("llama-3.3-70b-versatile")
   temperature  Float    @default(0.7)
   systemPrompt String?  @db.Text
   businessInfo String?  @db.Text
+  // AI Agent fields
+  agentMode        Boolean @default(false)          // false = simple chatbot, true = full agent
+  autonomyLevel    Int     @default(2)              // 1=view only, 2=suggest, 3=auto low-risk, 4=auto all
+  agentName        String? @default("AI Assistant") // displayed to customers
+  agentPersonality String? @db.Text                // tone/language guidance
+  allowedTools     Json?                            // string[] whitelist of enabled tool names
+  followupEnabled  Boolean @default(false)          // enable follow-up engine
+  hotLeadThreshold Int     @default(70)             // score 0-100 above which hot lead alert fires
+  maxIterations    Int     @default(8)              // max tool calls per message
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   shop         Shop     @relation(fields: [shopId], references: [id])
@@ -536,6 +565,179 @@ model WorkflowTemplate {
   updatedAt   DateTime @updatedAt
 
   @@index([category])
+}
+
+// ==========================================
+// AI Business Agent Models
+// ==========================================
+
+/// Per-shop AI agent configuration. Extends ChatbotConfig with full agent capabilities.
+model AiAgentConfig {
+  id              String   @id @default(uuid())
+  shopId          String   @unique
+  enabled         Boolean  @default(false)
+  provider        String   @default("groq")   // groq | openai | anthropic
+  model           String   @default("llama-3.3-70b-versatile")
+  apiKey          String?                      // encrypted; falls back to SystemConfig GROQ_API_KEY
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  shop            Shop     @relation(fields: [shopId], references: [id])
+
+  @@index([shopId])
+}
+
+/// Per-contact AI memory: preferences, interests, and historical context.
+model AiMemory {
+  id               String   @id @default(uuid())
+  shopId           String
+  contactId        String   @unique
+  preferences      Json     @default("{}")     // { language, preferredTime, interests[] }
+  purchaseHistory  Json     @default("[]")     // [{ item, date, amount }]
+  interactions     Json     @default("{}")     // { totalMessages, avgResponseTime, topics[] }
+  customFields     Json     @default("{}")     // arbitrary key-value store
+  lastSummarizedAt DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  shop             Shop     @relation(fields: [shopId], references: [id])
+  contact          Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
+}
+
+/// Rolling conversation summaries to compress context and save tokens.
+model AiConversationSummary {
+  id             String   @id @default(uuid())
+  shopId         String
+  conversationId String
+  summary        String   @db.Text
+  coveredUntil   DateTime // messages up to this timestamp are covered by this summary
+  messageCount   Int      @default(0)
+  createdAt      DateTime @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  shop           Shop         @relation(fields: [shopId], references: [id])
+
+  @@index([conversationId])
+  @@index([shopId])
+}
+
+/// Per-conversation agent workflow state (slot filling, cart, context).
+model AiConversationState {
+  id             String   @id @default(uuid())
+  shopId         String
+  contactId      String
+  conversationId String?
+  state          Json     @default("{}")   // { intent, slots, cart, stage, pendingAction }
+  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  shop           Shop     @relation(fields: [shopId], references: [id])
+  contact        Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, contactId])
+}
+
+/// AI-computed lead score and pipeline stage per contact.
+model AiLeadScore {
+  id              String   @id @default(uuid())
+  shopId          String
+  contactId       String   @unique
+  score           Int      @default(0)  // 0-100
+  stage           String   @default("NEW") // NEW|INTERESTED|QUALIFIED|PRODUCT_SELECTED|NEGOTIATING|PAYMENT_PENDING|PURCHASED|INACTIVE
+  intent          String?  // inferred purchase intent summary
+  sentiment       String?  // positive|neutral|negative
+  urgency         String?  // low|medium|high
+  productInterest Json?    // [{ name, confidence }]
+  followUpRequired Boolean @default(false)
+  lastScoredAt    DateTime?
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  shop            Shop     @relation(fields: [shopId], references: [id])
+  contact         Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, score])
+  @@index([shopId, stage])
+}
+
+/// Pending/completed AI actions requiring business owner review.
+model AiAction {
+  id             String   @id @default(uuid())
+  shopId         String
+  contactId      String?
+  toolName       String   // e.g. "send_campaign", "create_campaign_draft"
+  toolInput      Json     // sanitized input params
+  riskLevel      String   // LOW|MEDIUM|HIGH|CRITICAL
+  rationale      String   @db.Text  // why AI wants to do this
+  status         String   @default("pending") // pending|approved|rejected|expired|executed
+  result         Json?    // tool execution result after approval
+  errorMessage   String?  @db.Text
+  approvedBy     String?  // user id who approved/rejected
+  reviewedAt     DateTime?
+  expiresAt      DateTime?  // auto-expire pending actions after N hours
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  shop           Shop     @relation(fields: [shopId], references: [id])
+  contact        Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, status])
+  @@index([expiresAt])
+}
+
+/// Complete audit log of every AI tool execution (success or failure).
+model AiAuditLog {
+  id           String   @id @default(uuid())
+  shopId       String
+  contactId    String?
+  toolName     String
+  toolInput    Json
+  toolOutput   Json?
+  riskLevel    String
+  success      Boolean
+  errorMessage String?  @db.Text
+  durationMs   Int?
+  createdAt    DateTime @default(now())
+  shop         Shop     @relation(fields: [shopId], references: [id])
+
+  @@index([shopId])
+  @@index([shopId, toolName])
+  @@index([createdAt])
+}
+
+/// Scheduled AI follow-up messages.
+model AiFollowUp {
+  id              String   @id @default(uuid())
+  shopId          String
+  contactId       String
+  reason          String   // e.g. "abandoned_cart", "no_reply_48h", "hot_lead_uncontacted"
+  scheduledAt     DateTime
+  aiMessage       String   @db.Text  // AI-generated follow-up message
+  useTemplate     Boolean  @default(false)  // true if 24h window closed, must use template
+  templateId      String?
+  status          String   @default("pending") // pending|sent|failed|cancelled|skipped
+  result          Json?
+  errorMessage    String?  @db.Text
+  executedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  shop            Shop     @relation(fields: [shopId], references: [id])
+  contact         Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, status])
+  @@index([scheduledAt])
+}
+
+/// Business knowledge documents for AI context retrieval.
+model AiKnowledgeSource {
+  id        String   @id @default(uuid())
+  shopId    String
+  title     String
+  content   String   @db.Text
+  category  String   @default("general") // general|faq|policy|product|pricing
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  shop      Shop     @relation(fields: [shopId], references: [id])
+
+  @@index([shopId, category])
+  @@index([shopId, isActive])
 }
 
 /// Global platform configuration managed via the Admin panel.

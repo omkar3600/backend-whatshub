@@ -13,6 +13,9 @@ export declare class ConversationsController {
             shopId: string;
             tags: import("@prisma/client/runtime/library").JsonValue | null;
             notes: string | null;
+            aiSegment: string | null;
+            aiLeadStage: string | null;
+            lastAiInteractionAt: Date | null;
         };
     } & {
         id: string;
@@ -25,6 +28,7 @@ export declare class ConversationsController {
         lastContactMessageAt: Date | null;
         unreadCount: number;
         aiPaused: boolean;
+        aiState: import("@prisma/client/runtime/library").JsonValue | null;
     })[]>;
     getConversation(user: any, id: string): Promise<{
         contact: {
@@ -37,6 +41,9 @@ export declare class ConversationsController {
             shopId: string;
             tags: import("@prisma/client/runtime/library").JsonValue | null;
             notes: string | null;
+            aiSegment: string | null;
+            aiLeadStage: string | null;
+            lastAiInteractionAt: Date | null;
         };
     } & {
         id: string;
@@ -49,6 +56,7 @@ export declare class ConversationsController {
         lastContactMessageAt: Date | null;
         unreadCount: number;
         aiPaused: boolean;
+        aiState: import("@prisma/client/runtime/library").JsonValue | null;
     }>;
     findOrCreate(user: any, contactId: string): Promise<{
         contact: {
@@ -61,6 +69,9 @@ export declare class ConversationsController {
             shopId: string;
             tags: import("@prisma/client/runtime/library").JsonValue | null;
             notes: string | null;
+            aiSegment: string | null;
+            aiLeadStage: string | null;
+            lastAiInteractionAt: Date | null;
         };
     } & {
         id: string;
@@ -73,6 +84,7 @@ export declare class ConversationsController {
         lastContactMessageAt: Date | null;
         unreadCount: number;
         aiPaused: boolean;
+        aiState: import("@prisma/client/runtime/library").JsonValue | null;
     }>;
     markAsRead(user: any, id: string): Promise<{
         id: string;
@@ -85,5 +97,6 @@ export declare class ConversationsController {
         lastContactMessageAt: Date | null;
         unreadCount: number;
         aiPaused: boolean;
+        aiState: import("@prisma/client/runtime/library").JsonValue | null;
     }>;
 }

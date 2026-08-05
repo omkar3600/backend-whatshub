@@ -7,6 +7,7 @@ import { ChatbotService } from '../chatbot/chatbot.service';
 import { FlowEngineService } from '../flows/flow-engine.service';
 import { WorkflowEngineService } from '../workflows/engine/workflow-engine.service';
 import { TriggerRegistry } from '../workflows/engine/registries/trigger.registry';
+import { Queue } from 'bullmq';
 interface WhatsAppCredentials {
     shopId: string;
     phoneNumberId: string;
@@ -24,9 +25,10 @@ export declare class WhatsappService {
     private flowEngineService;
     private workflowEngineService;
     private triggerRegistry;
+    private aiQueue;
     private readonly logger;
     private readonly graphApiBase;
-    constructor(prisma: PrismaService, httpService: HttpService, cryptoService: CryptoService, systemConfigService: SystemConfigService, chatGateway: ChatGateway, chatbotService: ChatbotService, flowEngineService: FlowEngineService, workflowEngineService: WorkflowEngineService, triggerRegistry: TriggerRegistry);
+    constructor(prisma: PrismaService, httpService: HttpService, cryptoService: CryptoService, systemConfigService: SystemConfigService, chatGateway: ChatGateway, chatbotService: ChatbotService, flowEngineService: FlowEngineService, workflowEngineService: WorkflowEngineService, triggerRegistry: TriggerRegistry, aiQueue: Queue);
     private getGraphApiBase;
     getCredentials(shopId: string): Promise<WhatsAppCredentials>;
     getCredentialsByPhoneNumberId(phoneNumberId: string): Promise<WhatsAppCredentials | null>;

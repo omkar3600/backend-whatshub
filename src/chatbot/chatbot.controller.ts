@@ -11,7 +11,22 @@ export class ChatbotController {
     async getConfig(@Req() req: any) {
         const shopId = req.user.shopId;
         const config = await this.chatbotService.getConfig(shopId);
-        if (!config) return { isActive: false, model: 'gemini-1.5-flash', temperature: 0.7, systemPrompt: '', businessInfo: '', apiKey: '' };
+        if (!config) return {
+            isActive: false,
+            model: 'llama-3.3-70b-versatile',
+            temperature: 0.7,
+            systemPrompt: '',
+            businessInfo: '',
+            apiKey: '',
+            agentMode: false,
+            autonomyLevel: 2,
+            agentName: 'AI Assistant',
+            agentPersonality: '',
+            allowedTools: [],
+            followupEnabled: false,
+            hotLeadThreshold: 70,
+            maxIterations: 8,
+        };
 
         // Mask the API key — only expose last 4 chars
         return {
@@ -28,6 +43,14 @@ export class ChatbotController {
         temperature?: number;
         systemPrompt?: string;
         businessInfo?: string;
+        agentMode?: boolean;
+        autonomyLevel?: number;
+        agentName?: string;
+        agentPersonality?: string;
+        allowedTools?: string[];
+        followupEnabled?: boolean;
+        hotLeadThreshold?: number;
+        maxIterations?: number;
     }) {
         const shopId = req.user.shopId;
         // If API key is masked (starts with ****), don't overwrite the saved one

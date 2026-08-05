@@ -28,6 +28,7 @@ import { FlowsModule } from './flows/flows.module';
 import { ApiKeysModule } from './api-keys/api-keys.module';
 import { IntegrationModule } from './integration/integration.module';
 import { WorkflowsModule } from './workflows/workflows.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -69,6 +70,7 @@ import { WorkflowsModule } from './workflows/workflows.module';
     ApiKeysModule,
     IntegrationModule,
     WorkflowsModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [

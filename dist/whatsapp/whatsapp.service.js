@@ -27,6 +27,8 @@ const chatbot_service_1 = require("../chatbot/chatbot.service");
 const flow_engine_service_1 = require("../flows/flow-engine.service");
 const workflow_engine_service_1 = require("../workflows/engine/workflow-engine.service");
 const trigger_registry_1 = require("../workflows/engine/registries/trigger.registry");
+const bullmq_1 = require("@nestjs/bullmq");
+const bullmq_2 = require("bullmq");
 let WhatsappService = WhatsappService_1 = class WhatsappService {
     prisma;
     httpService;
@@ -37,9 +39,10 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
     flowEngineService;
     workflowEngineService;
     triggerRegistry;
+    aiQueue;
     logger = new common_1.Logger(WhatsappService_1.name);
     graphApiBase = `https://graph.facebook.com/${process.env.META_API_VERSION || 'v18.0'}`;
-    constructor(prisma, httpService, cryptoService, systemConfigService, chatGateway, chatbotService, flowEngineService, workflowEngineService, triggerRegistry) {
+    constructor(prisma, httpService, cryptoService, systemConfigService, chatGateway, chatbotService, flowEngineService, workflowEngineService, triggerRegistry, aiQueue) {
         this.prisma = prisma;
         this.httpService = httpService;
         this.cryptoService = cryptoService;
@@ -49,6 +52,7 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
         this.flowEngineService = flowEngineService;
         this.workflowEngineService = workflowEngineService;
         this.triggerRegistry = triggerRegistry;
+        this.aiQueue = aiQueue;
     }
     async getGraphApiBase() {
         const version = await this.systemConfigService.get('META_API_VERSION', process.env.META_API_VERSION || 'v18.0');
@@ -659,38 +663,19 @@ let WhatsappService = WhatsappService_1 = class WhatsappService {
                 select: { aiPaused: true },
             });
             if (!conv?.aiPaused) {
-                const aiReply = await this.chatbotService.generateResponse(shopId, contact.name, messageData.text.body, conversation.id);
-                if (aiReply.text) {
-                    this.logger.log(`[Chatbot] Sending AI reply to ${contactData.wa_id}`);
-                    const metaRes = await this.sendOutboundMessage(shopId, contactData.wa_id, 'text', aiReply.text);
-                    const wamid = metaRes?.messages?.[0]?.id;
-                    const savedAiMsg = await this.prisma.message.create({
-                        data: {
-                            id: wamid || undefined,
-                            shopId,
-                            conversationId: conversation.id,
-                            phoneNumberId: phoneNumberId || undefined,
-                            direction: 'outbound',
-                            type: 'text',
-                            content: aiReply.text,
-                            status: 'sent',
-                        },
-                    });
-                    this.chatGateway.notifyNewMessage(shopId, {
-                        ...savedAiMsg,
-                        contact: { name: contact.name, phone: contact.phone }
-                    });
-                    await this.prisma.conversation.update({
-                        where: { id: conversation.id },
-                        data: { lastMessageAt: new Date() },
-                    });
-                }
-                else if (aiReply.error) {
-                    this.logger.error(`[Chatbot] Failed to generate AI reply for ${contactData.wa_id}: ${aiReply.error}`);
-                }
+                await this.aiQueue.add('process-agent-message', {
+                    shopId,
+                    contactId: contact.id,
+                    conversationId: conversation.id,
+                    messageText: messageData.text.body,
+                    contactPhone: contactData.wa_id,
+                });
+                await this.aiQueue.add('score-lead', { shopId, contactId: contact.id, conversationId: conversation.id }, { delay: 2000 });
+                await this.aiQueue.add('update-memory', { shopId, contactId: contact.id, conversationId: conversation.id }, { delay: 5000 });
+                this.logger.log(`[AI Agent] Enqueued agent processing job for contact ${contact.phone}`);
             }
             else {
-                this.logger.log(`[Chatbot] AI paused for conversation ${conversation.id} — skipping.`);
+                this.logger.log(`[AI Agent] AI paused for conversation ${conversation.id} — skipping.`);
             }
         }
     }
@@ -1059,6 +1044,7 @@ exports.WhatsappService = WhatsappService = WhatsappService_1 = __decorate([
     __param(6, (0, common_1.Inject)((0, common_1.forwardRef)(() => flow_engine_service_1.FlowEngineService))),
     __param(7, (0, common_1.Inject)((0, common_1.forwardRef)(() => workflow_engine_service_1.WorkflowEngineService))),
     __param(8, (0, common_1.Inject)((0, common_1.forwardRef)(() => trigger_registry_1.TriggerRegistry))),
+    __param(9, (0, bullmq_1.InjectQueue)('ai-agent-queue')),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         axios_1.HttpService,
         crypto_service_1.CryptoService,
@@ -1067,6 +1053,7 @@ exports.WhatsappService = WhatsappService = WhatsappService_1 = __decorate([
         chatbot_service_1.ChatbotService,
         flow_engine_service_1.FlowEngineService,
         workflow_engine_service_1.WorkflowEngineService,
-        trigger_registry_1.TriggerRegistry])
+        trigger_registry_1.TriggerRegistry,
+        bullmq_2.Queue])
 ], WhatsappService);
 //# sourceMappingURL=whatsapp.service.js.map

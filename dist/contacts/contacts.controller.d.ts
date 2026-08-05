@@ -13,6 +13,9 @@ export declare class ContactsController {
         shopId: string;
         tags: import("@prisma/client/runtime/library").JsonValue | null;
         notes: string | null;
+        aiSegment: string | null;
+        aiLeadStage: string | null;
+        lastAiInteractionAt: Date | null;
     }>;
     importContacts(user: any, file: Express.Multer.File): Promise<{
         imported: number;
@@ -36,6 +39,9 @@ export declare class ContactsController {
         shopId: string;
         tags: import("@prisma/client/runtime/library").JsonValue | null;
         notes: string | null;
+        aiSegment: string | null;
+        aiLeadStage: string | null;
+        lastAiInteractionAt: Date | null;
     }[] | {
         data: {
             name: string;
@@ -47,6 +53,9 @@ export declare class ContactsController {
             shopId: string;
             tags: import("@prisma/client/runtime/library").JsonValue | null;
             notes: string | null;
+            aiSegment: string | null;
+            aiLeadStage: string | null;
+            lastAiInteractionAt: Date | null;
         }[];
         total: number;
         page: number;
@@ -68,6 +77,9 @@ export declare class ContactsController {
         shopId: string;
         tags: import("@prisma/client/runtime/library").JsonValue | null;
         notes: string | null;
+        aiSegment: string | null;
+        aiLeadStage: string | null;
+        lastAiInteractionAt: Date | null;
     }>;
     updateContact(user: any, id: string, body: UpdateContactDto): Promise<{
         name: string;
@@ -79,6 +91,9 @@ export declare class ContactsController {
         shopId: string;
         tags: import("@prisma/client/runtime/library").JsonValue | null;
         notes: string | null;
+        aiSegment: string | null;
+        aiLeadStage: string | null;
+        lastAiInteractionAt: Date | null;
     }>;
     deleteBulkContacts(user: any, body: {
         ids: string[];
@@ -93,5 +108,8 @@ export declare class ContactsController {
         shopId: string;
         tags: import("@prisma/client/runtime/library").JsonValue | null;
         notes: string | null;
+        aiSegment: string | null;
+        aiLeadStage: string | null;
+        lastAiInteractionAt: Date | null;
     }>;
 }

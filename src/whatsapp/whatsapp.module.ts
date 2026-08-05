@@ -7,9 +7,17 @@ import { ChatbotModule } from '../chatbot/chatbot.module';
 import { FlowsModule } from '../flows/flows.module';
 import { ChatModule } from '../chat/chat.module';
 import { WorkflowsModule } from '../workflows/workflows.module';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
-  imports: [HttpModule, ChatbotModule, forwardRef(() => FlowsModule), ChatModule, forwardRef(() => WorkflowsModule)],
+  imports: [
+    HttpModule,
+    ChatbotModule,
+    forwardRef(() => FlowsModule),
+    ChatModule,
+    forwardRef(() => WorkflowsModule),
+    BullModule.registerQueue({ name: 'ai-agent-queue' }),
+  ],
   providers: [WhatsappService],
   controllers: [WebhooksController, WhatsappController],
   exports: [WhatsappService],

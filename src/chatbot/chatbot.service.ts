@@ -19,6 +19,14 @@ export class ChatbotService {
         temperature?: number;
         systemPrompt?: string;
         businessInfo?: string;
+        agentMode?: boolean;
+        autonomyLevel?: number;
+        agentName?: string;
+        agentPersonality?: string;
+        allowedTools?: any;
+        followupEnabled?: boolean;
+        hotLeadThreshold?: number;
+        maxIterations?: number;
     }) {
         return this.prisma.chatbotConfig.upsert({
             where: { shopId },
