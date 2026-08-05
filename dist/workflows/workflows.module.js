@@ -24,22 +24,26 @@ const send_message_node_1 = require("./engine/nodes/send-message.node");
 const delay_node_1 = require("./engine/nodes/delay.node");
 const condition_node_1 = require("./engine/nodes/condition.node");
 const wait_reply_node_1 = require("./engine/nodes/wait-reply.node");
+const ai_agent_node_1 = require("./engine/nodes/ai-agent.node");
 const incoming_message_trigger_1 = require("./engine/triggers/incoming-message.trigger");
 const whatsapp_module_1 = require("../whatsapp/whatsapp.module");
+const ai_module_1 = require("../ai/ai.module");
 let WorkflowsModule = class WorkflowsModule {
     nodeRegistry;
     sendMessageExecutor;
     delayExecutor;
     conditionExecutor;
     waitReplyExecutor;
+    aiAgentExecutor;
     incomingMessageTrigger;
     triggerRegistry;
-    constructor(nodeRegistry, sendMessageExecutor, delayExecutor, conditionExecutor, waitReplyExecutor, incomingMessageTrigger, triggerRegistry) {
+    constructor(nodeRegistry, sendMessageExecutor, delayExecutor, conditionExecutor, waitReplyExecutor, aiAgentExecutor, incomingMessageTrigger, triggerRegistry) {
         this.nodeRegistry = nodeRegistry;
         this.sendMessageExecutor = sendMessageExecutor;
         this.delayExecutor = delayExecutor;
         this.conditionExecutor = conditionExecutor;
         this.waitReplyExecutor = waitReplyExecutor;
+        this.aiAgentExecutor = aiAgentExecutor;
         this.incomingMessageTrigger = incomingMessageTrigger;
         this.triggerRegistry = triggerRegistry;
     }
@@ -48,6 +52,7 @@ let WorkflowsModule = class WorkflowsModule {
         this.nodeRegistry.register(this.delayExecutor);
         this.nodeRegistry.register(this.conditionExecutor);
         this.nodeRegistry.register(this.waitReplyExecutor);
+        this.nodeRegistry.register(this.aiAgentExecutor);
         this.triggerRegistry.register(this.incomingMessageTrigger);
     }
 };
@@ -62,6 +67,7 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
                 name: 'workflow-dlq',
             }),
             (0, common_1.forwardRef)(() => whatsapp_module_1.WhatsappModule),
+            (0, common_1.forwardRef)(() => ai_module_1.AiModule),
         ],
         controllers: [workflows_controller_1.WorkflowsController],
         providers: [
@@ -76,6 +82,7 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
             delay_node_1.DelayExecutor,
             condition_node_1.ConditionExecutor,
             wait_reply_node_1.WaitReplyExecutor,
+            ai_agent_node_1.AiAgentExecutor,
             incoming_message_trigger_1.IncomingMessageTrigger,
         ],
         exports: [workflow_engine_service_1.WorkflowEngineService, trigger_registry_1.TriggerRegistry]
@@ -85,6 +92,7 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
         delay_node_1.DelayExecutor,
         condition_node_1.ConditionExecutor,
         wait_reply_node_1.WaitReplyExecutor,
+        ai_agent_node_1.AiAgentExecutor,
         incoming_message_trigger_1.IncomingMessageTrigger,
         trigger_registry_1.TriggerRegistry])
 ], WorkflowsModule);

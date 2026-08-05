@@ -16,13 +16,13 @@ export declare class AiApprovalController {
         shopId: string;
         errorMessage: string | null;
         contactId: string | null;
-        expiresAt: Date | null;
         toolName: string;
         toolInput: import("@prisma/client/runtime/library").JsonValue;
         riskLevel: string;
         rationale: string;
         approvedBy: string | null;
         reviewedAt: Date | null;
+        expiresAt: Date | null;
     })[]>;
     approve(id: string, req: any): Promise<{
         success: boolean;

@@ -20,8 +20,8 @@ export declare class ApiKeysService {
         id: string;
         status: string;
         createdAt: Date;
-        lastUsedAt: Date | null;
         expiresAt: Date | null;
+        lastUsedAt: Date | null;
     }[]>;
     revokeApiKey(shopId: string, keyId: string): Promise<{
         id: string;

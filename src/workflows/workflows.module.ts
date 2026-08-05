@@ -12,8 +12,10 @@ import { SendMessageExecutor } from './engine/nodes/send-message.node';
 import { DelayExecutor } from './engine/nodes/delay.node';
 import { ConditionExecutor } from './engine/nodes/condition.node';
 import { WaitReplyExecutor } from './engine/nodes/wait-reply.node';
+import { AiAgentExecutor } from './engine/nodes/ai-agent.node';
 import { IncomingMessageTrigger } from './engine/triggers/incoming-message.trigger';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
+import { AiModule } from '../ai/ai.module';
 
 @Module({
   imports: [
@@ -24,6 +26,7 @@ import { WhatsappModule } from '../whatsapp/whatsapp.module';
       name: 'workflow-dlq',
     }),
     forwardRef(() => WhatsappModule),
+    forwardRef(() => AiModule),
   ],
   controllers: [WorkflowsController],
   providers: [
@@ -38,6 +41,7 @@ import { WhatsappModule } from '../whatsapp/whatsapp.module';
     DelayExecutor,
     ConditionExecutor,
     WaitReplyExecutor,
+    AiAgentExecutor,
     IncomingMessageTrigger,
   ],
   exports: [WorkflowEngineService, TriggerRegistry]
@@ -49,6 +53,7 @@ export class WorkflowsModule implements OnModuleInit {
     private readonly delayExecutor: DelayExecutor,
     private readonly conditionExecutor: ConditionExecutor,
     private readonly waitReplyExecutor: WaitReplyExecutor,
+    private readonly aiAgentExecutor: AiAgentExecutor,
     private readonly incomingMessageTrigger: IncomingMessageTrigger,
     private readonly triggerRegistry: TriggerRegistry,
   ) {}
@@ -58,6 +63,7 @@ export class WorkflowsModule implements OnModuleInit {
     this.nodeRegistry.register(this.delayExecutor);
     this.nodeRegistry.register(this.conditionExecutor);
     this.nodeRegistry.register(this.waitReplyExecutor);
+    this.nodeRegistry.register(this.aiAgentExecutor);
 
     this.triggerRegistry.register(this.incomingMessageTrigger);
   }

@@ -21,8 +21,8 @@ export declare class ApiKeysController {
         id: string;
         status: string;
         createdAt: Date;
-        lastUsedAt: Date | null;
         expiresAt: Date | null;
+        lastUsedAt: Date | null;
     }[]>;
     revokeApiKey(user: any, id: string): Promise<{
         id: string;
