@@ -9,6 +9,7 @@ import { ExpressionEngineService } from './engine/expression-engine.service';
 import { NodeExecutorRegistry } from './engine/registries/node-executor.registry';
 import { TriggerRegistry } from './engine/registries/trigger.registry';
 import { WorkflowQueueProcessor } from './engine/processors/workflow-queue.processor';
+
 import { SendMessageExecutor } from './engine/nodes/send-message.node';
 import { DelayExecutor } from './engine/nodes/delay.node';
 import { ConditionExecutor } from './engine/nodes/condition.node';
@@ -19,6 +20,13 @@ import { HttpRequestExecutor } from './engine/nodes/http-request.node';
 import { CrmActionExecutor } from './engine/nodes/crm-action.node';
 import { AiIntentRouterExecutor } from './engine/nodes/ai-intent-router.node';
 import { AbTestSplitterExecutor } from './engine/nodes/ab-test-splitter.node';
+
+import { DataTransformExecutor } from './engine/nodes/data-transform.node';
+import { ForEachExecutor } from './engine/nodes/for-each.node';
+import { BusinessHoursExecutor } from './engine/nodes/business-hours.node';
+import { TeamHandoffExecutor } from './engine/nodes/team-handoff.node';
+import { ApprovalExecutor } from './engine/nodes/approval-node.node';
+
 import { IncomingMessageTrigger } from './engine/triggers/incoming-message.trigger';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
 import { AiModule } from '../ai/ai.module';
@@ -54,6 +62,11 @@ import { AiModule } from '../ai/ai.module';
     CrmActionExecutor,
     AiIntentRouterExecutor,
     AbTestSplitterExecutor,
+    DataTransformExecutor,
+    ForEachExecutor,
+    BusinessHoursExecutor,
+    TeamHandoffExecutor,
+    ApprovalExecutor,
     IncomingMessageTrigger,
   ],
   exports: [WorkflowEngineService, TriggerRegistry],
@@ -71,6 +84,11 @@ export class WorkflowsModule implements OnModuleInit {
     private readonly crmActionExecutor: CrmActionExecutor,
     private readonly aiIntentRouterExecutor: AiIntentRouterExecutor,
     private readonly abTestSplitterExecutor: AbTestSplitterExecutor,
+    private readonly dataTransformExecutor: DataTransformExecutor,
+    private readonly forEachExecutor: ForEachExecutor,
+    private readonly businessHoursExecutor: BusinessHoursExecutor,
+    private readonly teamHandoffExecutor: TeamHandoffExecutor,
+    private readonly approvalExecutor: ApprovalExecutor,
     private readonly incomingMessageTrigger: IncomingMessageTrigger,
     private readonly triggerRegistry: TriggerRegistry,
   ) {}
@@ -86,6 +104,11 @@ export class WorkflowsModule implements OnModuleInit {
     this.nodeRegistry.register(this.crmActionExecutor);
     this.nodeRegistry.register(this.aiIntentRouterExecutor);
     this.nodeRegistry.register(this.abTestSplitterExecutor);
+    this.nodeRegistry.register(this.dataTransformExecutor);
+    this.nodeRegistry.register(this.forEachExecutor);
+    this.nodeRegistry.register(this.businessHoursExecutor);
+    this.nodeRegistry.register(this.teamHandoffExecutor);
+    this.nodeRegistry.register(this.approvalExecutor);
 
     this.triggerRegistry.register(this.incomingMessageTrigger);
   }

@@ -54,11 +54,27 @@ let ExpressionEngineService = ExpressionEngineService_1 = class ExpressionEngine
         this.registerCustomFunctions();
     }
     registerCustomFunctions() {
-        this.jexlInstance.addTransform('upper', (val) => val ? val.toUpperCase() : val);
-        this.jexlInstance.addTransform('lower', (val) => val ? val.toLowerCase() : val);
+        this.jexlInstance.addTransform('upper', (val) => (val ? String(val).toUpperCase() : ''));
+        this.jexlInstance.addTransform('lower', (val) => (val ? String(val).toLowerCase() : ''));
+        this.jexlInstance.addTransform('trim', (val) => (val ? String(val).trim() : ''));
         this.jexlInstance.addTransform('concat', (val1, val2) => `${val1 || ''}${val2 || ''}`);
-        this.jexlInstance.addTransform('if', (cond, trueVal, falseVal) => cond ? trueVal : falseVal);
+        this.jexlInstance.addTransform('substring', (val, start, end) => (val ? String(val).substring(start, end) : ''));
+        this.jexlInstance.addTransform('contains', (val, search) => (val ? String(val).includes(search) : false));
+        this.jexlInstance.addTransform('replace', (val, search, replaceWith) => (val ? String(val).replace(new RegExp(search, 'g'), replaceWith) : ''));
+        this.jexlInstance.addTransform('round', (val) => Math.round(Number(val) || 0));
+        this.jexlInstance.addTransform('ceil', (val) => Math.ceil(Number(val) || 0));
+        this.jexlInstance.addTransform('floor', (val) => Math.floor(Number(val) || 0));
+        this.jexlInstance.addTransform('add', (val, num) => (Number(val) || 0) + (Number(num) || 0));
         this.jexlInstance.addTransform('now', () => new Date().toISOString());
+        this.jexlInstance.addTransform('addDays', (dateStr, days) => {
+            const d = dateStr ? new Date(dateStr) : new Date();
+            d.setDate(d.getDate() + (days || 0));
+            return d.toISOString();
+        });
+        this.jexlInstance.addTransform('length', (arr) => (Array.isArray(arr) ? arr.length : 0));
+        this.jexlInstance.addTransform('first', (arr) => (Array.isArray(arr) && arr.length > 0 ? arr[0] : null));
+        this.jexlInstance.addTransform('last', (arr) => (Array.isArray(arr) && arr.length > 0 ? arr[arr.length - 1] : null));
+        this.jexlInstance.addTransform('if', (cond, trueVal, falseVal) => (cond ? trueVal : falseVal));
     }
     async evaluateString(template, context) {
         if (!template || typeof template !== 'string')

@@ -11,6 +11,11 @@ import { HttpRequestExecutor } from './engine/nodes/http-request.node';
 import { CrmActionExecutor } from './engine/nodes/crm-action.node';
 import { AiIntentRouterExecutor } from './engine/nodes/ai-intent-router.node';
 import { AbTestSplitterExecutor } from './engine/nodes/ab-test-splitter.node';
+import { DataTransformExecutor } from './engine/nodes/data-transform.node';
+import { ForEachExecutor } from './engine/nodes/for-each.node';
+import { BusinessHoursExecutor } from './engine/nodes/business-hours.node';
+import { TeamHandoffExecutor } from './engine/nodes/team-handoff.node';
+import { ApprovalExecutor } from './engine/nodes/approval-node.node';
 import { IncomingMessageTrigger } from './engine/triggers/incoming-message.trigger';
 export declare class WorkflowsModule implements OnModuleInit {
     private readonly nodeRegistry;
@@ -24,8 +29,13 @@ export declare class WorkflowsModule implements OnModuleInit {
     private readonly crmActionExecutor;
     private readonly aiIntentRouterExecutor;
     private readonly abTestSplitterExecutor;
+    private readonly dataTransformExecutor;
+    private readonly forEachExecutor;
+    private readonly businessHoursExecutor;
+    private readonly teamHandoffExecutor;
+    private readonly approvalExecutor;
     private readonly incomingMessageTrigger;
     private readonly triggerRegistry;
-    constructor(nodeRegistry: NodeExecutorRegistry, sendMessageExecutor: SendMessageExecutor, delayExecutor: DelayExecutor, conditionExecutor: ConditionExecutor, waitReplyExecutor: WaitReplyExecutor, aiAgentExecutor: AiAgentExecutor, askQuestionExecutor: AskQuestionExecutor, httpRequestExecutor: HttpRequestExecutor, crmActionExecutor: CrmActionExecutor, aiIntentRouterExecutor: AiIntentRouterExecutor, abTestSplitterExecutor: AbTestSplitterExecutor, incomingMessageTrigger: IncomingMessageTrigger, triggerRegistry: TriggerRegistry);
+    constructor(nodeRegistry: NodeExecutorRegistry, sendMessageExecutor: SendMessageExecutor, delayExecutor: DelayExecutor, conditionExecutor: ConditionExecutor, waitReplyExecutor: WaitReplyExecutor, aiAgentExecutor: AiAgentExecutor, askQuestionExecutor: AskQuestionExecutor, httpRequestExecutor: HttpRequestExecutor, crmActionExecutor: CrmActionExecutor, aiIntentRouterExecutor: AiIntentRouterExecutor, abTestSplitterExecutor: AbTestSplitterExecutor, dataTransformExecutor: DataTransformExecutor, forEachExecutor: ForEachExecutor, businessHoursExecutor: BusinessHoursExecutor, teamHandoffExecutor: TeamHandoffExecutor, approvalExecutor: ApprovalExecutor, incomingMessageTrigger: IncomingMessageTrigger, triggerRegistry: TriggerRegistry);
     onModuleInit(): void;
 }

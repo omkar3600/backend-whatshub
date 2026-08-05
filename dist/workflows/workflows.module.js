@@ -31,6 +31,11 @@ const http_request_node_1 = require("./engine/nodes/http-request.node");
 const crm_action_node_1 = require("./engine/nodes/crm-action.node");
 const ai_intent_router_node_1 = require("./engine/nodes/ai-intent-router.node");
 const ab_test_splitter_node_1 = require("./engine/nodes/ab-test-splitter.node");
+const data_transform_node_1 = require("./engine/nodes/data-transform.node");
+const for_each_node_1 = require("./engine/nodes/for-each.node");
+const business_hours_node_1 = require("./engine/nodes/business-hours.node");
+const team_handoff_node_1 = require("./engine/nodes/team-handoff.node");
+const approval_node_node_1 = require("./engine/nodes/approval-node.node");
 const incoming_message_trigger_1 = require("./engine/triggers/incoming-message.trigger");
 const whatsapp_module_1 = require("../whatsapp/whatsapp.module");
 const ai_module_1 = require("../ai/ai.module");
@@ -46,9 +51,14 @@ let WorkflowsModule = class WorkflowsModule {
     crmActionExecutor;
     aiIntentRouterExecutor;
     abTestSplitterExecutor;
+    dataTransformExecutor;
+    forEachExecutor;
+    businessHoursExecutor;
+    teamHandoffExecutor;
+    approvalExecutor;
     incomingMessageTrigger;
     triggerRegistry;
-    constructor(nodeRegistry, sendMessageExecutor, delayExecutor, conditionExecutor, waitReplyExecutor, aiAgentExecutor, askQuestionExecutor, httpRequestExecutor, crmActionExecutor, aiIntentRouterExecutor, abTestSplitterExecutor, incomingMessageTrigger, triggerRegistry) {
+    constructor(nodeRegistry, sendMessageExecutor, delayExecutor, conditionExecutor, waitReplyExecutor, aiAgentExecutor, askQuestionExecutor, httpRequestExecutor, crmActionExecutor, aiIntentRouterExecutor, abTestSplitterExecutor, dataTransformExecutor, forEachExecutor, businessHoursExecutor, teamHandoffExecutor, approvalExecutor, incomingMessageTrigger, triggerRegistry) {
         this.nodeRegistry = nodeRegistry;
         this.sendMessageExecutor = sendMessageExecutor;
         this.delayExecutor = delayExecutor;
@@ -60,6 +70,11 @@ let WorkflowsModule = class WorkflowsModule {
         this.crmActionExecutor = crmActionExecutor;
         this.aiIntentRouterExecutor = aiIntentRouterExecutor;
         this.abTestSplitterExecutor = abTestSplitterExecutor;
+        this.dataTransformExecutor = dataTransformExecutor;
+        this.forEachExecutor = forEachExecutor;
+        this.businessHoursExecutor = businessHoursExecutor;
+        this.teamHandoffExecutor = teamHandoffExecutor;
+        this.approvalExecutor = approvalExecutor;
         this.incomingMessageTrigger = incomingMessageTrigger;
         this.triggerRegistry = triggerRegistry;
     }
@@ -74,6 +89,11 @@ let WorkflowsModule = class WorkflowsModule {
         this.nodeRegistry.register(this.crmActionExecutor);
         this.nodeRegistry.register(this.aiIntentRouterExecutor);
         this.nodeRegistry.register(this.abTestSplitterExecutor);
+        this.nodeRegistry.register(this.dataTransformExecutor);
+        this.nodeRegistry.register(this.forEachExecutor);
+        this.nodeRegistry.register(this.businessHoursExecutor);
+        this.nodeRegistry.register(this.teamHandoffExecutor);
+        this.nodeRegistry.register(this.approvalExecutor);
         this.triggerRegistry.register(this.incomingMessageTrigger);
     }
 };
@@ -110,6 +130,11 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
             crm_action_node_1.CrmActionExecutor,
             ai_intent_router_node_1.AiIntentRouterExecutor,
             ab_test_splitter_node_1.AbTestSplitterExecutor,
+            data_transform_node_1.DataTransformExecutor,
+            for_each_node_1.ForEachExecutor,
+            business_hours_node_1.BusinessHoursExecutor,
+            team_handoff_node_1.TeamHandoffExecutor,
+            approval_node_node_1.ApprovalExecutor,
             incoming_message_trigger_1.IncomingMessageTrigger,
         ],
         exports: [workflow_engine_service_1.WorkflowEngineService, trigger_registry_1.TriggerRegistry],
@@ -125,6 +150,11 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
         crm_action_node_1.CrmActionExecutor,
         ai_intent_router_node_1.AiIntentRouterExecutor,
         ab_test_splitter_node_1.AbTestSplitterExecutor,
+        data_transform_node_1.DataTransformExecutor,
+        for_each_node_1.ForEachExecutor,
+        business_hours_node_1.BusinessHoursExecutor,
+        team_handoff_node_1.TeamHandoffExecutor,
+        approval_node_node_1.ApprovalExecutor,
         incoming_message_trigger_1.IncomingMessageTrigger,
         trigger_registry_1.TriggerRegistry])
 ], WorkflowsModule);
