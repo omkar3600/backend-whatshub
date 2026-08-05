@@ -8,14 +8,16 @@ export interface OrchestratorResult {
     toolsUsed: string[];
     actionsQueued: string[];
 }
+import { AiPolicyEngineService } from '../policy/ai-policy-engine.service';
 export declare class AgentOrchestratorService {
     private readonly prisma;
     private readonly llmFactory;
     private readonly toolRegistry;
     private readonly contextBuilder;
+    private readonly policyEngine;
     private readonly logger;
     private static readonly PROMPT_INJECTION_PATTERNS;
-    constructor(prisma: PrismaService, llmFactory: LlmProviderFactory, toolRegistry: ToolRegistry, contextBuilder: ContextBuilderService);
+    constructor(prisma: PrismaService, llmFactory: LlmProviderFactory, toolRegistry: ToolRegistry, contextBuilder: ContextBuilderService, policyEngine: AiPolicyEngineService);
     private sanitizeInput;
     run(opts: {
         shopId: string;

@@ -48,6 +48,9 @@ const admin_module_1 = require("../admin/admin.module");
 const whatsapp_module_1 = require("../whatsapp/whatsapp.module");
 const campaigns_module_1 = require("../campaigns/campaigns.module");
 const chat_module_1 = require("../chat/chat.module");
+const agent_event_dispatcher_1 = require("./events/agent-event.dispatcher");
+const opportunity_detection_service_1 = require("./intelligence/opportunity-detection.service");
+const ai_kpi_service_1 = require("./analytics/ai-kpi.service");
 let AiModule = class AiModule {
 };
 exports.AiModule = AiModule;
@@ -65,6 +68,7 @@ exports.AiModule = AiModule = __decorate([
         providers: [
             llm_provider_factory_1.LlmProviderFactory,
             ai_policy_engine_service_1.AiPolicyEngineService,
+            agent_event_dispatcher_1.AgentEventDispatcher,
             tool_registry_1.ToolRegistry,
             knowledge_tools_1.KnowledgeTools,
             contact_tools_1.ContactTools,
@@ -87,6 +91,8 @@ exports.AiModule = AiModule = __decorate([
             lead_scoring_service_1.LeadScoringService,
             customer_intelligence_service_1.CustomerIntelligenceService,
             next_best_action_service_1.NextBestActionEngine,
+            opportunity_detection_service_1.OpportunityDetectionService,
+            ai_kpi_service_1.AiKpiService,
             ai_governance_service_1.AiGovernanceService,
             followup_service_1.FollowUpService,
             business_agent_service_1.BusinessAgentService,
@@ -103,9 +109,12 @@ exports.AiModule = AiModule = __decorate([
             agent_orchestrator_service_1.AgentOrchestratorService,
             agent_supervisor_service_1.AgentSupervisorService,
             agent_goal_manager_1.AgentGoalManager,
+            agent_event_dispatcher_1.AgentEventDispatcher,
             lead_scoring_service_1.LeadScoringService,
             customer_intelligence_service_1.CustomerIntelligenceService,
             next_best_action_service_1.NextBestActionEngine,
+            opportunity_detection_service_1.OpportunityDetectionService,
+            ai_kpi_service_1.AiKpiService,
             ai_governance_service_1.AiGovernanceService,
             ai_policy_engine_service_1.AiPolicyEngineService,
             followup_service_1.FollowUpService,

@@ -16,12 +16,14 @@ const prisma_service_1 = require("../../prisma/prisma.service");
 const llm_provider_factory_1 = require("../providers/llm-provider.factory");
 const tool_registry_1 = require("../tools/registry/tool.registry");
 const context_builder_service_1 = require("./context-builder.service");
+const ai_policy_engine_service_1 = require("../policy/ai-policy-engine.service");
 let AgentOrchestratorService = class AgentOrchestratorService {
     static { AgentOrchestratorService_1 = this; }
     prisma;
     llmFactory;
     toolRegistry;
     contextBuilder;
+    policyEngine;
     logger = new common_1.Logger(AgentOrchestratorService_1.name);
     static PROMPT_INJECTION_PATTERNS = [
         /ignore (all )?(previous|prior|above) instructions/i,
@@ -30,11 +32,12 @@ let AgentOrchestratorService = class AgentOrchestratorService {
         /act as (an? )?admin/i,
         /reveal (your )?(system|instructions|prompt)/i,
     ];
-    constructor(prisma, llmFactory, toolRegistry, contextBuilder) {
+    constructor(prisma, llmFactory, toolRegistry, contextBuilder, policyEngine) {
         this.prisma = prisma;
         this.llmFactory = llmFactory;
         this.toolRegistry = toolRegistry;
         this.contextBuilder = contextBuilder;
+        this.policyEngine = policyEngine;
     }
     sanitizeInput(text) {
         let sanitized = text;
@@ -189,6 +192,7 @@ exports.AgentOrchestratorService = AgentOrchestratorService = AgentOrchestratorS
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         llm_provider_factory_1.LlmProviderFactory,
         tool_registry_1.ToolRegistry,
-        context_builder_service_1.ContextBuilderService])
+        context_builder_service_1.ContextBuilderService,
+        ai_policy_engine_service_1.AiPolicyEngineService])
 ], AgentOrchestratorService);
 //# sourceMappingURL=agent-orchestrator.service.js.map

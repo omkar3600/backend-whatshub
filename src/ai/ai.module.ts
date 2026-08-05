@@ -65,6 +65,10 @@ import { WhatsappModule } from '../whatsapp/whatsapp.module';
 import { CampaignsModule } from '../campaigns/campaigns.module';
 import { ChatModule } from '../chat/chat.module';
 
+import { AgentEventDispatcher } from './events/agent-event.dispatcher';
+import { OpportunityDetectionService } from './intelligence/opportunity-detection.service';
+import { AiKpiService } from './analytics/ai-kpi.service';
+
 @Module({
   imports: [
     PrismaModule,
@@ -80,6 +84,8 @@ import { ChatModule } from '../chat/chat.module';
     LlmProviderFactory,
     // Policy
     AiPolicyEngineService,
+    // Events
+    AgentEventDispatcher,
     // Tools
     ToolRegistry,
     KnowledgeTools,
@@ -106,6 +112,8 @@ import { ChatModule } from '../chat/chat.module';
     LeadScoringService,
     CustomerIntelligenceService,
     NextBestActionEngine,
+    OpportunityDetectionService,
+    AiKpiService,
     // Governance
     AiGovernanceService,
     // Follow-up
@@ -127,9 +135,12 @@ import { ChatModule } from '../chat/chat.module';
     AgentOrchestratorService,
     AgentSupervisorService,
     AgentGoalManager,
+    AgentEventDispatcher,
     LeadScoringService,
     CustomerIntelligenceService,
     NextBestActionEngine,
+    OpportunityDetectionService,
+    AiKpiService,
     AiGovernanceService,
     AiPolicyEngineService,
     FollowUpService,

@@ -13,6 +13,8 @@ export interface OrchestratorResult {
   actionsQueued: string[]; // tool names queued for approval
 }
 
+import { AiPolicyEngineService } from '../policy/ai-policy-engine.service';
+
 @Injectable()
 export class AgentOrchestratorService {
   private readonly logger = new Logger(AgentOrchestratorService.name);
@@ -29,6 +31,7 @@ export class AgentOrchestratorService {
     private readonly llmFactory: LlmProviderFactory,
     private readonly toolRegistry: ToolRegistry,
     private readonly contextBuilder: ContextBuilderService,
+    private readonly policyEngine: AiPolicyEngineService,
   ) {}
 
   private sanitizeInput(text: string): string {
