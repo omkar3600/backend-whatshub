@@ -22,6 +22,8 @@ const ai_workflow_generator_service_1 = require("./ai/ai-workflow-generator.serv
 const ai_workflow_debugger_service_1 = require("./ai/ai-workflow-debugger.service");
 const ai_workflow_simulator_service_1 = require("./ai/ai-workflow-simulator.service");
 const ai_workflow_optimizer_service_1 = require("./ai/ai-workflow-optimizer.service");
+const ai_copilot_service_1 = require("./ai/ai-copilot.service");
+const ai_red_team_service_1 = require("./ai/ai-red-team.service");
 let WorkflowsController = class WorkflowsController {
     engineService;
     prisma;
@@ -31,7 +33,9 @@ let WorkflowsController = class WorkflowsController {
     debuggerService;
     simulatorService;
     optimizerService;
-    constructor(engineService, prisma, workflowsService, linterService, generatorService, debuggerService, simulatorService, optimizerService) {
+    copilotService;
+    redTeamService;
+    constructor(engineService, prisma, workflowsService, linterService, generatorService, debuggerService, simulatorService, optimizerService, copilotService, redTeamService) {
         this.engineService = engineService;
         this.prisma = prisma;
         this.workflowsService = workflowsService;
@@ -40,6 +44,8 @@ let WorkflowsController = class WorkflowsController {
         this.debuggerService = debuggerService;
         this.simulatorService = simulatorService;
         this.optimizerService = optimizerService;
+        this.copilotService = copilotService;
+        this.redTeamService = redTeamService;
     }
     async listWorkflows(shopId) {
         if (!shopId)
@@ -82,6 +88,22 @@ let WorkflowsController = class WorkflowsController {
         if (!body.graph)
             throw new common_1.BadRequestException('graph is required');
         return { issues: this.linterService.lintGraph(body.graph) };
+    }
+    async copilotEditGraph(body) {
+        if (!body.shopId || !body.graph || !body.instruction) {
+            throw new common_1.BadRequestException('shopId, graph, and instruction are required');
+        }
+        return this.copilotService.editGraphWithInstruction(body.shopId, body.graph, body.instruction);
+    }
+    async explainGraph(body) {
+        if (!body.shopId || !body.graph)
+            throw new common_1.BadRequestException('shopId and graph are required');
+        return this.copilotService.explainWorkflowGraph(body.shopId, body.graph);
+    }
+    async redTeamAudit(body) {
+        if (!body.shopId || !body.graph)
+            throw new common_1.BadRequestException('shopId and graph are required');
+        return this.redTeamService.runRedTeamAudit(body.shopId, body.graph);
     }
     async generateWorkflow(body) {
         if (!body.shopId || !body.prompt)
@@ -159,6 +181,27 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], WorkflowsController.prototype, "lintWorkflow", null);
 __decorate([
+    (0, common_1.Post)('ai/copilot-edit'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], WorkflowsController.prototype, "copilotEditGraph", null);
+__decorate([
+    (0, common_1.Post)('ai/explain'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], WorkflowsController.prototype, "explainGraph", null);
+__decorate([
+    (0, common_1.Post)('ai/red-team'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], WorkflowsController.prototype, "redTeamAudit", null);
+__decorate([
     (0, common_1.Post)('ai/generate'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -203,6 +246,8 @@ exports.WorkflowsController = WorkflowsController = __decorate([
         ai_workflow_generator_service_1.AiWorkflowGeneratorService,
         ai_workflow_debugger_service_1.AiWorkflowDebuggerService,
         ai_workflow_simulator_service_1.AiWorkflowSimulatorService,
-        ai_workflow_optimizer_service_1.AiWorkflowOptimizerService])
+        ai_workflow_optimizer_service_1.AiWorkflowOptimizerService,
+        ai_copilot_service_1.AiCopilotService,
+        ai_red_team_service_1.AiRedTeamService])
 ], WorkflowsController);
 //# sourceMappingURL=workflows.controller.js.map

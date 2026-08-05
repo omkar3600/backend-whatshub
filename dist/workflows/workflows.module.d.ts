@@ -22,6 +22,8 @@ import { SubWorkflowExecutor } from './engine/nodes/sub-workflow.node';
 import { AskInputExecutor } from './engine/nodes/ask-input.node';
 import { WhatsAppCatalogExecutor } from './engine/nodes/whatsapp-catalog.node';
 import { EcomOrderExecutor } from './engine/nodes/ecom-order.node';
+import { AiGoalAgentExecutor } from './engine/nodes/ai-goal-agent.node';
+import { AiDecisionExecutor } from './engine/nodes/ai-decision.node';
 import { IncomingMessageTrigger } from './engine/triggers/incoming-message.trigger';
 export declare class WorkflowsModule implements OnModuleInit {
     private readonly nodeRegistry;
@@ -46,8 +48,10 @@ export declare class WorkflowsModule implements OnModuleInit {
     private readonly askInputExecutor;
     private readonly whatsAppCatalogExecutor;
     private readonly ecomOrderExecutor;
+    private readonly aiGoalAgentExecutor;
+    private readonly aiDecisionExecutor;
     private readonly incomingMessageTrigger;
     private readonly triggerRegistry;
-    constructor(nodeRegistry: NodeExecutorRegistry, sendMessageExecutor: SendMessageExecutor, delayExecutor: DelayExecutor, conditionExecutor: ConditionExecutor, waitReplyExecutor: WaitReplyExecutor, aiAgentExecutor: AiAgentExecutor, askQuestionExecutor: AskQuestionExecutor, httpRequestExecutor: HttpRequestExecutor, crmActionExecutor: CrmActionExecutor, aiIntentRouterExecutor: AiIntentRouterExecutor, abTestSplitterExecutor: AbTestSplitterExecutor, dataTransformExecutor: DataTransformExecutor, forEachExecutor: ForEachExecutor, businessHoursExecutor: BusinessHoursExecutor, teamHandoffExecutor: TeamHandoffExecutor, approvalExecutor: ApprovalExecutor, aiExtractionExecutor: AiExtractionExecutor, aiSentimentExecutor: AiSentimentExecutor, subWorkflowExecutor: SubWorkflowExecutor, askInputExecutor: AskInputExecutor, whatsAppCatalogExecutor: WhatsAppCatalogExecutor, ecomOrderExecutor: EcomOrderExecutor, incomingMessageTrigger: IncomingMessageTrigger, triggerRegistry: TriggerRegistry);
+    constructor(nodeRegistry: NodeExecutorRegistry, sendMessageExecutor: SendMessageExecutor, delayExecutor: DelayExecutor, conditionExecutor: ConditionExecutor, waitReplyExecutor: WaitReplyExecutor, aiAgentExecutor: AiAgentExecutor, askQuestionExecutor: AskQuestionExecutor, httpRequestExecutor: HttpRequestExecutor, crmActionExecutor: CrmActionExecutor, aiIntentRouterExecutor: AiIntentRouterExecutor, abTestSplitterExecutor: AbTestSplitterExecutor, dataTransformExecutor: DataTransformExecutor, forEachExecutor: ForEachExecutor, businessHoursExecutor: BusinessHoursExecutor, teamHandoffExecutor: TeamHandoffExecutor, approvalExecutor: ApprovalExecutor, aiExtractionExecutor: AiExtractionExecutor, aiSentimentExecutor: AiSentimentExecutor, subWorkflowExecutor: SubWorkflowExecutor, askInputExecutor: AskInputExecutor, whatsAppCatalogExecutor: WhatsAppCatalogExecutor, ecomOrderExecutor: EcomOrderExecutor, aiGoalAgentExecutor: AiGoalAgentExecutor, aiDecisionExecutor: AiDecisionExecutor, incomingMessageTrigger: IncomingMessageTrigger, triggerRegistry: TriggerRegistry);
     onModuleInit(): void;
 }

@@ -5,6 +5,9 @@ import { BullModule } from '@nestjs/bullmq';
 import { LlmProviderFactory } from './providers/llm-provider.factory';
 import { GroqProvider } from './providers/groq.provider';
 
+// Policy Engine
+import { AiPolicyEngineService } from './policy/ai-policy-engine.service';
+
 // Tools
 import { ToolRegistry } from './tools/registry/tool.registry';
 import { KnowledgeTools } from './tools/impl/knowledge-tools';
@@ -75,6 +78,8 @@ import { ChatModule } from '../chat/chat.module';
   providers: [
     // Providers
     LlmProviderFactory,
+    // Policy
+    AiPolicyEngineService,
     // Tools
     ToolRegistry,
     KnowledgeTools,
@@ -126,6 +131,7 @@ import { ChatModule } from '../chat/chat.module';
     CustomerIntelligenceService,
     NextBestActionEngine,
     AiGovernanceService,
+    AiPolicyEngineService,
     FollowUpService,
     ToolRegistry,
     LlmProviderFactory,

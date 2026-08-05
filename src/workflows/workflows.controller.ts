@@ -7,6 +7,8 @@ import { AiWorkflowGeneratorService } from './ai/ai-workflow-generator.service';
 import { AiWorkflowDebuggerService } from './ai/ai-workflow-debugger.service';
 import { AiWorkflowSimulatorService } from './ai/ai-workflow-simulator.service';
 import { AiWorkflowOptimizerService } from './ai/ai-workflow-optimizer.service';
+import { AiCopilotService } from './ai/ai-copilot.service';
+import { AiRedTeamService } from './ai/ai-red-team.service';
 
 @Controller('workflows')
 export class WorkflowsController {
@@ -19,6 +21,8 @@ export class WorkflowsController {
     private readonly debuggerService: AiWorkflowDebuggerService,
     private readonly simulatorService: AiWorkflowSimulatorService,
     private readonly optimizerService: AiWorkflowOptimizerService,
+    private readonly copilotService: AiCopilotService,
+    private readonly redTeamService: AiRedTeamService,
   ) {}
 
   @Get()
@@ -71,6 +75,26 @@ export class WorkflowsController {
   async lintWorkflow(@Body() body: { graph: any }) {
     if (!body.graph) throw new BadRequestException('graph is required');
     return { issues: this.linterService.lintGraph(body.graph) };
+  }
+
+  @Post('ai/copilot-edit')
+  async copilotEditGraph(@Body() body: { shopId: string; graph: any; instruction: string }) {
+    if (!body.shopId || !body.graph || !body.instruction) {
+      throw new BadRequestException('shopId, graph, and instruction are required');
+    }
+    return this.copilotService.editGraphWithInstruction(body.shopId, body.graph, body.instruction);
+  }
+
+  @Post('ai/explain')
+  async explainGraph(@Body() body: { shopId: string; graph: any }) {
+    if (!body.shopId || !body.graph) throw new BadRequestException('shopId and graph are required');
+    return this.copilotService.explainWorkflowGraph(body.shopId, body.graph);
+  }
+
+  @Post('ai/red-team')
+  async redTeamAudit(@Body() body: { shopId: string; graph: any }) {
+    if (!body.shopId || !body.graph) throw new BadRequestException('shopId and graph are required');
+    return this.redTeamService.runRedTeamAudit(body.shopId, body.graph);
   }
 
   @Post('ai/generate')

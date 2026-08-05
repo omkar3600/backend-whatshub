@@ -10,6 +10,7 @@ exports.AiModule = void 0;
 const common_1 = require("@nestjs/common");
 const bullmq_1 = require("@nestjs/bullmq");
 const llm_provider_factory_1 = require("./providers/llm-provider.factory");
+const ai_policy_engine_service_1 = require("./policy/ai-policy-engine.service");
 const tool_registry_1 = require("./tools/registry/tool.registry");
 const knowledge_tools_1 = require("./tools/impl/knowledge-tools");
 const contact_tools_1 = require("./tools/impl/contact-tools");
@@ -63,6 +64,7 @@ exports.AiModule = AiModule = __decorate([
         ],
         providers: [
             llm_provider_factory_1.LlmProviderFactory,
+            ai_policy_engine_service_1.AiPolicyEngineService,
             tool_registry_1.ToolRegistry,
             knowledge_tools_1.KnowledgeTools,
             contact_tools_1.ContactTools,
@@ -105,6 +107,7 @@ exports.AiModule = AiModule = __decorate([
             customer_intelligence_service_1.CustomerIntelligenceService,
             next_best_action_service_1.NextBestActionEngine,
             ai_governance_service_1.AiGovernanceService,
+            ai_policy_engine_service_1.AiPolicyEngineService,
             followup_service_1.FollowUpService,
             tool_registry_1.ToolRegistry,
             llm_provider_factory_1.LlmProviderFactory,

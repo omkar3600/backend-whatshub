@@ -6,6 +6,8 @@ import { AiWorkflowGeneratorService } from './ai/ai-workflow-generator.service';
 import { AiWorkflowDebuggerService } from './ai/ai-workflow-debugger.service';
 import { AiWorkflowSimulatorService } from './ai/ai-workflow-simulator.service';
 import { AiWorkflowOptimizerService } from './ai/ai-workflow-optimizer.service';
+import { AiCopilotService } from './ai/ai-copilot.service';
+import { AiRedTeamService } from './ai/ai-red-team.service';
 export declare class WorkflowsController {
     private readonly engineService;
     private readonly prisma;
@@ -15,7 +17,9 @@ export declare class WorkflowsController {
     private readonly debuggerService;
     private readonly simulatorService;
     private readonly optimizerService;
-    constructor(engineService: WorkflowEngineService, prisma: PrismaService, workflowsService: WorkflowsService, linterService: WorkflowLinterService, generatorService: AiWorkflowGeneratorService, debuggerService: AiWorkflowDebuggerService, simulatorService: AiWorkflowSimulatorService, optimizerService: AiWorkflowOptimizerService);
+    private readonly copilotService;
+    private readonly redTeamService;
+    constructor(engineService: WorkflowEngineService, prisma: PrismaService, workflowsService: WorkflowsService, linterService: WorkflowLinterService, generatorService: AiWorkflowGeneratorService, debuggerService: AiWorkflowDebuggerService, simulatorService: AiWorkflowSimulatorService, optimizerService: AiWorkflowOptimizerService, copilotService: AiCopilotService, redTeamService: AiRedTeamService);
     listWorkflows(shopId: string): Promise<({
         _count: {
             instances: number;
@@ -109,6 +113,25 @@ export declare class WorkflowsController {
     }): Promise<{
         issues: import("./engine/workflow-linter.service").LintIssue[];
     }>;
+    copilotEditGraph(body: {
+        shopId: string;
+        graph: any;
+        instruction: string;
+    }): Promise<{
+        nodes: any[];
+        edges: any[];
+        explanation: string;
+    }>;
+    explainGraph(body: {
+        shopId: string;
+        graph: any;
+    }): Promise<{
+        explanation: string;
+    }>;
+    redTeamAudit(body: {
+        shopId: string;
+        graph: any;
+    }): Promise<import("./ai/ai-red-team.service").RedTeamReport>;
     generateWorkflow(body: {
         shopId: string;
         prompt: string;

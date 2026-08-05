@@ -26,6 +26,8 @@ const ai_workflow_generator_service_1 = require("./ai/ai-workflow-generator.serv
 const ai_workflow_debugger_service_1 = require("./ai/ai-workflow-debugger.service");
 const ai_workflow_simulator_service_1 = require("./ai/ai-workflow-simulator.service");
 const ai_workflow_optimizer_service_1 = require("./ai/ai-workflow-optimizer.service");
+const ai_copilot_service_1 = require("./ai/ai-copilot.service");
+const ai_red_team_service_1 = require("./ai/ai-red-team.service");
 const send_message_node_1 = require("./engine/nodes/send-message.node");
 const delay_node_1 = require("./engine/nodes/delay.node");
 const condition_node_1 = require("./engine/nodes/condition.node");
@@ -47,6 +49,8 @@ const sub_workflow_node_1 = require("./engine/nodes/sub-workflow.node");
 const ask_input_node_1 = require("./engine/nodes/ask-input.node");
 const whatsapp_catalog_node_1 = require("./engine/nodes/whatsapp-catalog.node");
 const ecom_order_node_1 = require("./engine/nodes/ecom-order.node");
+const ai_goal_agent_node_1 = require("./engine/nodes/ai-goal-agent.node");
+const ai_decision_node_1 = require("./engine/nodes/ai-decision.node");
 const incoming_message_trigger_1 = require("./engine/triggers/incoming-message.trigger");
 const whatsapp_module_1 = require("../whatsapp/whatsapp.module");
 const ai_module_1 = require("../ai/ai.module");
@@ -73,9 +77,11 @@ let WorkflowsModule = class WorkflowsModule {
     askInputExecutor;
     whatsAppCatalogExecutor;
     ecomOrderExecutor;
+    aiGoalAgentExecutor;
+    aiDecisionExecutor;
     incomingMessageTrigger;
     triggerRegistry;
-    constructor(nodeRegistry, sendMessageExecutor, delayExecutor, conditionExecutor, waitReplyExecutor, aiAgentExecutor, askQuestionExecutor, httpRequestExecutor, crmActionExecutor, aiIntentRouterExecutor, abTestSplitterExecutor, dataTransformExecutor, forEachExecutor, businessHoursExecutor, teamHandoffExecutor, approvalExecutor, aiExtractionExecutor, aiSentimentExecutor, subWorkflowExecutor, askInputExecutor, whatsAppCatalogExecutor, ecomOrderExecutor, incomingMessageTrigger, triggerRegistry) {
+    constructor(nodeRegistry, sendMessageExecutor, delayExecutor, conditionExecutor, waitReplyExecutor, aiAgentExecutor, askQuestionExecutor, httpRequestExecutor, crmActionExecutor, aiIntentRouterExecutor, abTestSplitterExecutor, dataTransformExecutor, forEachExecutor, businessHoursExecutor, teamHandoffExecutor, approvalExecutor, aiExtractionExecutor, aiSentimentExecutor, subWorkflowExecutor, askInputExecutor, whatsAppCatalogExecutor, ecomOrderExecutor, aiGoalAgentExecutor, aiDecisionExecutor, incomingMessageTrigger, triggerRegistry) {
         this.nodeRegistry = nodeRegistry;
         this.sendMessageExecutor = sendMessageExecutor;
         this.delayExecutor = delayExecutor;
@@ -98,6 +104,8 @@ let WorkflowsModule = class WorkflowsModule {
         this.askInputExecutor = askInputExecutor;
         this.whatsAppCatalogExecutor = whatsAppCatalogExecutor;
         this.ecomOrderExecutor = ecomOrderExecutor;
+        this.aiGoalAgentExecutor = aiGoalAgentExecutor;
+        this.aiDecisionExecutor = aiDecisionExecutor;
         this.incomingMessageTrigger = incomingMessageTrigger;
         this.triggerRegistry = triggerRegistry;
     }
@@ -123,6 +131,8 @@ let WorkflowsModule = class WorkflowsModule {
         this.nodeRegistry.register(this.askInputExecutor);
         this.nodeRegistry.register(this.whatsAppCatalogExecutor);
         this.nodeRegistry.register(this.ecomOrderExecutor);
+        this.nodeRegistry.register(this.aiGoalAgentExecutor);
+        this.nodeRegistry.register(this.aiDecisionExecutor);
         this.triggerRegistry.register(this.incomingMessageTrigger);
     }
 };
@@ -154,6 +164,8 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
             ai_workflow_debugger_service_1.AiWorkflowDebuggerService,
             ai_workflow_simulator_service_1.AiWorkflowSimulatorService,
             ai_workflow_optimizer_service_1.AiWorkflowOptimizerService,
+            ai_copilot_service_1.AiCopilotService,
+            ai_red_team_service_1.AiRedTeamService,
             send_message_node_1.SendMessageExecutor,
             delay_node_1.DelayExecutor,
             condition_node_1.ConditionExecutor,
@@ -175,6 +187,8 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
             ask_input_node_1.AskInputExecutor,
             whatsapp_catalog_node_1.WhatsAppCatalogExecutor,
             ecom_order_node_1.EcomOrderExecutor,
+            ai_goal_agent_node_1.AiGoalAgentExecutor,
+            ai_decision_node_1.AiDecisionExecutor,
             incoming_message_trigger_1.IncomingMessageTrigger,
         ],
         exports: [
@@ -185,6 +199,8 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
             ai_workflow_debugger_service_1.AiWorkflowDebuggerService,
             ai_workflow_simulator_service_1.AiWorkflowSimulatorService,
             ai_workflow_optimizer_service_1.AiWorkflowOptimizerService,
+            ai_copilot_service_1.AiCopilotService,
+            ai_red_team_service_1.AiRedTeamService,
         ],
     }),
     __metadata("design:paramtypes", [node_executor_registry_1.NodeExecutorRegistry,
@@ -209,6 +225,8 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
         ask_input_node_1.AskInputExecutor,
         whatsapp_catalog_node_1.WhatsAppCatalogExecutor,
         ecom_order_node_1.EcomOrderExecutor,
+        ai_goal_agent_node_1.AiGoalAgentExecutor,
+        ai_decision_node_1.AiDecisionExecutor,
         incoming_message_trigger_1.IncomingMessageTrigger,
         trigger_registry_1.TriggerRegistry])
 ], WorkflowsModule);

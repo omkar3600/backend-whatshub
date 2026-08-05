@@ -15,6 +15,8 @@ import { AiWorkflowGeneratorService } from './ai/ai-workflow-generator.service';
 import { AiWorkflowDebuggerService } from './ai/ai-workflow-debugger.service';
 import { AiWorkflowSimulatorService } from './ai/ai-workflow-simulator.service';
 import { AiWorkflowOptimizerService } from './ai/ai-workflow-optimizer.service';
+import { AiCopilotService } from './ai/ai-copilot.service';
+import { AiRedTeamService } from './ai/ai-red-team.service';
 
 import { SendMessageExecutor } from './engine/nodes/send-message.node';
 import { DelayExecutor } from './engine/nodes/delay.node';
@@ -32,13 +34,15 @@ import { BusinessHoursExecutor } from './engine/nodes/business-hours.node';
 import { TeamHandoffExecutor } from './engine/nodes/team-handoff.node';
 import { ApprovalExecutor } from './engine/nodes/approval-node.node';
 
-// Workflow 2.0 Nodes
+// Workflow 2.0 & OS 3.0 Nodes
 import { AiExtractionExecutor } from './engine/nodes/ai-extraction.node';
 import { AiSentimentExecutor } from './engine/nodes/ai-sentiment.node';
 import { SubWorkflowExecutor } from './engine/nodes/sub-workflow.node';
 import { AskInputExecutor } from './engine/nodes/ask-input.node';
 import { WhatsAppCatalogExecutor } from './engine/nodes/whatsapp-catalog.node';
 import { EcomOrderExecutor } from './engine/nodes/ecom-order.node';
+import { AiGoalAgentExecutor } from './engine/nodes/ai-goal-agent.node';
+import { AiDecisionExecutor } from './engine/nodes/ai-decision.node';
 
 import { IncomingMessageTrigger } from './engine/triggers/incoming-message.trigger';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
@@ -70,6 +74,8 @@ import { AiModule } from '../ai/ai.module';
     AiWorkflowDebuggerService,
     AiWorkflowSimulatorService,
     AiWorkflowOptimizerService,
+    AiCopilotService,
+    AiRedTeamService,
     SendMessageExecutor,
     DelayExecutor,
     ConditionExecutor,
@@ -91,6 +97,8 @@ import { AiModule } from '../ai/ai.module';
     AskInputExecutor,
     WhatsAppCatalogExecutor,
     EcomOrderExecutor,
+    AiGoalAgentExecutor,
+    AiDecisionExecutor,
     IncomingMessageTrigger,
   ],
   exports: [
@@ -101,6 +109,8 @@ import { AiModule } from '../ai/ai.module';
     AiWorkflowDebuggerService,
     AiWorkflowSimulatorService,
     AiWorkflowOptimizerService,
+    AiCopilotService,
+    AiRedTeamService,
   ],
 })
 export class WorkflowsModule implements OnModuleInit {
@@ -127,6 +137,8 @@ export class WorkflowsModule implements OnModuleInit {
     private readonly askInputExecutor: AskInputExecutor,
     private readonly whatsAppCatalogExecutor: WhatsAppCatalogExecutor,
     private readonly ecomOrderExecutor: EcomOrderExecutor,
+    private readonly aiGoalAgentExecutor: AiGoalAgentExecutor,
+    private readonly aiDecisionExecutor: AiDecisionExecutor,
     private readonly incomingMessageTrigger: IncomingMessageTrigger,
     private readonly triggerRegistry: TriggerRegistry,
   ) {}
@@ -147,14 +159,14 @@ export class WorkflowsModule implements OnModuleInit {
     this.nodeRegistry.register(this.businessHoursExecutor);
     this.nodeRegistry.register(this.teamHandoffExecutor);
     this.nodeRegistry.register(this.approvalExecutor);
-
-    // Workflow 2.0 Executors
     this.nodeRegistry.register(this.aiExtractionExecutor);
     this.nodeRegistry.register(this.aiSentimentExecutor);
     this.nodeRegistry.register(this.subWorkflowExecutor);
     this.nodeRegistry.register(this.askInputExecutor);
     this.nodeRegistry.register(this.whatsAppCatalogExecutor);
     this.nodeRegistry.register(this.ecomOrderExecutor);
+    this.nodeRegistry.register(this.aiGoalAgentExecutor);
+    this.nodeRegistry.register(this.aiDecisionExecutor);
 
     this.triggerRegistry.register(this.incomingMessageTrigger);
   }
