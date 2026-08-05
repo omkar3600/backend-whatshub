@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { CampaignsService } from './campaigns.service';
 import { CampaignsController } from './campaigns.controller';
@@ -10,7 +10,7 @@ import { WhatsappModule } from '../whatsapp/whatsapp.module';
     BullModule.registerQueue({
       name: 'campaigns',
     }),
-    WhatsappModule,
+    forwardRef(() => WhatsappModule),
   ],
   controllers: [CampaignsController],
   providers: [CampaignsService, CampaignProcessor],

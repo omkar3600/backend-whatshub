@@ -22,7 +22,7 @@ exports.CampaignsModule = CampaignsModule = __decorate([
             bullmq_1.BullModule.registerQueue({
                 name: 'campaigns',
             }),
-            whatsapp_module_1.WhatsappModule,
+            (0, common_1.forwardRef)(() => whatsapp_module_1.WhatsappModule),
         ],
         controllers: [campaigns_controller_1.CampaignsController],
         providers: [campaigns_service_1.CampaignsService, campaign_processor_1.CampaignProcessor],
