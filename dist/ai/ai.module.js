@@ -51,6 +51,10 @@ const chat_module_1 = require("../chat/chat.module");
 const agent_event_dispatcher_1 = require("./events/agent-event.dispatcher");
 const opportunity_detection_service_1 = require("./intelligence/opportunity-detection.service");
 const ai_kpi_service_1 = require("./analytics/ai-kpi.service");
+const agent_skill_registry_1 = require("./skills/agent-skill.registry");
+const customer_fatigue_service_1 = require("./governance/customer-fatigue.service");
+const negotiation_engine_service_1 = require("./intelligence/negotiation-engine.service");
+const agent_simulation_lab_service_1 = require("./simulation/agent-simulation-lab.service");
 let AiModule = class AiModule {
 };
 exports.AiModule = AiModule;
@@ -68,7 +72,10 @@ exports.AiModule = AiModule = __decorate([
         providers: [
             llm_provider_factory_1.LlmProviderFactory,
             ai_policy_engine_service_1.AiPolicyEngineService,
+            customer_fatigue_service_1.CustomerFatigueService,
             agent_event_dispatcher_1.AgentEventDispatcher,
+            agent_skill_registry_1.AgentSkillRegistry,
+            agent_simulation_lab_service_1.AgentSimulationLabService,
             tool_registry_1.ToolRegistry,
             knowledge_tools_1.KnowledgeTools,
             contact_tools_1.ContactTools,
@@ -91,6 +98,7 @@ exports.AiModule = AiModule = __decorate([
             lead_scoring_service_1.LeadScoringService,
             customer_intelligence_service_1.CustomerIntelligenceService,
             next_best_action_service_1.NextBestActionEngine,
+            negotiation_engine_service_1.NegotiationEngineService,
             opportunity_detection_service_1.OpportunityDetectionService,
             ai_kpi_service_1.AiKpiService,
             ai_governance_service_1.AiGovernanceService,
@@ -110,13 +118,17 @@ exports.AiModule = AiModule = __decorate([
             agent_supervisor_service_1.AgentSupervisorService,
             agent_goal_manager_1.AgentGoalManager,
             agent_event_dispatcher_1.AgentEventDispatcher,
+            agent_skill_registry_1.AgentSkillRegistry,
+            agent_simulation_lab_service_1.AgentSimulationLabService,
             lead_scoring_service_1.LeadScoringService,
             customer_intelligence_service_1.CustomerIntelligenceService,
             next_best_action_service_1.NextBestActionEngine,
+            negotiation_engine_service_1.NegotiationEngineService,
             opportunity_detection_service_1.OpportunityDetectionService,
             ai_kpi_service_1.AiKpiService,
             ai_governance_service_1.AiGovernanceService,
             ai_policy_engine_service_1.AiPolicyEngineService,
+            customer_fatigue_service_1.CustomerFatigueService,
             followup_service_1.FollowUpService,
             tool_registry_1.ToolRegistry,
             llm_provider_factory_1.LlmProviderFactory,

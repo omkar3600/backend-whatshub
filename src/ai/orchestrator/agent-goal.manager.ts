@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 
 export type GoalStatus = 
+  | 'NOT_STARTED'
   | 'PLANNING'
   | 'RUNNING'
   | 'WAITING'
@@ -12,6 +13,8 @@ export type GoalStatus =
 
 export interface AgentGoal {
   id: string;
+  parentGoalId?: string;
+  subGoalIds: string[];
   shopId: string;
   contactId?: string;
   goalName: string;
@@ -36,6 +39,7 @@ export class AgentGoalManager {
 
   createGoal(opts: {
     shopId: string;
+    parentGoalId?: string;
     contactId?: string;
     goalName: string;
     agentRole: string;
@@ -45,8 +49,11 @@ export class AgentGoalManager {
     failureCriteria?: string[];
     executionPlan?: string[];
   }): AgentGoal {
+    const goalId = `goal_${uuidv4().substring(0, 8)}`;
     const goal: AgentGoal = {
-      id: `goal_${uuidv4().substring(0, 8)}`,
+      id: goalId,
+      parentGoalId: opts.parentGoalId,
+      subGoalIds: [],
       shopId: opts.shopId,
       contactId: opts.contactId,
       goalName: opts.goalName,
@@ -63,6 +70,14 @@ export class AgentGoalManager {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
+    if (opts.parentGoalId) {
+      const parent = this.goals.get(opts.parentGoalId);
+      if (parent) {
+        parent.subGoalIds.push(goalId);
+        parent.updatedAt = new Date().toISOString();
+      }
+    }
 
     this.goals.set(goal.id, goal);
     return goal;
@@ -103,6 +118,18 @@ export class AgentGoalManager {
     if (goal) {
       goal.status = status;
       goal.updatedAt = new Date().toISOString();
+
+      // If sub-goal completed, check if parent can be evaluated
+      if (goal.parentGoalId && status === 'COMPLETED') {
+        const parent = this.goals.get(goal.parentGoalId);
+        if (parent) {
+          const allSubsCompleted = parent.subGoalIds.every(id => this.goals.get(id)?.status === 'COMPLETED');
+          if (allSubsCompleted) {
+            parent.status = 'COMPLETED';
+            parent.updatedAt = new Date().toISOString();
+          }
+        }
+      }
     }
   }
 }

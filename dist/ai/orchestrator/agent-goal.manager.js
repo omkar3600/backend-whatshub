@@ -14,8 +14,11 @@ let AgentGoalManager = AgentGoalManager_1 = class AgentGoalManager {
     logger = new common_1.Logger(AgentGoalManager_1.name);
     goals = new Map();
     createGoal(opts) {
+        const goalId = `goal_${(0, uuid_1.v4)().substring(0, 8)}`;
         const goal = {
-            id: `goal_${(0, uuid_1.v4)().substring(0, 8)}`,
+            id: goalId,
+            parentGoalId: opts.parentGoalId,
+            subGoalIds: [],
             shopId: opts.shopId,
             contactId: opts.contactId,
             goalName: opts.goalName,
@@ -32,6 +35,13 @@ let AgentGoalManager = AgentGoalManager_1 = class AgentGoalManager {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         };
+        if (opts.parentGoalId) {
+            const parent = this.goals.get(opts.parentGoalId);
+            if (parent) {
+                parent.subGoalIds.push(goalId);
+                parent.updatedAt = new Date().toISOString();
+            }
+        }
         this.goals.set(goal.id, goal);
         return goal;
     }
@@ -66,6 +76,16 @@ let AgentGoalManager = AgentGoalManager_1 = class AgentGoalManager {
         if (goal) {
             goal.status = status;
             goal.updatedAt = new Date().toISOString();
+            if (goal.parentGoalId && status === 'COMPLETED') {
+                const parent = this.goals.get(goal.parentGoalId);
+                if (parent) {
+                    const allSubsCompleted = parent.subGoalIds.every(id => this.goals.get(id)?.status === 'COMPLETED');
+                    if (allSubsCompleted) {
+                        parent.status = 'COMPLETED';
+                        parent.updatedAt = new Date().toISOString();
+                    }
+                }
+            }
         }
     }
 };

@@ -68,6 +68,10 @@ import { ChatModule } from '../chat/chat.module';
 import { AgentEventDispatcher } from './events/agent-event.dispatcher';
 import { OpportunityDetectionService } from './intelligence/opportunity-detection.service';
 import { AiKpiService } from './analytics/ai-kpi.service';
+import { AgentSkillRegistry } from './skills/agent-skill.registry';
+import { CustomerFatigueService } from './governance/customer-fatigue.service';
+import { NegotiationEngineService } from './intelligence/negotiation-engine.service';
+import { AgentSimulationLabService } from './simulation/agent-simulation-lab.service';
 
 @Module({
   imports: [
@@ -82,10 +86,15 @@ import { AiKpiService } from './analytics/ai-kpi.service';
   providers: [
     // Providers
     LlmProviderFactory,
-    // Policy
+    // Policy & Governance
     AiPolicyEngineService,
+    CustomerFatigueService,
     // Events
     AgentEventDispatcher,
+    // Skills
+    AgentSkillRegistry,
+    // Simulation Lab
+    AgentSimulationLabService,
     // Tools
     ToolRegistry,
     KnowledgeTools,
@@ -112,6 +121,7 @@ import { AiKpiService } from './analytics/ai-kpi.service';
     LeadScoringService,
     CustomerIntelligenceService,
     NextBestActionEngine,
+    NegotiationEngineService,
     OpportunityDetectionService,
     AiKpiService,
     // Governance
@@ -136,13 +146,17 @@ import { AiKpiService } from './analytics/ai-kpi.service';
     AgentSupervisorService,
     AgentGoalManager,
     AgentEventDispatcher,
+    AgentSkillRegistry,
+    AgentSimulationLabService,
     LeadScoringService,
     CustomerIntelligenceService,
     NextBestActionEngine,
+    NegotiationEngineService,
     OpportunityDetectionService,
     AiKpiService,
     AiGovernanceService,
     AiPolicyEngineService,
+    CustomerFatigueService,
     FollowUpService,
     ToolRegistry,
     LlmProviderFactory,

@@ -1,6 +1,8 @@
-export type GoalStatus = 'PLANNING' | 'RUNNING' | 'WAITING' | 'AWAITING_APPROVAL' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+export type GoalStatus = 'NOT_STARTED' | 'PLANNING' | 'RUNNING' | 'WAITING' | 'AWAITING_APPROVAL' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
 export interface AgentGoal {
     id: string;
+    parentGoalId?: string;
+    subGoalIds: string[];
     shopId: string;
     contactId?: string;
     goalName: string;
@@ -27,6 +29,7 @@ export declare class AgentGoalManager {
     private goals;
     createGoal(opts: {
         shopId: string;
+        parentGoalId?: string;
         contactId?: string;
         goalName: string;
         agentRole: string;
