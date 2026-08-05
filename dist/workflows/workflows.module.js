@@ -18,6 +18,7 @@ const workflows_service_1 = require("./workflows.service");
 const workflow_engine_service_1 = require("./engine/workflow-engine.service");
 const workflow_publishing_service_1 = require("./engine/workflow-publishing.service");
 const expression_engine_service_1 = require("./engine/expression-engine.service");
+const workflow_linter_service_1 = require("./engine/workflow-linter.service");
 const node_executor_registry_1 = require("./engine/registries/node-executor.registry");
 const trigger_registry_1 = require("./engine/registries/trigger.registry");
 const workflow_queue_processor_1 = require("./engine/processors/workflow-queue.processor");
@@ -40,6 +41,12 @@ const for_each_node_1 = require("./engine/nodes/for-each.node");
 const business_hours_node_1 = require("./engine/nodes/business-hours.node");
 const team_handoff_node_1 = require("./engine/nodes/team-handoff.node");
 const approval_node_node_1 = require("./engine/nodes/approval-node.node");
+const ai_extraction_node_1 = require("./engine/nodes/ai-extraction.node");
+const ai_sentiment_node_1 = require("./engine/nodes/ai-sentiment.node");
+const sub_workflow_node_1 = require("./engine/nodes/sub-workflow.node");
+const ask_input_node_1 = require("./engine/nodes/ask-input.node");
+const whatsapp_catalog_node_1 = require("./engine/nodes/whatsapp-catalog.node");
+const ecom_order_node_1 = require("./engine/nodes/ecom-order.node");
 const incoming_message_trigger_1 = require("./engine/triggers/incoming-message.trigger");
 const whatsapp_module_1 = require("../whatsapp/whatsapp.module");
 const ai_module_1 = require("../ai/ai.module");
@@ -60,9 +67,15 @@ let WorkflowsModule = class WorkflowsModule {
     businessHoursExecutor;
     teamHandoffExecutor;
     approvalExecutor;
+    aiExtractionExecutor;
+    aiSentimentExecutor;
+    subWorkflowExecutor;
+    askInputExecutor;
+    whatsAppCatalogExecutor;
+    ecomOrderExecutor;
     incomingMessageTrigger;
     triggerRegistry;
-    constructor(nodeRegistry, sendMessageExecutor, delayExecutor, conditionExecutor, waitReplyExecutor, aiAgentExecutor, askQuestionExecutor, httpRequestExecutor, crmActionExecutor, aiIntentRouterExecutor, abTestSplitterExecutor, dataTransformExecutor, forEachExecutor, businessHoursExecutor, teamHandoffExecutor, approvalExecutor, incomingMessageTrigger, triggerRegistry) {
+    constructor(nodeRegistry, sendMessageExecutor, delayExecutor, conditionExecutor, waitReplyExecutor, aiAgentExecutor, askQuestionExecutor, httpRequestExecutor, crmActionExecutor, aiIntentRouterExecutor, abTestSplitterExecutor, dataTransformExecutor, forEachExecutor, businessHoursExecutor, teamHandoffExecutor, approvalExecutor, aiExtractionExecutor, aiSentimentExecutor, subWorkflowExecutor, askInputExecutor, whatsAppCatalogExecutor, ecomOrderExecutor, incomingMessageTrigger, triggerRegistry) {
         this.nodeRegistry = nodeRegistry;
         this.sendMessageExecutor = sendMessageExecutor;
         this.delayExecutor = delayExecutor;
@@ -79,6 +92,12 @@ let WorkflowsModule = class WorkflowsModule {
         this.businessHoursExecutor = businessHoursExecutor;
         this.teamHandoffExecutor = teamHandoffExecutor;
         this.approvalExecutor = approvalExecutor;
+        this.aiExtractionExecutor = aiExtractionExecutor;
+        this.aiSentimentExecutor = aiSentimentExecutor;
+        this.subWorkflowExecutor = subWorkflowExecutor;
+        this.askInputExecutor = askInputExecutor;
+        this.whatsAppCatalogExecutor = whatsAppCatalogExecutor;
+        this.ecomOrderExecutor = ecomOrderExecutor;
         this.incomingMessageTrigger = incomingMessageTrigger;
         this.triggerRegistry = triggerRegistry;
     }
@@ -98,6 +117,12 @@ let WorkflowsModule = class WorkflowsModule {
         this.nodeRegistry.register(this.businessHoursExecutor);
         this.nodeRegistry.register(this.teamHandoffExecutor);
         this.nodeRegistry.register(this.approvalExecutor);
+        this.nodeRegistry.register(this.aiExtractionExecutor);
+        this.nodeRegistry.register(this.aiSentimentExecutor);
+        this.nodeRegistry.register(this.subWorkflowExecutor);
+        this.nodeRegistry.register(this.askInputExecutor);
+        this.nodeRegistry.register(this.whatsAppCatalogExecutor);
+        this.nodeRegistry.register(this.ecomOrderExecutor);
         this.triggerRegistry.register(this.incomingMessageTrigger);
     }
 };
@@ -121,6 +146,7 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
             workflow_engine_service_1.WorkflowEngineService,
             workflow_publishing_service_1.WorkflowPublishingService,
             expression_engine_service_1.ExpressionEngineService,
+            workflow_linter_service_1.WorkflowLinterService,
             node_executor_registry_1.NodeExecutorRegistry,
             trigger_registry_1.TriggerRegistry,
             workflow_queue_processor_1.WorkflowQueueProcessor,
@@ -143,10 +169,17 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
             business_hours_node_1.BusinessHoursExecutor,
             team_handoff_node_1.TeamHandoffExecutor,
             approval_node_node_1.ApprovalExecutor,
+            ai_extraction_node_1.AiExtractionExecutor,
+            ai_sentiment_node_1.AiSentimentExecutor,
+            sub_workflow_node_1.SubWorkflowExecutor,
+            ask_input_node_1.AskInputExecutor,
+            whatsapp_catalog_node_1.WhatsAppCatalogExecutor,
+            ecom_order_node_1.EcomOrderExecutor,
             incoming_message_trigger_1.IncomingMessageTrigger,
         ],
         exports: [
             workflow_engine_service_1.WorkflowEngineService,
+            workflow_linter_service_1.WorkflowLinterService,
             trigger_registry_1.TriggerRegistry,
             ai_workflow_generator_service_1.AiWorkflowGeneratorService,
             ai_workflow_debugger_service_1.AiWorkflowDebuggerService,
@@ -170,6 +203,12 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
         business_hours_node_1.BusinessHoursExecutor,
         team_handoff_node_1.TeamHandoffExecutor,
         approval_node_node_1.ApprovalExecutor,
+        ai_extraction_node_1.AiExtractionExecutor,
+        ai_sentiment_node_1.AiSentimentExecutor,
+        sub_workflow_node_1.SubWorkflowExecutor,
+        ask_input_node_1.AskInputExecutor,
+        whatsapp_catalog_node_1.WhatsAppCatalogExecutor,
+        ecom_order_node_1.EcomOrderExecutor,
         incoming_message_trigger_1.IncomingMessageTrigger,
         trigger_registry_1.TriggerRegistry])
 ], WorkflowsModule);

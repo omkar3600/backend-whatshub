@@ -6,6 +6,7 @@ import { WorkflowsService } from './workflows.service';
 import { WorkflowEngineService } from './engine/workflow-engine.service';
 import { WorkflowPublishingService } from './engine/workflow-publishing.service';
 import { ExpressionEngineService } from './engine/expression-engine.service';
+import { WorkflowLinterService } from './engine/workflow-linter.service';
 import { NodeExecutorRegistry } from './engine/registries/node-executor.registry';
 import { TriggerRegistry } from './engine/registries/trigger.registry';
 import { WorkflowQueueProcessor } from './engine/processors/workflow-queue.processor';
@@ -25,12 +26,19 @@ import { HttpRequestExecutor } from './engine/nodes/http-request.node';
 import { CrmActionExecutor } from './engine/nodes/crm-action.node';
 import { AiIntentRouterExecutor } from './engine/nodes/ai-intent-router.node';
 import { AbTestSplitterExecutor } from './engine/nodes/ab-test-splitter.node';
-
 import { DataTransformExecutor } from './engine/nodes/data-transform.node';
 import { ForEachExecutor } from './engine/nodes/for-each.node';
 import { BusinessHoursExecutor } from './engine/nodes/business-hours.node';
 import { TeamHandoffExecutor } from './engine/nodes/team-handoff.node';
 import { ApprovalExecutor } from './engine/nodes/approval-node.node';
+
+// Workflow 2.0 Nodes
+import { AiExtractionExecutor } from './engine/nodes/ai-extraction.node';
+import { AiSentimentExecutor } from './engine/nodes/ai-sentiment.node';
+import { SubWorkflowExecutor } from './engine/nodes/sub-workflow.node';
+import { AskInputExecutor } from './engine/nodes/ask-input.node';
+import { WhatsAppCatalogExecutor } from './engine/nodes/whatsapp-catalog.node';
+import { EcomOrderExecutor } from './engine/nodes/ecom-order.node';
 
 import { IncomingMessageTrigger } from './engine/triggers/incoming-message.trigger';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
@@ -54,6 +62,7 @@ import { AiModule } from '../ai/ai.module';
     WorkflowEngineService,
     WorkflowPublishingService,
     ExpressionEngineService,
+    WorkflowLinterService,
     NodeExecutorRegistry,
     TriggerRegistry,
     WorkflowQueueProcessor,
@@ -76,10 +85,17 @@ import { AiModule } from '../ai/ai.module';
     BusinessHoursExecutor,
     TeamHandoffExecutor,
     ApprovalExecutor,
+    AiExtractionExecutor,
+    AiSentimentExecutor,
+    SubWorkflowExecutor,
+    AskInputExecutor,
+    WhatsAppCatalogExecutor,
+    EcomOrderExecutor,
     IncomingMessageTrigger,
   ],
   exports: [
     WorkflowEngineService,
+    WorkflowLinterService,
     TriggerRegistry,
     AiWorkflowGeneratorService,
     AiWorkflowDebuggerService,
@@ -105,6 +121,12 @@ export class WorkflowsModule implements OnModuleInit {
     private readonly businessHoursExecutor: BusinessHoursExecutor,
     private readonly teamHandoffExecutor: TeamHandoffExecutor,
     private readonly approvalExecutor: ApprovalExecutor,
+    private readonly aiExtractionExecutor: AiExtractionExecutor,
+    private readonly aiSentimentExecutor: AiSentimentExecutor,
+    private readonly subWorkflowExecutor: SubWorkflowExecutor,
+    private readonly askInputExecutor: AskInputExecutor,
+    private readonly whatsAppCatalogExecutor: WhatsAppCatalogExecutor,
+    private readonly ecomOrderExecutor: EcomOrderExecutor,
     private readonly incomingMessageTrigger: IncomingMessageTrigger,
     private readonly triggerRegistry: TriggerRegistry,
   ) {}
@@ -125,6 +147,14 @@ export class WorkflowsModule implements OnModuleInit {
     this.nodeRegistry.register(this.businessHoursExecutor);
     this.nodeRegistry.register(this.teamHandoffExecutor);
     this.nodeRegistry.register(this.approvalExecutor);
+
+    // Workflow 2.0 Executors
+    this.nodeRegistry.register(this.aiExtractionExecutor);
+    this.nodeRegistry.register(this.aiSentimentExecutor);
+    this.nodeRegistry.register(this.subWorkflowExecutor);
+    this.nodeRegistry.register(this.askInputExecutor);
+    this.nodeRegistry.register(this.whatsAppCatalogExecutor);
+    this.nodeRegistry.register(this.ecomOrderExecutor);
 
     this.triggerRegistry.register(this.incomingMessageTrigger);
   }

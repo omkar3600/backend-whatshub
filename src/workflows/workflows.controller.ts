@@ -1,6 +1,7 @@
 import { Controller, Post, Body, Param, Get, Put, Delete, Query, BadRequestException } from '@nestjs/common';
 import { WorkflowsService } from './workflows.service';
 import { WorkflowEngineService } from './engine/workflow-engine.service';
+import { WorkflowLinterService } from './engine/workflow-linter.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiWorkflowGeneratorService } from './ai/ai-workflow-generator.service';
 import { AiWorkflowDebuggerService } from './ai/ai-workflow-debugger.service';
@@ -13,6 +14,7 @@ export class WorkflowsController {
     private readonly engineService: WorkflowEngineService,
     private readonly prisma: PrismaService,
     private readonly workflowsService: WorkflowsService,
+    private readonly linterService: WorkflowLinterService,
     private readonly generatorService: AiWorkflowGeneratorService,
     private readonly debuggerService: AiWorkflowDebuggerService,
     private readonly simulatorService: AiWorkflowSimulatorService,
@@ -63,6 +65,12 @@ export class WorkflowsController {
   async deleteWorkflow(@Param('id') id: string, @Query('shopId') shopId: string) {
     if (!shopId) throw new Error('shopId is required');
     return this.workflowsService.deleteWorkflow(shopId, id);
+  }
+
+  @Post('ai/lint')
+  async lintWorkflow(@Body() body: { graph: any }) {
+    if (!body.graph) throw new BadRequestException('graph is required');
+    return { issues: this.linterService.lintGraph(body.graph) };
   }
 
   @Post('ai/generate')

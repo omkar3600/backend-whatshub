@@ -16,6 +16,7 @@ exports.WorkflowsController = void 0;
 const common_1 = require("@nestjs/common");
 const workflows_service_1 = require("./workflows.service");
 const workflow_engine_service_1 = require("./engine/workflow-engine.service");
+const workflow_linter_service_1 = require("./engine/workflow-linter.service");
 const prisma_service_1 = require("../prisma/prisma.service");
 const ai_workflow_generator_service_1 = require("./ai/ai-workflow-generator.service");
 const ai_workflow_debugger_service_1 = require("./ai/ai-workflow-debugger.service");
@@ -25,14 +26,16 @@ let WorkflowsController = class WorkflowsController {
     engineService;
     prisma;
     workflowsService;
+    linterService;
     generatorService;
     debuggerService;
     simulatorService;
     optimizerService;
-    constructor(engineService, prisma, workflowsService, generatorService, debuggerService, simulatorService, optimizerService) {
+    constructor(engineService, prisma, workflowsService, linterService, generatorService, debuggerService, simulatorService, optimizerService) {
         this.engineService = engineService;
         this.prisma = prisma;
         this.workflowsService = workflowsService;
+        this.linterService = linterService;
         this.generatorService = generatorService;
         this.debuggerService = debuggerService;
         this.simulatorService = simulatorService;
@@ -74,6 +77,11 @@ let WorkflowsController = class WorkflowsController {
         if (!shopId)
             throw new Error('shopId is required');
         return this.workflowsService.deleteWorkflow(shopId, id);
+    }
+    async lintWorkflow(body) {
+        if (!body.graph)
+            throw new common_1.BadRequestException('graph is required');
+        return { issues: this.linterService.lintGraph(body.graph) };
     }
     async generateWorkflow(body) {
         if (!body.shopId || !body.prompt)
@@ -144,6 +152,13 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], WorkflowsController.prototype, "deleteWorkflow", null);
 __decorate([
+    (0, common_1.Post)('ai/lint'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], WorkflowsController.prototype, "lintWorkflow", null);
+__decorate([
     (0, common_1.Post)('ai/generate'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -184,6 +199,7 @@ exports.WorkflowsController = WorkflowsController = __decorate([
     __metadata("design:paramtypes", [workflow_engine_service_1.WorkflowEngineService,
         prisma_service_1.PrismaService,
         workflows_service_1.WorkflowsService,
+        workflow_linter_service_1.WorkflowLinterService,
         ai_workflow_generator_service_1.AiWorkflowGeneratorService,
         ai_workflow_debugger_service_1.AiWorkflowDebuggerService,
         ai_workflow_simulator_service_1.AiWorkflowSimulatorService,

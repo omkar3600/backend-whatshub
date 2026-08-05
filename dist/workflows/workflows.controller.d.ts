@@ -1,5 +1,6 @@
 import { WorkflowsService } from './workflows.service';
 import { WorkflowEngineService } from './engine/workflow-engine.service';
+import { WorkflowLinterService } from './engine/workflow-linter.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiWorkflowGeneratorService } from './ai/ai-workflow-generator.service';
 import { AiWorkflowDebuggerService } from './ai/ai-workflow-debugger.service';
@@ -9,11 +10,12 @@ export declare class WorkflowsController {
     private readonly engineService;
     private readonly prisma;
     private readonly workflowsService;
+    private readonly linterService;
     private readonly generatorService;
     private readonly debuggerService;
     private readonly simulatorService;
     private readonly optimizerService;
-    constructor(engineService: WorkflowEngineService, prisma: PrismaService, workflowsService: WorkflowsService, generatorService: AiWorkflowGeneratorService, debuggerService: AiWorkflowDebuggerService, simulatorService: AiWorkflowSimulatorService, optimizerService: AiWorkflowOptimizerService);
+    constructor(engineService: WorkflowEngineService, prisma: PrismaService, workflowsService: WorkflowsService, linterService: WorkflowLinterService, generatorService: AiWorkflowGeneratorService, debuggerService: AiWorkflowDebuggerService, simulatorService: AiWorkflowSimulatorService, optimizerService: AiWorkflowOptimizerService);
     listWorkflows(shopId: string): Promise<({
         _count: {
             instances: number;
@@ -101,6 +103,11 @@ export declare class WorkflowsController {
         shopId: string;
         description: string | null;
         isTemplate: boolean;
+    }>;
+    lintWorkflow(body: {
+        graph: any;
+    }): Promise<{
+        issues: import("./engine/workflow-linter.service").LintIssue[];
     }>;
     generateWorkflow(body: {
         shopId: string;
