@@ -6,6 +6,11 @@ import { DelayExecutor } from './engine/nodes/delay.node';
 import { ConditionExecutor } from './engine/nodes/condition.node';
 import { WaitReplyExecutor } from './engine/nodes/wait-reply.node';
 import { AiAgentExecutor } from './engine/nodes/ai-agent.node';
+import { AskQuestionExecutor } from './engine/nodes/ask-question.node';
+import { HttpRequestExecutor } from './engine/nodes/http-request.node';
+import { CrmActionExecutor } from './engine/nodes/crm-action.node';
+import { AiIntentRouterExecutor } from './engine/nodes/ai-intent-router.node';
+import { AbTestSplitterExecutor } from './engine/nodes/ab-test-splitter.node';
 import { IncomingMessageTrigger } from './engine/triggers/incoming-message.trigger';
 export declare class WorkflowsModule implements OnModuleInit {
     private readonly nodeRegistry;
@@ -14,8 +19,13 @@ export declare class WorkflowsModule implements OnModuleInit {
     private readonly conditionExecutor;
     private readonly waitReplyExecutor;
     private readonly aiAgentExecutor;
+    private readonly askQuestionExecutor;
+    private readonly httpRequestExecutor;
+    private readonly crmActionExecutor;
+    private readonly aiIntentRouterExecutor;
+    private readonly abTestSplitterExecutor;
     private readonly incomingMessageTrigger;
     private readonly triggerRegistry;
-    constructor(nodeRegistry: NodeExecutorRegistry, sendMessageExecutor: SendMessageExecutor, delayExecutor: DelayExecutor, conditionExecutor: ConditionExecutor, waitReplyExecutor: WaitReplyExecutor, aiAgentExecutor: AiAgentExecutor, incomingMessageTrigger: IncomingMessageTrigger, triggerRegistry: TriggerRegistry);
+    constructor(nodeRegistry: NodeExecutorRegistry, sendMessageExecutor: SendMessageExecutor, delayExecutor: DelayExecutor, conditionExecutor: ConditionExecutor, waitReplyExecutor: WaitReplyExecutor, aiAgentExecutor: AiAgentExecutor, askQuestionExecutor: AskQuestionExecutor, httpRequestExecutor: HttpRequestExecutor, crmActionExecutor: CrmActionExecutor, aiIntentRouterExecutor: AiIntentRouterExecutor, abTestSplitterExecutor: AbTestSplitterExecutor, incomingMessageTrigger: IncomingMessageTrigger, triggerRegistry: TriggerRegistry);
     onModuleInit(): void;
 }
