@@ -19,6 +19,10 @@ const campaign_tools_1 = require("./tools/impl/campaign-tools");
 const lead_tools_1 = require("./tools/impl/lead-tools");
 const analytics_tools_1 = require("./tools/impl/analytics-tools");
 const handoff_tool_1 = require("./tools/impl/handoff-tool");
+const product_tools_1 = require("./tools/impl/product-tools");
+const sales_tools_1 = require("./tools/impl/sales-tools");
+const workflow_tools_1 = require("./tools/impl/workflow-tools");
+const owner_tools_1 = require("./tools/impl/owner-tools");
 const context_builder_service_1 = require("./orchestrator/context-builder.service");
 const memory_manager_service_1 = require("./orchestrator/memory-manager.service");
 const agent_orchestrator_service_1 = require("./orchestrator/agent-orchestrator.service");
@@ -62,6 +66,10 @@ exports.AiModule = AiModule = __decorate([
             lead_tools_1.LeadTools,
             analytics_tools_1.AnalyticsTools,
             handoff_tool_1.HandoffTool,
+            product_tools_1.ProductTools,
+            sales_tools_1.SalesTools,
+            workflow_tools_1.WorkflowTools,
+            owner_tools_1.OwnerTools,
             context_builder_service_1.ContextBuilderService,
             memory_manager_service_1.MemoryManagerService,
             agent_orchestrator_service_1.AgentOrchestratorService,

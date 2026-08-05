@@ -23,22 +23,38 @@ export class BusinessAgentService {
 
     const llm = await this.llmFactory.create(config);
 
-    // Business owner tools: analytics, leads, campaigns (no customer-facing tools)
-    const businessToolNames = ['get_conversation_stats', 'get_lead_pipeline_summary', 'get_campaign_stats', 'get_campaigns', 'get_hot_leads', 'search_contacts', 'get_business_info'];
+    // Full business owner tool suite
+    const businessToolNames = [
+      'get_daily_business_briefing',
+      'get_conversation_stats',
+      'get_lead_pipeline_summary',
+      'get_campaign_stats',
+      'get_campaigns',
+      'create_campaign_draft',
+      'get_hot_leads',
+      'notify_owner_hot_lead',
+      'search_contacts',
+      'search_products',
+      'check_stock',
+      'get_active_workflows',
+      'get_business_info',
+    ];
     const tools = businessToolNames.map(n => this.toolRegistry.get(n)).filter(Boolean) as any[];
     const toolDefs = tools.map(t => ({ name: t.name, description: t.description, parameters: t.inputSchema }));
 
-    const toolCtx: ToolContext = { shopId }; // No contactId for owner queries
+    const toolCtx: ToolContext = { shopId };
 
     const messages: LlmMessage[] = [
       {
         role: 'system',
-        content: `You are an AI business intelligence assistant for a WhatsApp business. Answer the owner's questions using the available tools. Be concise and data-driven. Today's date: ${new Date().toLocaleDateString('en-IN')}.`,
+        content: `You are an executive AI Business Operating Agent for a WhatsApp business owner.
+Answer questions accurately using available tools. Highlight critical metrics, hot leads, campaign status, and inventory alerts clearly.
+Today's date: ${new Date().toLocaleDateString('en-IN')}.`,
       },
       { role: 'user', content: question },
     ];
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 6; i++) {
       const response = await llm.generateCompletion(messages, toolDefs, { temperature: 0.2 });
 
       if (!response.toolCalls.length || response.finishReason === 'stop') {
@@ -55,6 +71,6 @@ export class BusinessAgentService {
       }
     }
 
-    return { answer: 'I was unable to retrieve the information at this time.' };
+    return { answer: 'I was unable to retrieve the complete information at this time.' };
   }
 }

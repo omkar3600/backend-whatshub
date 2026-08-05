@@ -8,6 +8,10 @@ import { CampaignTools } from '../impl/campaign-tools';
 import { LeadTools } from '../impl/lead-tools';
 import { AnalyticsTools } from '../impl/analytics-tools';
 import { HandoffTool } from '../impl/handoff-tool';
+import { ProductTools } from '../impl/product-tools';
+import { SalesTools } from '../impl/sales-tools';
+import { WorkflowTools } from '../impl/workflow-tools';
+import { OwnerTools } from '../impl/owner-tools';
 export declare class ToolRegistry implements OnModuleInit {
     private readonly knowledge;
     private readonly contacts;
@@ -17,8 +21,12 @@ export declare class ToolRegistry implements OnModuleInit {
     private readonly leads;
     private readonly analytics;
     private readonly handoff;
+    private readonly product;
+    private readonly sales;
+    private readonly workflow;
+    private readonly owner;
     private tools;
-    constructor(knowledge: KnowledgeTools, contacts: ContactTools, conversations: ConversationTools, whatsapp: WhatsAppTools, campaigns: CampaignTools, leads: LeadTools, analytics: AnalyticsTools, handoff: HandoffTool);
+    constructor(knowledge: KnowledgeTools, contacts: ContactTools, conversations: ConversationTools, whatsapp: WhatsAppTools, campaigns: CampaignTools, leads: LeadTools, analytics: AnalyticsTools, handoff: HandoffTool, product: ProductTools, sales: SalesTools, workflow: WorkflowTools, owner: OwnerTools);
     onModuleInit(): void;
     get(name: string): AiTool | undefined;
     getAll(): AiTool[];

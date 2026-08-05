@@ -8,6 +8,10 @@ import { CampaignTools } from '../impl/campaign-tools';
 import { LeadTools } from '../impl/lead-tools';
 import { AnalyticsTools } from '../impl/analytics-tools';
 import { HandoffTool } from '../impl/handoff-tool';
+import { ProductTools } from '../impl/product-tools';
+import { SalesTools } from '../impl/sales-tools';
+import { WorkflowTools } from '../impl/workflow-tools';
+import { OwnerTools } from '../impl/owner-tools';
 
 @Injectable()
 export class ToolRegistry implements OnModuleInit {
@@ -22,6 +26,10 @@ export class ToolRegistry implements OnModuleInit {
     private readonly leads: LeadTools,
     private readonly analytics: AnalyticsTools,
     private readonly handoff: HandoffTool,
+    private readonly product: ProductTools,
+    private readonly sales: SalesTools,
+    private readonly workflow: WorkflowTools,
+    private readonly owner: OwnerTools,
   ) {}
 
   onModuleInit() {
@@ -34,6 +42,10 @@ export class ToolRegistry implements OnModuleInit {
       ...this.leads.getTools(),
       ...this.analytics.getTools(),
       ...this.handoff.getTools(),
+      ...this.product.getTools(),
+      ...this.sales.getTools(),
+      ...this.workflow.getTools(),
+      ...this.owner.getTools(),
     ];
     for (const tool of allTools) {
       this.tools.set(tool.name, tool);

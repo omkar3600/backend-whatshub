@@ -15,6 +15,10 @@ import { CampaignTools } from './tools/impl/campaign-tools';
 import { LeadTools } from './tools/impl/lead-tools';
 import { AnalyticsTools } from './tools/impl/analytics-tools';
 import { HandoffTool } from './tools/impl/handoff-tool';
+import { ProductTools } from './tools/impl/product-tools';
+import { SalesTools } from './tools/impl/sales-tools';
+import { WorkflowTools } from './tools/impl/workflow-tools';
+import { OwnerTools } from './tools/impl/owner-tools';
 
 // Orchestrator
 import { ContextBuilderService } from './orchestrator/context-builder.service';
@@ -73,6 +77,10 @@ import { ChatModule } from '../chat/chat.module';
     LeadTools,
     AnalyticsTools,
     HandoffTool,
+    ProductTools,
+    SalesTools,
+    WorkflowTools,
+    OwnerTools,
     // Orchestrator
     ContextBuilderService,
     MemoryManagerService,

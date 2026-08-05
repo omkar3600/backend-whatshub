@@ -19,6 +19,10 @@ const campaign_tools_1 = require("../impl/campaign-tools");
 const lead_tools_1 = require("../impl/lead-tools");
 const analytics_tools_1 = require("../impl/analytics-tools");
 const handoff_tool_1 = require("../impl/handoff-tool");
+const product_tools_1 = require("../impl/product-tools");
+const sales_tools_1 = require("../impl/sales-tools");
+const workflow_tools_1 = require("../impl/workflow-tools");
+const owner_tools_1 = require("../impl/owner-tools");
 let ToolRegistry = class ToolRegistry {
     knowledge;
     contacts;
@@ -28,8 +32,12 @@ let ToolRegistry = class ToolRegistry {
     leads;
     analytics;
     handoff;
+    product;
+    sales;
+    workflow;
+    owner;
     tools = new Map();
-    constructor(knowledge, contacts, conversations, whatsapp, campaigns, leads, analytics, handoff) {
+    constructor(knowledge, contacts, conversations, whatsapp, campaigns, leads, analytics, handoff, product, sales, workflow, owner) {
         this.knowledge = knowledge;
         this.contacts = contacts;
         this.conversations = conversations;
@@ -38,6 +46,10 @@ let ToolRegistry = class ToolRegistry {
         this.leads = leads;
         this.analytics = analytics;
         this.handoff = handoff;
+        this.product = product;
+        this.sales = sales;
+        this.workflow = workflow;
+        this.owner = owner;
     }
     onModuleInit() {
         const allTools = [
@@ -49,6 +61,10 @@ let ToolRegistry = class ToolRegistry {
             ...this.leads.getTools(),
             ...this.analytics.getTools(),
             ...this.handoff.getTools(),
+            ...this.product.getTools(),
+            ...this.sales.getTools(),
+            ...this.workflow.getTools(),
+            ...this.owner.getTools(),
         ];
         for (const tool of allTools) {
             this.tools.set(tool.name, tool);
@@ -78,6 +94,10 @@ exports.ToolRegistry = ToolRegistry = __decorate([
         campaign_tools_1.CampaignTools,
         lead_tools_1.LeadTools,
         analytics_tools_1.AnalyticsTools,
-        handoff_tool_1.HandoffTool])
+        handoff_tool_1.HandoffTool,
+        product_tools_1.ProductTools,
+        sales_tools_1.SalesTools,
+        workflow_tools_1.WorkflowTools,
+        owner_tools_1.OwnerTools])
 ], ToolRegistry);
 //# sourceMappingURL=tool.registry.js.map
