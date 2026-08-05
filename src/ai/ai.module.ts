@@ -63,7 +63,6 @@ import { ChatModule } from '../chat/chat.module';
   providers: [
     // Providers
     LlmProviderFactory,
-    GroqProvider,
     // Tools
     ToolRegistry,
     KnowledgeTools,

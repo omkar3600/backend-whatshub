@@ -30,6 +30,14 @@ export declare class ChatbotService {
         temperature?: number;
         systemPrompt?: string;
         businessInfo?: string;
+        agentMode?: boolean;
+        autonomyLevel?: number;
+        agentName?: string;
+        agentPersonality?: string;
+        allowedTools?: any;
+        followupEnabled?: boolean;
+        hotLeadThreshold?: number;
+        maxIterations?: number;
     }): Promise<{
         apiKey: string | null;
         id: string;

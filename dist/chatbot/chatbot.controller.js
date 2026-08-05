@@ -25,7 +25,22 @@ let ChatbotController = class ChatbotController {
         const shopId = req.user.shopId;
         const config = await this.chatbotService.getConfig(shopId);
         if (!config)
-            return { isActive: false, model: 'gemini-1.5-flash', temperature: 0.7, systemPrompt: '', businessInfo: '', apiKey: '' };
+            return {
+                isActive: false,
+                model: 'llama-3.3-70b-versatile',
+                temperature: 0.7,
+                systemPrompt: '',
+                businessInfo: '',
+                apiKey: '',
+                agentMode: false,
+                autonomyLevel: 2,
+                agentName: 'AI Assistant',
+                agentPersonality: '',
+                allowedTools: [],
+                followupEnabled: false,
+                hotLeadThreshold: 70,
+                maxIterations: 8,
+            };
         return {
             ...config,
             apiKey: config.apiKey ? `****${config.apiKey.slice(-4)}` : '',

@@ -9,6 +9,14 @@ export declare class ChatbotController {
         systemPrompt: string;
         businessInfo: string;
         apiKey: string;
+        agentMode: boolean;
+        autonomyLevel: number;
+        agentName: string;
+        agentPersonality: string;
+        allowedTools: never[];
+        followupEnabled: boolean;
+        hotLeadThreshold: number;
+        maxIterations: number;
     } | {
         apiKey: string;
         id: string;
@@ -36,6 +44,14 @@ export declare class ChatbotController {
         temperature?: number;
         systemPrompt?: string;
         businessInfo?: string;
+        agentMode?: boolean;
+        autonomyLevel?: number;
+        agentName?: string;
+        agentPersonality?: string;
+        allowedTools?: string[];
+        followupEnabled?: boolean;
+        hotLeadThreshold?: number;
+        maxIterations?: number;
     }): Promise<{
         apiKey: string | null;
         id: string;

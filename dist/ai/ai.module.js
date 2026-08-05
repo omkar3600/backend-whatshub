@@ -10,7 +10,6 @@ exports.AiModule = void 0;
 const common_1 = require("@nestjs/common");
 const bullmq_1 = require("@nestjs/bullmq");
 const llm_provider_factory_1 = require("./providers/llm-provider.factory");
-const groq_provider_1 = require("./providers/groq.provider");
 const tool_registry_1 = require("./tools/registry/tool.registry");
 const knowledge_tools_1 = require("./tools/impl/knowledge-tools");
 const contact_tools_1 = require("./tools/impl/contact-tools");
@@ -54,7 +53,6 @@ exports.AiModule = AiModule = __decorate([
         ],
         providers: [
             llm_provider_factory_1.LlmProviderFactory,
-            groq_provider_1.GroqProvider,
             tool_registry_1.ToolRegistry,
             knowledge_tools_1.KnowledgeTools,
             contact_tools_1.ContactTools,
