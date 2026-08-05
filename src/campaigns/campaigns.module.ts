@@ -14,5 +14,6 @@ import { WhatsappModule } from '../whatsapp/whatsapp.module';
   ],
   controllers: [CampaignsController],
   providers: [CampaignsService, CampaignProcessor],
+  exports: [CampaignsService],
 })
 export class CampaignsModule { }

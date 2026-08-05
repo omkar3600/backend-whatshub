@@ -7,7 +7,6 @@ import { AiTool, ToolContext, ToolResult } from '../tool.interface';
 export class CampaignTools {
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(forwardRef(() => CampaignsService))
     private readonly campaigns: CampaignsService,
   ) {}
 
