@@ -10,6 +10,11 @@ import { NodeExecutorRegistry } from './engine/registries/node-executor.registry
 import { TriggerRegistry } from './engine/registries/trigger.registry';
 import { WorkflowQueueProcessor } from './engine/processors/workflow-queue.processor';
 
+import { AiWorkflowGeneratorService } from './ai/ai-workflow-generator.service';
+import { AiWorkflowDebuggerService } from './ai/ai-workflow-debugger.service';
+import { AiWorkflowSimulatorService } from './ai/ai-workflow-simulator.service';
+import { AiWorkflowOptimizerService } from './ai/ai-workflow-optimizer.service';
+
 import { SendMessageExecutor } from './engine/nodes/send-message.node';
 import { DelayExecutor } from './engine/nodes/delay.node';
 import { ConditionExecutor } from './engine/nodes/condition.node';
@@ -52,6 +57,10 @@ import { AiModule } from '../ai/ai.module';
     NodeExecutorRegistry,
     TriggerRegistry,
     WorkflowQueueProcessor,
+    AiWorkflowGeneratorService,
+    AiWorkflowDebuggerService,
+    AiWorkflowSimulatorService,
+    AiWorkflowOptimizerService,
     SendMessageExecutor,
     DelayExecutor,
     ConditionExecutor,
@@ -69,7 +78,14 @@ import { AiModule } from '../ai/ai.module';
     ApprovalExecutor,
     IncomingMessageTrigger,
   ],
-  exports: [WorkflowEngineService, TriggerRegistry],
+  exports: [
+    WorkflowEngineService,
+    TriggerRegistry,
+    AiWorkflowGeneratorService,
+    AiWorkflowDebuggerService,
+    AiWorkflowSimulatorService,
+    AiWorkflowOptimizerService,
+  ],
 })
 export class WorkflowsModule implements OnModuleInit {
   constructor(

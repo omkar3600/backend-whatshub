@@ -60,11 +60,15 @@ export class ToolRegistry implements OnModuleInit {
     return Array.from(this.tools.values());
   }
 
-  /** Returns tools allowed for a given autonomy level and allowed-tools whitelist */
-  getAvailableTools(autonomyLevel: number, allowedTools?: string[] | null): AiTool[] {
+  /** Returns tools allowed for a given autonomy level, allowed-tools whitelist, and agent permissions */
+  getAvailableTools(autonomyLevel: number, allowedTools?: string[] | null, permissions?: string[] | null): AiTool[] {
     return this.getAll().filter(t => {
       if (allowedTools && allowedTools.length > 0 && !allowedTools.includes(t.name)) return false;
-      return true; // All tools are available; requiresApproval controls whether they auto-execute
+      if (permissions && permissions.length > 0 && t.permissions) {
+        const hasPermission = t.permissions.some(p => permissions.includes(p));
+        if (!hasPermission) return false;
+      }
+      return true;
     });
   }
 }

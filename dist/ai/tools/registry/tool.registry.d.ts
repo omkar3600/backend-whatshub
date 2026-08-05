@@ -30,5 +30,5 @@ export declare class ToolRegistry implements OnModuleInit {
     onModuleInit(): void;
     get(name: string): AiTool | undefined;
     getAll(): AiTool[];
-    getAvailableTools(autonomyLevel: number, allowedTools?: string[] | null): AiTool[];
+    getAvailableTools(autonomyLevel: number, allowedTools?: string[] | null, permissions?: string[] | null): AiTool[];
 }

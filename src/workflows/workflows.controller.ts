@@ -2,6 +2,10 @@ import { Controller, Post, Body, Param, Get, Put, Delete, Query, BadRequestExcep
 import { WorkflowsService } from './workflows.service';
 import { WorkflowEngineService } from './engine/workflow-engine.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AiWorkflowGeneratorService } from './ai/ai-workflow-generator.service';
+import { AiWorkflowDebuggerService } from './ai/ai-workflow-debugger.service';
+import { AiWorkflowSimulatorService } from './ai/ai-workflow-simulator.service';
+import { AiWorkflowOptimizerService } from './ai/ai-workflow-optimizer.service';
 
 @Controller('workflows')
 export class WorkflowsController {
@@ -9,6 +13,10 @@ export class WorkflowsController {
     private readonly engineService: WorkflowEngineService,
     private readonly prisma: PrismaService,
     private readonly workflowsService: WorkflowsService,
+    private readonly generatorService: AiWorkflowGeneratorService,
+    private readonly debuggerService: AiWorkflowDebuggerService,
+    private readonly simulatorService: AiWorkflowSimulatorService,
+    private readonly optimizerService: AiWorkflowOptimizerService,
   ) {}
 
   @Get()
@@ -57,12 +65,33 @@ export class WorkflowsController {
     return this.workflowsService.deleteWorkflow(shopId, id);
   }
 
+  @Post('ai/generate')
+  async generateWorkflow(@Body() body: { shopId: string; prompt: string }) {
+    if (!body.shopId || !body.prompt) throw new BadRequestException('shopId and prompt are required');
+    return this.generatorService.generateGraphFromPrompt(body.shopId, body.prompt);
+  }
+
+  @Get('ai/debug/:instanceId')
+  async debugWorkflow(@Param('instanceId') instanceId: string) {
+    return this.debuggerService.debugExecution(instanceId);
+  }
+
+  @Post('ai/simulate')
+  async simulateWorkflow(@Body() body: { shopId: string; workflowId: string; testMessage: string }) {
+    if (!body.shopId || !body.workflowId) throw new BadRequestException('shopId and workflowId are required');
+    return this.simulatorService.simulateWorkflow(body.shopId, body.workflowId, body.testMessage || 'Test');
+  }
+
+  @Get('ai/optimize/:id')
+  async optimizeWorkflow(@Param('id') id: string) {
+    return this.optimizerService.analyzeAndOptimize(id);
+  }
+
   @Post(':id/test-trigger')
   async triggerTestWorkflow(
     @Param('id') id: string,
     @Body() body: { shopId: string, contactId: string }
   ) {
-    // Basic endpoint to manually start a workflow instance
     const instance = await this.engineService.startWorkflow(
       body.shopId,
       id,
@@ -70,37 +99,5 @@ export class WorkflowsController {
       { source: 'manual-api-test' }
     );
     return { success: true, instanceId: instance.id };
-  }
-
-  @Post('create-test-workflow')
-  async createTestWorkflow(@Body() body: { shopId: string }) {
-    // Creates a dummy workflow for testing
-    const workflow = await this.prisma.workflow.create({
-      data: {
-        shopId: body.shopId,
-        name: 'Test Workflow',
-        status: 'published',
-        versions: {
-          create: {
-            versionNumber: 1,
-            status: 'published',
-            graph: {
-              nodes: [
-                { id: '1', type: 'trigger', data: {} },
-                { id: '2', type: 'sendMessage', data: { messageType: 'text', text: 'Hello from Workflow Engine! Time is {{system.now}}' } },
-                { id: '3', type: 'delay', data: { delayValue: 5, delayUnit: 'seconds' } },
-                { id: '4', type: 'sendMessage', data: { messageType: 'text', text: 'This message comes after 5 seconds delay.' } }
-              ],
-              edges: [
-                { source: '1', target: '2' },
-                { source: '2', target: '3' },
-                { source: '3', target: '4' }
-              ]
-            }
-          }
-        }
-      }
-    });
-    return { success: true, workflowId: workflow.id };
   }
 }

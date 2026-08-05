@@ -26,8 +26,14 @@ const owner_tools_1 = require("./tools/impl/owner-tools");
 const context_builder_service_1 = require("./orchestrator/context-builder.service");
 const memory_manager_service_1 = require("./orchestrator/memory-manager.service");
 const agent_orchestrator_service_1 = require("./orchestrator/agent-orchestrator.service");
+const agent_supervisor_service_1 = require("./orchestrator/agent-supervisor.service");
+const agent_goal_manager_1 = require("./orchestrator/agent-goal.manager");
 const ai_job_processor_1 = require("./queue/ai-job.processor");
 const lead_scoring_service_1 = require("./intelligence/lead-scoring.service");
+const customer_intelligence_service_1 = require("./intelligence/customer-intelligence.service");
+const next_best_action_service_1 = require("./intelligence/next-best-action.service");
+const ai_governance_service_1 = require("./governance/ai-governance.service");
+const ai_governance_controller_1 = require("./governance/ai-governance.controller");
 const followup_service_1 = require("./followup/followup.service");
 const business_agent_service_1 = require("./business/business-agent.service");
 const business_agent_controller_1 = require("./business/business-agent.controller");
@@ -73,8 +79,13 @@ exports.AiModule = AiModule = __decorate([
             context_builder_service_1.ContextBuilderService,
             memory_manager_service_1.MemoryManagerService,
             agent_orchestrator_service_1.AgentOrchestratorService,
+            agent_supervisor_service_1.AgentSupervisorService,
+            agent_goal_manager_1.AgentGoalManager,
             ai_job_processor_1.AiJobProcessor,
             lead_scoring_service_1.LeadScoringService,
+            customer_intelligence_service_1.CustomerIntelligenceService,
+            next_best_action_service_1.NextBestActionEngine,
+            ai_governance_service_1.AiGovernanceService,
             followup_service_1.FollowUpService,
             business_agent_service_1.BusinessAgentService,
             ai_approval_service_1.AiApprovalService,
@@ -84,10 +95,16 @@ exports.AiModule = AiModule = __decorate([
             business_agent_controller_1.BusinessAgentController,
             ai_approval_controller_1.AiApprovalController,
             knowledge_controller_1.KnowledgeController,
+            ai_governance_controller_1.AiGovernanceController,
         ],
         exports: [
             agent_orchestrator_service_1.AgentOrchestratorService,
+            agent_supervisor_service_1.AgentSupervisorService,
+            agent_goal_manager_1.AgentGoalManager,
             lead_scoring_service_1.LeadScoringService,
+            customer_intelligence_service_1.CustomerIntelligenceService,
+            next_best_action_service_1.NextBestActionEngine,
+            ai_governance_service_1.AiGovernanceService,
             followup_service_1.FollowUpService,
             tool_registry_1.ToolRegistry,
             llm_provider_factory_1.LlmProviderFactory,

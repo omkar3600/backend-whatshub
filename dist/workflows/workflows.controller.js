@@ -17,14 +17,26 @@ const common_1 = require("@nestjs/common");
 const workflows_service_1 = require("./workflows.service");
 const workflow_engine_service_1 = require("./engine/workflow-engine.service");
 const prisma_service_1 = require("../prisma/prisma.service");
+const ai_workflow_generator_service_1 = require("./ai/ai-workflow-generator.service");
+const ai_workflow_debugger_service_1 = require("./ai/ai-workflow-debugger.service");
+const ai_workflow_simulator_service_1 = require("./ai/ai-workflow-simulator.service");
+const ai_workflow_optimizer_service_1 = require("./ai/ai-workflow-optimizer.service");
 let WorkflowsController = class WorkflowsController {
     engineService;
     prisma;
     workflowsService;
-    constructor(engineService, prisma, workflowsService) {
+    generatorService;
+    debuggerService;
+    simulatorService;
+    optimizerService;
+    constructor(engineService, prisma, workflowsService, generatorService, debuggerService, simulatorService, optimizerService) {
         this.engineService = engineService;
         this.prisma = prisma;
         this.workflowsService = workflowsService;
+        this.generatorService = generatorService;
+        this.debuggerService = debuggerService;
+        this.simulatorService = simulatorService;
+        this.optimizerService = optimizerService;
     }
     async listWorkflows(shopId) {
         if (!shopId)
@@ -63,38 +75,25 @@ let WorkflowsController = class WorkflowsController {
             throw new Error('shopId is required');
         return this.workflowsService.deleteWorkflow(shopId, id);
     }
+    async generateWorkflow(body) {
+        if (!body.shopId || !body.prompt)
+            throw new common_1.BadRequestException('shopId and prompt are required');
+        return this.generatorService.generateGraphFromPrompt(body.shopId, body.prompt);
+    }
+    async debugWorkflow(instanceId) {
+        return this.debuggerService.debugExecution(instanceId);
+    }
+    async simulateWorkflow(body) {
+        if (!body.shopId || !body.workflowId)
+            throw new common_1.BadRequestException('shopId and workflowId are required');
+        return this.simulatorService.simulateWorkflow(body.shopId, body.workflowId, body.testMessage || 'Test');
+    }
+    async optimizeWorkflow(id) {
+        return this.optimizerService.analyzeAndOptimize(id);
+    }
     async triggerTestWorkflow(id, body) {
         const instance = await this.engineService.startWorkflow(body.shopId, id, body.contactId, { source: 'manual-api-test' });
         return { success: true, instanceId: instance.id };
-    }
-    async createTestWorkflow(body) {
-        const workflow = await this.prisma.workflow.create({
-            data: {
-                shopId: body.shopId,
-                name: 'Test Workflow',
-                status: 'published',
-                versions: {
-                    create: {
-                        versionNumber: 1,
-                        status: 'published',
-                        graph: {
-                            nodes: [
-                                { id: '1', type: 'trigger', data: {} },
-                                { id: '2', type: 'sendMessage', data: { messageType: 'text', text: 'Hello from Workflow Engine! Time is {{system.now}}' } },
-                                { id: '3', type: 'delay', data: { delayValue: 5, delayUnit: 'seconds' } },
-                                { id: '4', type: 'sendMessage', data: { messageType: 'text', text: 'This message comes after 5 seconds delay.' } }
-                            ],
-                            edges: [
-                                { source: '1', target: '2' },
-                                { source: '2', target: '3' },
-                                { source: '3', target: '4' }
-                            ]
-                        }
-                    }
-                }
-            }
-        });
-        return { success: true, workflowId: workflow.id };
     }
 };
 exports.WorkflowsController = WorkflowsController;
@@ -145,6 +144,34 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], WorkflowsController.prototype, "deleteWorkflow", null);
 __decorate([
+    (0, common_1.Post)('ai/generate'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], WorkflowsController.prototype, "generateWorkflow", null);
+__decorate([
+    (0, common_1.Get)('ai/debug/:instanceId'),
+    __param(0, (0, common_1.Param)('instanceId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], WorkflowsController.prototype, "debugWorkflow", null);
+__decorate([
+    (0, common_1.Post)('ai/simulate'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], WorkflowsController.prototype, "simulateWorkflow", null);
+__decorate([
+    (0, common_1.Get)('ai/optimize/:id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], WorkflowsController.prototype, "optimizeWorkflow", null);
+__decorate([
     (0, common_1.Post)(':id/test-trigger'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
@@ -152,17 +179,14 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], WorkflowsController.prototype, "triggerTestWorkflow", null);
-__decorate([
-    (0, common_1.Post)('create-test-workflow'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], WorkflowsController.prototype, "createTestWorkflow", null);
 exports.WorkflowsController = WorkflowsController = __decorate([
     (0, common_1.Controller)('workflows'),
     __metadata("design:paramtypes", [workflow_engine_service_1.WorkflowEngineService,
         prisma_service_1.PrismaService,
-        workflows_service_1.WorkflowsService])
+        workflows_service_1.WorkflowsService,
+        ai_workflow_generator_service_1.AiWorkflowGeneratorService,
+        ai_workflow_debugger_service_1.AiWorkflowDebuggerService,
+        ai_workflow_simulator_service_1.AiWorkflowSimulatorService,
+        ai_workflow_optimizer_service_1.AiWorkflowOptimizerService])
 ], WorkflowsController);
 //# sourceMappingURL=workflows.controller.js.map

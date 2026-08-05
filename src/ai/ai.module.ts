@@ -24,12 +24,20 @@ import { OwnerTools } from './tools/impl/owner-tools';
 import { ContextBuilderService } from './orchestrator/context-builder.service';
 import { MemoryManagerService } from './orchestrator/memory-manager.service';
 import { AgentOrchestratorService } from './orchestrator/agent-orchestrator.service';
+import { AgentSupervisorService } from './orchestrator/agent-supervisor.service';
+import { AgentGoalManager } from './orchestrator/agent-goal.manager';
 
 // Queue
 import { AiJobProcessor } from './queue/ai-job.processor';
 
 // Intelligence
 import { LeadScoringService } from './intelligence/lead-scoring.service';
+import { CustomerIntelligenceService } from './intelligence/customer-intelligence.service';
+import { NextBestActionEngine } from './intelligence/next-best-action.service';
+
+// Governance
+import { AiGovernanceService } from './governance/ai-governance.service';
+import { AiGovernanceController } from './governance/ai-governance.controller';
 
 // Follow-up
 import { FollowUpService } from './followup/followup.service';
@@ -85,10 +93,16 @@ import { ChatModule } from '../chat/chat.module';
     ContextBuilderService,
     MemoryManagerService,
     AgentOrchestratorService,
+    AgentSupervisorService,
+    AgentGoalManager,
     // Queue processor
     AiJobProcessor,
     // Intelligence
     LeadScoringService,
+    CustomerIntelligenceService,
+    NextBestActionEngine,
+    // Governance
+    AiGovernanceService,
     // Follow-up
     FollowUpService,
     // Business
@@ -102,10 +116,16 @@ import { ChatModule } from '../chat/chat.module';
     BusinessAgentController,
     AiApprovalController,
     KnowledgeController,
+    AiGovernanceController,
   ],
   exports: [
     AgentOrchestratorService,
+    AgentSupervisorService,
+    AgentGoalManager,
     LeadScoringService,
+    CustomerIntelligenceService,
+    NextBestActionEngine,
+    AiGovernanceService,
     FollowUpService,
     ToolRegistry,
     LlmProviderFactory,

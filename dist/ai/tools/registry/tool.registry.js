@@ -76,10 +76,15 @@ let ToolRegistry = class ToolRegistry {
     getAll() {
         return Array.from(this.tools.values());
     }
-    getAvailableTools(autonomyLevel, allowedTools) {
+    getAvailableTools(autonomyLevel, allowedTools, permissions) {
         return this.getAll().filter(t => {
             if (allowedTools && allowedTools.length > 0 && !allowedTools.includes(t.name))
                 return false;
+            if (permissions && permissions.length > 0 && t.permissions) {
+                const hasPermission = t.permissions.some(p => permissions.includes(p));
+                if (!hasPermission)
+                    return false;
+            }
             return true;
         });
     }

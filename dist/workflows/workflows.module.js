@@ -21,6 +21,10 @@ const expression_engine_service_1 = require("./engine/expression-engine.service"
 const node_executor_registry_1 = require("./engine/registries/node-executor.registry");
 const trigger_registry_1 = require("./engine/registries/trigger.registry");
 const workflow_queue_processor_1 = require("./engine/processors/workflow-queue.processor");
+const ai_workflow_generator_service_1 = require("./ai/ai-workflow-generator.service");
+const ai_workflow_debugger_service_1 = require("./ai/ai-workflow-debugger.service");
+const ai_workflow_simulator_service_1 = require("./ai/ai-workflow-simulator.service");
+const ai_workflow_optimizer_service_1 = require("./ai/ai-workflow-optimizer.service");
 const send_message_node_1 = require("./engine/nodes/send-message.node");
 const delay_node_1 = require("./engine/nodes/delay.node");
 const condition_node_1 = require("./engine/nodes/condition.node");
@@ -120,6 +124,10 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
             node_executor_registry_1.NodeExecutorRegistry,
             trigger_registry_1.TriggerRegistry,
             workflow_queue_processor_1.WorkflowQueueProcessor,
+            ai_workflow_generator_service_1.AiWorkflowGeneratorService,
+            ai_workflow_debugger_service_1.AiWorkflowDebuggerService,
+            ai_workflow_simulator_service_1.AiWorkflowSimulatorService,
+            ai_workflow_optimizer_service_1.AiWorkflowOptimizerService,
             send_message_node_1.SendMessageExecutor,
             delay_node_1.DelayExecutor,
             condition_node_1.ConditionExecutor,
@@ -137,7 +145,14 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
             approval_node_node_1.ApprovalExecutor,
             incoming_message_trigger_1.IncomingMessageTrigger,
         ],
-        exports: [workflow_engine_service_1.WorkflowEngineService, trigger_registry_1.TriggerRegistry],
+        exports: [
+            workflow_engine_service_1.WorkflowEngineService,
+            trigger_registry_1.TriggerRegistry,
+            ai_workflow_generator_service_1.AiWorkflowGeneratorService,
+            ai_workflow_debugger_service_1.AiWorkflowDebuggerService,
+            ai_workflow_simulator_service_1.AiWorkflowSimulatorService,
+            ai_workflow_optimizer_service_1.AiWorkflowOptimizerService,
+        ],
     }),
     __metadata("design:paramtypes", [node_executor_registry_1.NodeExecutorRegistry,
         send_message_node_1.SendMessageExecutor,
