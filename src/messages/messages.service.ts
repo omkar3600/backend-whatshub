@@ -80,8 +80,17 @@ export class MessagesService {
         // Bug 3 fix: If the Meta API call failed, surface the real error to the caller
         // The message is already saved (as 'failed') so the record exists for audit.
         if (sendError) {
-            const metaMsg = sendError?.response?.data?.error?.message;
-            const reason = metaMsg || (sendError instanceof Error ? sendError.message : String(sendError));
+            const errObj = sendError?.response?.data?.error;
+            const metaMsg = errObj?.message;
+            const metaCode = errObj?.code;
+            const metaDetails = errObj?.error_data?.details;
+
+            const reason = metaMsg
+                ? `Meta Error (${metaCode || 'API'}): ${metaMsg}${metaDetails ? ` - ${metaDetails}` : ''}`
+                : (sendError instanceof Error ? sendError.message : String(sendError));
+
+            this.logger.error(`Outbound message failed for shop ${shopId}: ${reason}`);
+
             throw new HttpException(
                 { message: 'Message saved but failed to send via WhatsApp', reason, messageId: message.id },
                 HttpStatus.BAD_GATEWAY,
