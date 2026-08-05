@@ -830,17 +830,18 @@ export class WhatsappService {
 
     private async getAppSecretProof(accessToken: string): Promise<string | undefined> {
         const appSecret = await this.systemConfigService.get('META_APP_SECRET', process.env.META_APP_SECRET);
-        if (!appSecret) return undefined;
-        return createHmac('sha256', appSecret).update(accessToken).digest('hex');
+        if (!appSecret || appSecret.includes('your_meta_app_secret') || appSecret.trim() === '') return undefined;
+        return createHmac('sha256', appSecret.trim()).update(accessToken).digest('hex');
     }
 
     async sendOutboundMessage(shopId: string, toPhone: string, type: string, content: any, mediaUrl?: string) {
         const creds = await this.getCredentials(shopId);
+        const cleanPhone = normalizePhone(toPhone);
 
         const payload: any = {
             messaging_product: 'whatsapp',
             recipient_type: 'individual',
-            to: toPhone,
+            to: cleanPhone,
             type: type,
         };
 
