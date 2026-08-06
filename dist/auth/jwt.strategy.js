@@ -49,7 +49,7 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
             id: payload.sub,
             username: payload.username,
             role: payload.role,
-            shopId: payload.shopId,
+            shopId: user.shop?.id || payload.shopId,
             shopStatus: user.shop?.status,
             subscriptionExpiry: user.shop?.subscription?.expiryDate
         };

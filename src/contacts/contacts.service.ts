@@ -182,6 +182,14 @@ export class ContactsService {
     async getContacts(shopId: string, filters: any) {
         const { page, limit, search } = filters || {};
         
+        if (!shopId) {
+            this.logger.warn('[getContacts] Request made without valid shopId');
+            if (page && limit) {
+                return { data: [], total: 0, page: 1, totalPages: 0 };
+            }
+            return [];
+        }
+
         const where: any = { shopId };
         if (search) {
             where.OR = [
@@ -190,33 +198,38 @@ export class ContactsService {
             ];
         }
 
-        if (page && limit) {
-            const pageNumber = parseInt(page as string, 10) || 1;
-            const limitNumber = parseInt(limit as string, 10) || 50;
-            
-            const [data, total] = await Promise.all([
-                this.prisma.contact.findMany({
-                    where,
-                    orderBy: { createdAt: 'desc' },
-                    skip: (pageNumber - 1) * limitNumber,
-                    take: limitNumber,
-                }),
-                this.prisma.contact.count({ where })
-            ]);
-            
-            return {
-                data,
-                total,
-                page: pageNumber,
-                totalPages: Math.ceil(total / limitNumber),
-            };
-        }
+        try {
+            if (page && limit) {
+                const pageNumber = parseInt(page as string, 10) || 1;
+                const limitNumber = parseInt(limit as string, 10) || 50;
+                
+                const [data, total] = await Promise.all([
+                    this.prisma.contact.findMany({
+                        where,
+                        orderBy: { createdAt: 'desc' },
+                        skip: (pageNumber - 1) * limitNumber,
+                        take: limitNumber,
+                    }),
+                    this.prisma.contact.count({ where })
+                ]);
+                
+                return {
+                    data,
+                    total,
+                    page: pageNumber,
+                    totalPages: Math.ceil(total / limitNumber),
+                };
+            }
 
-        // Backward compatible: return just the array if no pagination requested
-        return this.prisma.contact.findMany({
-            where,
-            orderBy: { createdAt: 'desc' },
-        });
+            // Backward compatible: return just the array if no pagination requested
+            return await this.prisma.contact.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+            });
+        } catch (err: any) {
+            this.logger.error(`[getContacts] Database query failed for shopId="${shopId}": ${err?.message}`, err?.stack);
+            throw err;
+        }
     }
 
     async getContact(shopId: string, id: string) {

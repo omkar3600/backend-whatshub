@@ -201,6 +201,13 @@ let ContactsService = ContactsService_1 = class ContactsService {
     }
     async getContacts(shopId, filters) {
         const { page, limit, search } = filters || {};
+        if (!shopId) {
+            this.logger.warn('[getContacts] Request made without valid shopId');
+            if (page && limit) {
+                return { data: [], total: 0, page: 1, totalPages: 0 };
+            }
+            return [];
+        }
         const where = { shopId };
         if (search) {
             where.OR = [
@@ -208,29 +215,35 @@ let ContactsService = ContactsService_1 = class ContactsService {
                 { phone: { contains: search } }
             ];
         }
-        if (page && limit) {
-            const pageNumber = parseInt(page, 10) || 1;
-            const limitNumber = parseInt(limit, 10) || 50;
-            const [data, total] = await Promise.all([
-                this.prisma.contact.findMany({
-                    where,
-                    orderBy: { createdAt: 'desc' },
-                    skip: (pageNumber - 1) * limitNumber,
-                    take: limitNumber,
-                }),
-                this.prisma.contact.count({ where })
-            ]);
-            return {
-                data,
-                total,
-                page: pageNumber,
-                totalPages: Math.ceil(total / limitNumber),
-            };
+        try {
+            if (page && limit) {
+                const pageNumber = parseInt(page, 10) || 1;
+                const limitNumber = parseInt(limit, 10) || 50;
+                const [data, total] = await Promise.all([
+                    this.prisma.contact.findMany({
+                        where,
+                        orderBy: { createdAt: 'desc' },
+                        skip: (pageNumber - 1) * limitNumber,
+                        take: limitNumber,
+                    }),
+                    this.prisma.contact.count({ where })
+                ]);
+                return {
+                    data,
+                    total,
+                    page: pageNumber,
+                    totalPages: Math.ceil(total / limitNumber),
+                };
+            }
+            return await this.prisma.contact.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+            });
         }
-        return this.prisma.contact.findMany({
-            where,
-            orderBy: { createdAt: 'desc' },
-        });
+        catch (err) {
+            this.logger.error(`[getContacts] Database query failed for shopId="${shopId}": ${err?.message}`, err?.stack);
+            throw err;
+        }
     }
     async getContact(shopId, id) {
         const contact = await this.prisma.contact.findFirst({
