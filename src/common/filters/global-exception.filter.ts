@@ -52,11 +52,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // Do not leak stack traces or internal errors to client in production
     const isProduction = process.env.NODE_ENV === 'production';
     
+    const detail = exception instanceof Error ? exception.message : message;
+    
     response.status(status).json({
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: request.url,
-      message: isProduction && status >= 500 ? 'Internal server error' : message,
+      message: message,
+      errorDetail: detail,
     });
   }
 }
