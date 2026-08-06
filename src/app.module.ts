@@ -29,6 +29,10 @@ import { IntegrationModule } from './integration/integration.module';
 import { WorkflowsModule } from './workflows/workflows.module';
 import { AiModule } from './ai/ai.module';
 
+import { NtfyService } from './notifications/ntfy.service';
+import { N8nWebhookService } from './webhooks/n8n.service';
+import { SystemSchedulerService } from './scheduler/system-scheduler.service';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -73,6 +77,9 @@ import { AiModule } from './ai/ai.module';
   controllers: [AppController],
   providers: [
     AppService,
+    NtfyService,
+    N8nWebhookService,
+    SystemSchedulerService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

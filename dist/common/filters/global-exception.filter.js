@@ -43,11 +43,13 @@ let GlobalExceptionFilter = GlobalExceptionFilter_1 = class GlobalExceptionFilte
             this.logger.warn(`[${request.method}] ${request.url} - ${status} - ${message}`);
         }
         const isProduction = process.env.NODE_ENV === 'production';
+        const detail = exception instanceof Error ? exception.message : message;
         response.status(status).json({
             statusCode: status,
             timestamp: new Date().toISOString(),
             path: request.url,
-            message: isProduction && status >= 500 ? 'Internal server error' : message,
+            message: message,
+            errorDetail: detail,
         });
     }
 };

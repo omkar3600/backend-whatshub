@@ -37,6 +37,9 @@ const api_keys_module_1 = require("./api-keys/api-keys.module");
 const integration_module_1 = require("./integration/integration.module");
 const workflows_module_1 = require("./workflows/workflows.module");
 const ai_module_1 = require("./ai/ai.module");
+const ntfy_service_1 = require("./notifications/ntfy.service");
+const n8n_service_1 = require("./webhooks/n8n.service");
+const system_scheduler_service_1 = require("./scheduler/system-scheduler.service");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -84,6 +87,9 @@ exports.AppModule = AppModule = __decorate([
         controllers: [app_controller_1.AppController],
         providers: [
             app_service_1.AppService,
+            ntfy_service_1.NtfyService,
+            n8n_service_1.N8nWebhookService,
+            system_scheduler_service_1.SystemSchedulerService,
             {
                 provide: core_1.APP_GUARD,
                 useClass: throttler_1.ThrottlerGuard,
