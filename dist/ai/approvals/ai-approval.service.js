@@ -21,6 +21,8 @@ let AiApprovalService = class AiApprovalService {
         this.toolRegistry = toolRegistry;
     }
     async getPendingActions(shopId) {
+        if (!shopId)
+            return [];
         await this.prisma.aiAction.updateMany({
             where: { shopId, status: 'pending', expiresAt: { lt: new Date() } },
             data: { status: 'expired' },

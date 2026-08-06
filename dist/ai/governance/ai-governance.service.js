@@ -20,6 +20,18 @@ let AiGovernanceService = AiGovernanceService_1 = class AiGovernanceService {
         this.prisma = prisma;
     }
     async getOverview(shopId) {
+        if (!shopId) {
+            return {
+                shopId: '',
+                autonomyLevel: 2,
+                maxIterationsLimit: 8,
+                totalAuditLogs: 0,
+                successfulToolExecutions: 0,
+                pendingApprovals: 0,
+                estimatedDailyCost: 0,
+                allowedTools: [],
+            };
+        }
         const config = await this.prisma.chatbotConfig.findUnique({ where: { shopId } });
         const [totalAuditLogs, successfulLogs, pendingActions] = await Promise.all([
             this.prisma.aiAuditLog.count({ where: { shopId } }),

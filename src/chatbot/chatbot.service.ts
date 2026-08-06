@@ -9,6 +9,7 @@ export class ChatbotService {
     constructor(private prisma: PrismaService) {}
 
     async getConfig(shopId: string) {
+        if (!shopId) return null;
         return this.prisma.chatbotConfig.findUnique({ where: { shopId } });
     }
 

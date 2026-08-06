@@ -24,6 +24,8 @@ let ChatbotService = ChatbotService_1 = class ChatbotService {
         this.prisma = prisma;
     }
     async getConfig(shopId) {
+        if (!shopId)
+            return null;
         return this.prisma.chatbotConfig.findUnique({ where: { shopId } });
     }
     async upsertConfig(shopId, data) {

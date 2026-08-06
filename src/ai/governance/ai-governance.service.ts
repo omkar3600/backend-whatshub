@@ -19,6 +19,19 @@ export class AiGovernanceService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getOverview(shopId: string): Promise<GovernanceOverview> {
+    if (!shopId) {
+      return {
+        shopId: '',
+        autonomyLevel: 2,
+        maxIterationsLimit: 8,
+        totalAuditLogs: 0,
+        successfulToolExecutions: 0,
+        pendingApprovals: 0,
+        estimatedDailyCost: 0,
+        allowedTools: [],
+      };
+    }
+
     const config = await this.prisma.chatbotConfig.findUnique({ where: { shopId } });
     
     const [totalAuditLogs, successfulLogs, pendingActions] = await Promise.all([

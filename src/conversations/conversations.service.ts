@@ -12,6 +12,7 @@ export class ConversationsService {
     ) { }
 
     async getConversations(shopId: string) {
+        if (!shopId) return [];
         return this.prisma.conversation.findMany({
             where: { shopId },
             include: { contact: true },

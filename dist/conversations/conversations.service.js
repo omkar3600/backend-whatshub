@@ -27,6 +27,8 @@ let ConversationsService = class ConversationsService {
         this.whatsappService = whatsappService;
     }
     async getConversations(shopId) {
+        if (!shopId)
+            return [];
         return this.prisma.conversation.findMany({
             where: { shopId },
             include: { contact: true },
