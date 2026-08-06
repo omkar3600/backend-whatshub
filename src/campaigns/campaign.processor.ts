@@ -17,7 +17,7 @@ function resolveBodyText(bodyTemplate: string, components: any[]): string {
     return resolved;
 }
 
-@Processor('campaigns', { concurrency: 3 })
+@Processor('campaigns', { concurrency: 5 })
 export class CampaignProcessor extends WorkerHost {
     constructor(
         private prisma: PrismaService,
@@ -172,77 +172,93 @@ export class CampaignProcessor extends WorkerHost {
                 break;
             }
 
-            for (let i = 0; i < pendingBatch.length; i++) {
-                const item = pendingBatch[i];
-                try {
-                    const templateParamsObj = campaign.templateParams as any;
-                    const templateContent =
-                        templateParamsObj && Array.isArray(templateParamsObj) && templateParamsObj.length > 0
-                            ? { name: campaign.template.templateName, language: campaign.template.language, components: templateParamsObj }
-                            : { name: campaign.template.templateName, language: campaign.template.language };
+            // Determine batch concurrency based on sendDelay setting
+            // sendDelay = 0 (Instant Rate): batch chunk size 10, 0ms delay (Max Speed)
+            // sendDelay <= 100 (Fastest / Turbo): batch chunk size 5, 100ms delay
+            // sendDelay >= 300 (Good Rate / Standard): batch chunk size 1 (sequential), sendDelay ms delay
+            let chunkSize = 1;
+            if (sendDelay === 0) {
+                chunkSize = 10;
+            } else if (sendDelay <= 100) {
+                chunkSize = 5;
+            }
 
-                    const headerMediaUrl = campaign.headerMediaUrl ?? undefined;
+            for (let i = 0; i < pendingBatch.length; i += chunkSize) {
+                const chunk = pendingBatch.slice(i, i + chunkSize);
 
-                    const result = await this.whatsappService.sendOutboundMessage(
-                        campaign.shopId,
-                        item.phone,
-                        'template',
-                        templateContent,
-                        headerMediaUrl
-                    );
-
-                    const wamid: string | undefined = result?.messages?.[0]?.id;
-
-                    await this.prisma.campaignContact.update({
-                        where: { id: item.id },
-                        data: { status: 'sent', failReason: null, wamid: wamid ?? null }
-                    });
-
-                    // Save message record if contactId exists
-                    if (item.contactId) {
+                await Promise.all(
+                    chunk.map(async (item) => {
                         try {
-                            const conversation = await this.prisma.conversation.upsert({
-                                where: { shopId_contactId: { shopId: campaign.shopId, contactId: item.contactId } },
-                                create: { shopId: campaign.shopId, contactId: item.contactId, lastMessageAt: new Date() },
-                                update: { lastMessageAt: new Date() },
+                            const templateParamsObj = campaign.templateParams as any;
+                            const templateContent =
+                                templateParamsObj && Array.isArray(templateParamsObj) && templateParamsObj.length > 0
+                                    ? { name: campaign.template.templateName, language: campaign.template.language, components: templateParamsObj }
+                                    : { name: campaign.template.templateName, language: campaign.template.language };
+
+                            const headerMediaUrl = campaign.headerMediaUrl ?? undefined;
+
+                            const result = await this.whatsappService.sendOutboundMessage(
+                                campaign.shopId,
+                                item.phone,
+                                'template',
+                                templateContent,
+                                headerMediaUrl
+                            );
+
+                            const wamid: string | undefined = result?.messages?.[0]?.id;
+
+                            await this.prisma.campaignContact.update({
+                                where: { id: item.id },
+                                data: { status: 'sent', failReason: null, wamid: wamid ?? null }
                             });
-                            await this.prisma.message.create({
-                                data: {
-                                    id: wamid || undefined,
-                                    shopId: campaign.shopId,
-                                    conversationId: conversation.id,
-                                    direction: 'outbound',
-                                    type: 'template',
-                                    content: resolvedBody,
-                                    mediaUrl: headerImageUrl,
-                                    status: 'sent',
-                                    templateData: {
-                                        templateName: campaign.template.templateName,
-                                        campaignName: campaign.name,
-                                        campaignId,
-                                        wamid: wamid ?? null,
-                                        components: campaign.template.components,
-                                    } as any,
-                                },
+
+                            // Save message record if contactId exists
+                            if (item.contactId) {
+                                try {
+                                    const conversation = await this.prisma.conversation.upsert({
+                                        where: { shopId_contactId: { shopId: campaign.shopId, contactId: item.contactId } },
+                                        create: { shopId: campaign.shopId, contactId: item.contactId, lastMessageAt: new Date() },
+                                        update: { lastMessageAt: new Date() },
+                                    });
+                                    await this.prisma.message.create({
+                                        data: {
+                                            id: wamid || undefined,
+                                            shopId: campaign.shopId,
+                                            conversationId: conversation.id,
+                                            direction: 'outbound',
+                                            type: 'template',
+                                            content: resolvedBody,
+                                            mediaUrl: headerImageUrl,
+                                            status: 'sent',
+                                            templateData: {
+                                                templateName: campaign.template.templateName,
+                                                campaignName: campaign.name,
+                                                campaignId,
+                                                wamid: wamid ?? null,
+                                                components: campaign.template.components,
+                                            } as any,
+                                        },
+                                    });
+                                } catch (msgErr) {
+                                    console.error(`[Campaign] Failed to save message record for ${item.phone}:`, msgErr);
+                                }
+                            }
+                        } catch (e: unknown) {
+                            const axiosErr = e as any;
+                            const metaError = axiosErr?.response?.data?.error?.message;
+                            const reason = metaError || (e instanceof Error ? e.message : typeof e === 'string' ? e : 'Unknown error');
+
+                            failureHistory.push({ phone: item.phone, name: item.name, reason, timestamp: new Date() });
+
+                            await this.prisma.campaignContact.update({
+                                where: { id: item.id },
+                                data: { status: 'failed', failReason: reason }
                             });
-                        } catch (msgErr) {
-                            console.error(`[Campaign] Failed to save message record for ${item.phone}:`, msgErr);
                         }
-                    }
-                } catch (e: unknown) {
-                    const axiosErr = e as any;
-                    const metaError = axiosErr?.response?.data?.error?.message;
-                    const reason = metaError || (e instanceof Error ? e.message : typeof e === 'string' ? e : 'Unknown error');
+                    })
+                );
 
-                    failureHistory.push({ phone: item.phone, name: item.name, reason, timestamp: new Date() });
-
-                    await this.prisma.campaignContact.update({
-                        where: { id: item.id },
-                        data: { status: 'failed', failReason: reason }
-                    });
-                }
-
-                if (i < pendingBatch.length - 1) {
+                if (sendDelay > 0 && i + chunkSize < pendingBatch.length) {
                     await sleep(sendDelay);
                 }
             }

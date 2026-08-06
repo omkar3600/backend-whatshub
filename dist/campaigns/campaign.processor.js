@@ -164,63 +164,72 @@ let CampaignProcessor = class CampaignProcessor extends bullmq_1.WorkerHost {
                 hasMore = false;
                 break;
             }
-            for (let i = 0; i < pendingBatch.length; i++) {
-                const item = pendingBatch[i];
-                try {
-                    const templateParamsObj = campaign.templateParams;
-                    const templateContent = templateParamsObj && Array.isArray(templateParamsObj) && templateParamsObj.length > 0
-                        ? { name: campaign.template.templateName, language: campaign.template.language, components: templateParamsObj }
-                        : { name: campaign.template.templateName, language: campaign.template.language };
-                    const headerMediaUrl = campaign.headerMediaUrl ?? undefined;
-                    const result = await this.whatsappService.sendOutboundMessage(campaign.shopId, item.phone, 'template', templateContent, headerMediaUrl);
-                    const wamid = result?.messages?.[0]?.id;
-                    await this.prisma.campaignContact.update({
-                        where: { id: item.id },
-                        data: { status: 'sent', failReason: null, wamid: wamid ?? null }
-                    });
-                    if (item.contactId) {
-                        try {
-                            const conversation = await this.prisma.conversation.upsert({
-                                where: { shopId_contactId: { shopId: campaign.shopId, contactId: item.contactId } },
-                                create: { shopId: campaign.shopId, contactId: item.contactId, lastMessageAt: new Date() },
-                                update: { lastMessageAt: new Date() },
-                            });
-                            await this.prisma.message.create({
-                                data: {
-                                    id: wamid || undefined,
-                                    shopId: campaign.shopId,
-                                    conversationId: conversation.id,
-                                    direction: 'outbound',
-                                    type: 'template',
-                                    content: resolvedBody,
-                                    mediaUrl: headerImageUrl,
-                                    status: 'sent',
-                                    templateData: {
-                                        templateName: campaign.template.templateName,
-                                        campaignName: campaign.name,
-                                        campaignId,
-                                        wamid: wamid ?? null,
-                                        components: campaign.template.components,
+            let chunkSize = 1;
+            if (sendDelay === 0) {
+                chunkSize = 10;
+            }
+            else if (sendDelay <= 100) {
+                chunkSize = 5;
+            }
+            for (let i = 0; i < pendingBatch.length; i += chunkSize) {
+                const chunk = pendingBatch.slice(i, i + chunkSize);
+                await Promise.all(chunk.map(async (item) => {
+                    try {
+                        const templateParamsObj = campaign.templateParams;
+                        const templateContent = templateParamsObj && Array.isArray(templateParamsObj) && templateParamsObj.length > 0
+                            ? { name: campaign.template.templateName, language: campaign.template.language, components: templateParamsObj }
+                            : { name: campaign.template.templateName, language: campaign.template.language };
+                        const headerMediaUrl = campaign.headerMediaUrl ?? undefined;
+                        const result = await this.whatsappService.sendOutboundMessage(campaign.shopId, item.phone, 'template', templateContent, headerMediaUrl);
+                        const wamid = result?.messages?.[0]?.id;
+                        await this.prisma.campaignContact.update({
+                            where: { id: item.id },
+                            data: { status: 'sent', failReason: null, wamid: wamid ?? null }
+                        });
+                        if (item.contactId) {
+                            try {
+                                const conversation = await this.prisma.conversation.upsert({
+                                    where: { shopId_contactId: { shopId: campaign.shopId, contactId: item.contactId } },
+                                    create: { shopId: campaign.shopId, contactId: item.contactId, lastMessageAt: new Date() },
+                                    update: { lastMessageAt: new Date() },
+                                });
+                                await this.prisma.message.create({
+                                    data: {
+                                        id: wamid || undefined,
+                                        shopId: campaign.shopId,
+                                        conversationId: conversation.id,
+                                        direction: 'outbound',
+                                        type: 'template',
+                                        content: resolvedBody,
+                                        mediaUrl: headerImageUrl,
+                                        status: 'sent',
+                                        templateData: {
+                                            templateName: campaign.template.templateName,
+                                            campaignName: campaign.name,
+                                            campaignId,
+                                            wamid: wamid ?? null,
+                                            components: campaign.template.components,
+                                        },
                                     },
-                                },
-                            });
-                        }
-                        catch (msgErr) {
-                            console.error(`[Campaign] Failed to save message record for ${item.phone}:`, msgErr);
+                                });
+                            }
+                            catch (msgErr) {
+                                console.error(`[Campaign] Failed to save message record for ${item.phone}:`, msgErr);
+                            }
                         }
                     }
-                }
-                catch (e) {
-                    const axiosErr = e;
-                    const metaError = axiosErr?.response?.data?.error?.message;
-                    const reason = metaError || (e instanceof Error ? e.message : typeof e === 'string' ? e : 'Unknown error');
-                    failureHistory.push({ phone: item.phone, name: item.name, reason, timestamp: new Date() });
-                    await this.prisma.campaignContact.update({
-                        where: { id: item.id },
-                        data: { status: 'failed', failReason: reason }
-                    });
-                }
-                if (i < pendingBatch.length - 1) {
+                    catch (e) {
+                        const axiosErr = e;
+                        const metaError = axiosErr?.response?.data?.error?.message;
+                        const reason = metaError || (e instanceof Error ? e.message : typeof e === 'string' ? e : 'Unknown error');
+                        failureHistory.push({ phone: item.phone, name: item.name, reason, timestamp: new Date() });
+                        await this.prisma.campaignContact.update({
+                            where: { id: item.id },
+                            data: { status: 'failed', failReason: reason }
+                        });
+                    }
+                }));
+                if (sendDelay > 0 && i + chunkSize < pendingBatch.length) {
                     await sleep(sendDelay);
                 }
             }
@@ -269,7 +278,7 @@ let CampaignProcessor = class CampaignProcessor extends bullmq_1.WorkerHost {
 };
 exports.CampaignProcessor = CampaignProcessor;
 exports.CampaignProcessor = CampaignProcessor = __decorate([
-    (0, bullmq_1.Processor)('campaigns', { concurrency: 3 }),
+    (0, bullmq_1.Processor)('campaigns', { concurrency: 5 }),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         whatsapp_service_1.WhatsappService])
 ], CampaignProcessor);
