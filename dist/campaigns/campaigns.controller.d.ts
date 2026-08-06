@@ -128,7 +128,7 @@ export declare class CampaignsController {
         updated: number;
         message: string;
     }>;
-    resendFailed(user: any, id: string): Promise<{
+    resendFailed(user: any, id: string, body: any): Promise<{
         name: string;
         id: string;
         status: string;

@@ -36,8 +36,8 @@ let CampaignsController = class CampaignsController {
     async addTagsToContacts(user, id, body) {
         return this.campaignsService.addTagsToContacts(user.shopId, id, body);
     }
-    async resendFailed(user, id) {
-        return this.campaignsService.resendFailed(user.shopId, id);
+    async resendFailed(user, id, body) {
+        return this.campaignsService.resendFailed(user.shopId, id, body?.phones);
     }
     async abortCampaign(user, id) {
         return this.campaignsService.abortCampaign(user.shopId, id);
@@ -86,8 +86,9 @@ __decorate([
     (0, common_1.Post)(':id/resend-failed'),
     __param(0, (0, get_user_decorator_1.GetUser)()),
     __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object, String, Object]),
     __metadata("design:returntype", Promise)
 ], CampaignsController.prototype, "resendFailed", null);
 __decorate([

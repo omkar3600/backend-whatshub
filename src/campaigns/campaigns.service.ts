@@ -296,7 +296,7 @@ export class CampaignsService {
         return { updated: results.length, message: `Tags added to ${results.length} contacts` };
     }
 
-    async resendFailed(shopId: string, campaignId: string) {
+    async resendFailed(shopId: string, campaignId: string, customPhones?: string[]) {
         const original = await this.prisma.campaign.findFirst({
             where: { id: campaignId, shopId },
             include: { template: true, contacts: { where: { status: 'failed' } } }
@@ -306,22 +306,23 @@ export class CampaignsService {
             throw new NotFoundException('Campaign not found');
         }
 
-        const failedPhones = new Set<string>();
+        let phonesList: string[] = [];
+        if (customPhones && Array.isArray(customPhones) && customPhones.length > 0) {
+            phonesList = Array.from(new Set(customPhones.map(p => normalizePhone(p) || p)));
+        } else {
+            const failedPhones = new Set<string>();
+            original.contacts.forEach(c => failedPhones.add(c.phone));
+            const failHist = (original.failureHistory as any[]) || [];
+            failHist.forEach(f => { if (f.phone) failedPhones.add(f.phone); });
+            phonesList = Array.from(failedPhones);
+        }
 
-        // 1. Collect from CampaignContact entries with status === 'failed'
-        original.contacts.forEach(c => failedPhones.add(c.phone));
-
-        // 2. Collect from failureHistory JSON array
-        const failHist = (original.failureHistory as any[]) || [];
-        failHist.forEach(f => { if (f.phone) failedPhones.add(f.phone); });
-
-        const phonesList = Array.from(failedPhones);
-        if (phonesList.length === 0) return { message: 'No failed contacts to resend' };
+        if (phonesList.length === 0) return { message: 'No contacts selected to resend' };
 
         const retryCampaign = await this.prisma.campaign.create({
             data: {
                 shopId,
-                name: `Retry: ${original.name}`,
+                name: `Resend: ${original.name}`,
                 templateId: original.templateId,
                 status: 'processing',
                 scheduledAt: new Date(),

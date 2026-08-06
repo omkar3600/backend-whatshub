@@ -32,8 +32,8 @@ export class CampaignsController {
     }
 
     @Post(':id/resend-failed')
-    async resendFailed(@GetUser() user: any, @Param('id') id: string) {
-        return this.campaignsService.resendFailed(user.shopId, id);
+    async resendFailed(@GetUser() user: any, @Param('id') id: string, @Body() body: any) {
+        return this.campaignsService.resendFailed(user.shopId, id, body?.phones);
     }
 
     @Post(':id/abort')

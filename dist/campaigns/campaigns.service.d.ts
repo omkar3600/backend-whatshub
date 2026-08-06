@@ -188,7 +188,7 @@ export declare class CampaignsService {
         updated: number;
         message: string;
     }>;
-    resendFailed(shopId: string, campaignId: string): Promise<{
+    resendFailed(shopId: string, campaignId: string, customPhones?: string[]): Promise<{
         name: string;
         id: string;
         status: string;

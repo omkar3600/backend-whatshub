@@ -272,7 +272,7 @@ let CampaignsService = class CampaignsService {
         }
         return { updated: results.length, message: `Tags added to ${results.length} contacts` };
     }
-    async resendFailed(shopId, campaignId) {
+    async resendFailed(shopId, campaignId, customPhones) {
         const original = await this.prisma.campaign.findFirst({
             where: { id: campaignId, shopId },
             include: { template: true, contacts: { where: { status: 'failed' } } }
@@ -280,18 +280,24 @@ let CampaignsService = class CampaignsService {
         if (!original) {
             throw new common_1.NotFoundException('Campaign not found');
         }
-        const failedPhones = new Set();
-        original.contacts.forEach(c => failedPhones.add(c.phone));
-        const failHist = original.failureHistory || [];
-        failHist.forEach(f => { if (f.phone)
-            failedPhones.add(f.phone); });
-        const phonesList = Array.from(failedPhones);
+        let phonesList = [];
+        if (customPhones && Array.isArray(customPhones) && customPhones.length > 0) {
+            phonesList = Array.from(new Set(customPhones.map(p => (0, phone_normalizer_1.normalizePhone)(p) || p)));
+        }
+        else {
+            const failedPhones = new Set();
+            original.contacts.forEach(c => failedPhones.add(c.phone));
+            const failHist = original.failureHistory || [];
+            failHist.forEach(f => { if (f.phone)
+                failedPhones.add(f.phone); });
+            phonesList = Array.from(failedPhones);
+        }
         if (phonesList.length === 0)
-            return { message: 'No failed contacts to resend' };
+            return { message: 'No contacts selected to resend' };
         const retryCampaign = await this.prisma.campaign.create({
             data: {
                 shopId,
-                name: `Retry: ${original.name}`,
+                name: `Resend: ${original.name}`,
                 templateId: original.templateId,
                 status: 'processing',
                 scheduledAt: new Date(),
