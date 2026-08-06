@@ -44,4 +44,4 @@ ENV NODE_ENV=production
 EXPOSE 3001
 
 # Start the application
-CMD ["node", "dist/main.js"]
+CMD ["sh", "-c", "npx prisma db push --skip-generate || true; node dist/main.js"]
