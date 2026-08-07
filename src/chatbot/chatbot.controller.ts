@@ -79,7 +79,7 @@ export class ChatbotController {
     async testConnection(@Req() req: any, @Body('message') message?: string) {
         const shopId = req.user.shopId;
         const config = await this.chatbotService.getConfig(shopId);
-        if (!config?.apiKey) return { success: false, message: 'No API key configured.' };
+        if (!config) return { success: false, message: 'Chatbot configuration not found.' };
 
         const userMessage = message?.trim() || 'Hello! Please introduce yourself in one sentence.';
         const reply = await this.chatbotService.generateResponse(shopId, 'Test User', userMessage);
