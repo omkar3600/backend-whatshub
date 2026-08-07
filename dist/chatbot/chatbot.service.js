@@ -45,7 +45,7 @@ let ChatbotService = ChatbotService_1 = class ChatbotService {
             const knowledgeSources = await this.prisma.aiKnowledgeSource.findMany({
                 where: { shopId, isActive: true },
             });
-            const systemContext = this.buildSystemPrompt(config.systemPrompt, config.businessInfo, contactName, knowledgeSources);
+            const systemContext = this.buildSystemPrompt(config.systemPrompt, config.businessInfo, contactName, knowledgeSources, config.allowedTools);
             const messages = [
                 { role: 'system', content: systemContext }
             ];
@@ -80,7 +80,7 @@ let ChatbotService = ChatbotService_1 = class ChatbotService {
             return { error: err.message || 'Unknown API Error' };
         }
     }
-    buildSystemPrompt(systemPrompt, businessInfo, contactName, knowledgeSources = []) {
+    buildSystemPrompt(systemPrompt, businessInfo, contactName, knowledgeSources = [], allowedTools = null) {
         const parts = [];
         parts.push(`[SYSTEM BEHAVIOR AND PERSONA]`);
         if (systemPrompt && systemPrompt.trim()) {
@@ -95,8 +95,18 @@ let ChatbotService = ChatbotService_1 = class ChatbotService {
             const truncatedInfo = businessInfo.trim().length > 10000
                 ? businessInfo.trim().slice(0, 10000) + '... (truncated)'
                 : businessInfo.trim();
-            parts.push(`\n[BUSINESS INFORMATION & RULES]`);
+            parts.push(`\n[DETAILED BUSINESS PROFILE & RULES]`);
             parts.push(truncatedInfo);
+        }
+        if (allowedTools && Array.isArray(allowedTools.customActions) && allowedTools.customActions.length > 0) {
+            parts.push(`\n[CUSTOM ACTIONS & AUTOMATED INTENT RULES]`);
+            for (const ca of allowedTools.customActions) {
+                if (ca.enabled !== false && ca.name && ca.trigger) {
+                    parts.push(`• ACTION NAME: "${ca.name}"`);
+                    parts.push(`  WHEN CUSTOMER INTENT MATCHES: ${ca.trigger}`);
+                    parts.push(`  RESPONSE / INSTRUCTION TO EXECUTE: ${ca.response}`);
+                }
+            }
         }
         if (knowledgeSources && knowledgeSources.length > 0) {
             parts.push(`\n[ATTACHED BUSINESS RESOURCES & KNOWLEDGE ARTICLES]`);
@@ -106,10 +116,11 @@ let ChatbotService = ChatbotService_1 = class ChatbotService {
             }
         }
         parts.push(`\n[CRITICAL INSTRUCTIONS]`);
-        parts.push(`1. You must answer the customer's questions strictly using the facts inside the [BUSINESS INFORMATION & RULES] and [ATTACHED BUSINESS RESOURCES & KNOWLEDGE ARTICLES] provided above.`);
-        parts.push(`2. If the customer asks a question or makes a request that is NOT covered by the business info or resources, politely state that you do not have that information and a human agent will assist them shortly.`);
-        parts.push(`3. Do NOT invent, assume, or hallucinate any prices, rules, features, or policies.`);
-        parts.push(`4. Always maintain the persona defined in [SYSTEM BEHAVIOR AND PERSONA].`);
+        parts.push(`1. You must answer the customer's questions strictly using the facts inside [DETAILED BUSINESS PROFILE & RULES], [CUSTOM ACTIONS & AUTOMATED INTENT RULES], and [ATTACHED BUSINESS RESOURCES & KNOWLEDGE ARTICLES] provided above.`);
+        parts.push(`2. If the customer asks a question or makes a request that is NOT covered by the business info, custom actions, or resources, politely state that you do not have that information and a human agent will assist them shortly.`);
+        parts.push(`3. When a customer's intent matches a [CUSTOM ACTION], execute the corresponding action instructions immediately.`);
+        parts.push(`4. Do NOT invent, assume, or hallucinate any prices, rules, features, or policies.`);
+        parts.push(`5. Always maintain the persona defined in [SYSTEM BEHAVIOR AND PERSONA].`);
         return parts.join('\n');
     }
     async toggleAiPause(shopId, conversationId, paused) {
