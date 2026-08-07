@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Put, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Param, Put, Query, UseGuards } from '@nestjs/common';
 import { ConversationsService } from './conversations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -12,8 +12,18 @@ export class ConversationsController {
     constructor(private readonly conversationsService: ConversationsService) { }
 
     @Get()
-    async getConversations(@GetUser() user: any) {
-        return this.conversationsService.getConversations(user.shopId);
+    async getConversations(
+        @GetUser() user: any,
+        @Query('page') page?: string,
+        @Query('limit') limit?: string,
+        @Query('search') search?: string,
+    ) {
+        return this.conversationsService.getConversations(
+            user.shopId,
+            page ? parseInt(page, 10) : undefined,
+            limit ? parseInt(limit, 10) : undefined,
+            search,
+        );
     }
 
     @Get(':id')

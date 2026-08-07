@@ -24,8 +24,8 @@ let ConversationsController = class ConversationsController {
     constructor(conversationsService) {
         this.conversationsService = conversationsService;
     }
-    async getConversations(user) {
-        return this.conversationsService.getConversations(user.shopId);
+    async getConversations(user, page, limit, search) {
+        return this.conversationsService.getConversations(user.shopId, page ? parseInt(page, 10) : undefined, limit ? parseInt(limit, 10) : undefined, search);
     }
     async getConversation(user, id) {
         return this.conversationsService.getConversation(user.shopId, id);
@@ -41,8 +41,11 @@ exports.ConversationsController = ConversationsController;
 __decorate([
     (0, common_1.Get)(),
     __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Query)('page')),
+    __param(2, (0, common_1.Query)('limit')),
+    __param(3, (0, common_1.Query)('search')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, String, String, String]),
     __metadata("design:returntype", Promise)
 ], ConversationsController.prototype, "getConversations", null);
 __decorate([

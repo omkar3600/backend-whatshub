@@ -11,13 +11,45 @@ export class ConversationsService {
         @Inject(forwardRef(() => WhatsappService)) private whatsappService: WhatsappService,
     ) { }
 
-    async getConversations(shopId: string) {
-        if (!shopId) return [];
-        return this.prisma.conversation.findMany({
-            where: { shopId },
-            include: { contact: true },
-            orderBy: { lastMessageAt: 'desc' },
-        });
+    async getConversations(shopId: string, page?: number, limit?: number, search?: string) {
+        if (!shopId) return { data: [], total: 0, page: 1, totalPages: 0, hasMore: false };
+
+        const trimmedSearch = search ? search.trim() : '';
+        const searchFilter = trimmedSearch
+            ? {
+                OR: [
+                    { contact: { name: { contains: trimmedSearch, mode: 'insensitive' as const } } },
+                    { contact: { phone: { contains: trimmedSearch } } },
+                ],
+            }
+            : {};
+
+        const where: any = { shopId, ...searchFilter };
+        const take = limit || 100;
+        const pageNum = page && page > 0 ? page : 1;
+        const skip = (pageNum - 1) * take;
+
+        const [data, total] = await Promise.all([
+            this.prisma.conversation.findMany({
+                where,
+                include: { contact: true },
+                orderBy: { lastMessageAt: 'desc' },
+                take,
+                skip,
+            }),
+            this.prisma.conversation.count({ where }),
+        ]);
+
+        const totalPages = Math.ceil(total / take);
+        const hasMore = pageNum * take < total;
+
+        return {
+            data,
+            total,
+            page: pageNum,
+            totalPages,
+            hasMore,
+        };
     }
 
     async getConversation(shopId: string, id: string) {
