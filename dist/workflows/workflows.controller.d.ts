@@ -34,7 +34,15 @@ export declare class WorkflowsController {
         description: string | null;
         isTemplate: boolean;
     })[]>;
-    getWorkflow(shopId: string, id: string): Promise<{
+    getWorkflowVersions(id: string, shopId: string): Promise<{
+        id: string;
+        status: string;
+        createdAt: Date;
+        versionNumber: number;
+        workflowId: string;
+        graph: import("@prisma/client/runtime/library").JsonValue;
+    }[]>;
+    getWorkflow(id: string, shopId: string): Promise<{
         versions: {
             id: string;
             status: string;
@@ -75,8 +83,19 @@ export declare class WorkflowsController {
         description: string | null;
         isTemplate: boolean;
     }>;
-    updateWorkflowGraph(id: string, body: {
-        shopId: string;
+    createWorkflowVersion(id: string, queryShopId: string, body: {
+        shopId?: string;
+        graph: any;
+    }): Promise<{
+        id: string;
+        status: string;
+        createdAt: Date;
+        versionNumber: number;
+        workflowId: string;
+        graph: import("@prisma/client/runtime/library").JsonValue;
+    }>;
+    updateWorkflowGraph(id: string, queryShopId: string, body: {
+        shopId?: string;
         graph: any;
     }): Promise<{
         id: string;

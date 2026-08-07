@@ -37,6 +37,19 @@ export class WorkflowsService {
     return workflow;
   }
 
+  async getWorkflowVersions(shopId: string, id: string) {
+    const workflow = await this.prisma.workflow.findFirst({
+      where: { id, shopId },
+      include: {
+        versions: {
+          orderBy: { versionNumber: 'desc' },
+        }
+      }
+    });
+    if (!workflow) throw new NotFoundException('Workflow not found');
+    return workflow.versions;
+  }
+
   async createWorkflow(shopId: string, name: string) {
     return this.prisma.workflow.create({
       data: {

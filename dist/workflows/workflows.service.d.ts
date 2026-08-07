@@ -38,6 +38,14 @@ export declare class WorkflowsService {
         description: string | null;
         isTemplate: boolean;
     }>;
+    getWorkflowVersions(shopId: string, id: string): Promise<{
+        id: string;
+        status: string;
+        createdAt: Date;
+        versionNumber: number;
+        workflowId: string;
+        graph: Prisma.JsonValue;
+    }[]>;
     createWorkflow(shopId: string, name: string): Promise<{
         versions: {
             id: string;

@@ -49,12 +49,17 @@ let WorkflowsController = class WorkflowsController {
     }
     async listWorkflows(shopId) {
         if (!shopId)
-            throw new Error('shopId is required');
+            throw new common_1.BadRequestException('shopId is required');
         return this.workflowsService.listWorkflows(shopId);
     }
-    async getWorkflow(shopId, id) {
+    async getWorkflowVersions(id, shopId) {
         if (!shopId)
-            throw new Error('shopId is required');
+            throw new common_1.BadRequestException('shopId is required');
+        return this.workflowsService.getWorkflowVersions(shopId, id);
+    }
+    async getWorkflow(id, shopId) {
+        if (!shopId)
+            throw new common_1.BadRequestException('shopId is required');
         return this.workflowsService.getWorkflow(shopId, id);
     }
     async createWorkflow(body) {
@@ -69,10 +74,17 @@ let WorkflowsController = class WorkflowsController {
             throw new common_1.BadRequestException(error.message || 'Failed to create workflow');
         }
     }
-    async updateWorkflowGraph(id, body) {
-        if (!body.shopId || !body.graph)
-            throw new Error('shopId and graph are required');
-        return this.workflowsService.updateWorkflowGraph(body.shopId, id, body.graph);
+    async createWorkflowVersion(id, queryShopId, body) {
+        const shopId = body?.shopId || queryShopId;
+        if (!shopId || !body?.graph)
+            throw new common_1.BadRequestException('shopId and graph are required');
+        return this.workflowsService.updateWorkflowGraph(shopId, id, body.graph);
+    }
+    async updateWorkflowGraph(id, queryShopId, body) {
+        const shopId = body?.shopId || queryShopId;
+        if (!shopId || !body?.graph)
+            throw new common_1.BadRequestException('shopId and graph are required');
+        return this.workflowsService.updateWorkflowGraph(shopId, id, body.graph);
     }
     async publishWorkflow(id, body) {
         if (!body.shopId)
@@ -135,9 +147,17 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], WorkflowsController.prototype, "listWorkflows", null);
 __decorate([
+    (0, common_1.Get)(':id/versions'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Query)('shopId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], WorkflowsController.prototype, "getWorkflowVersions", null);
+__decorate([
     (0, common_1.Get)(':id'),
-    __param(0, (0, common_1.Query)('shopId')),
-    __param(1, (0, common_1.Param)('id')),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Query)('shopId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", Promise)
@@ -150,11 +170,21 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], WorkflowsController.prototype, "createWorkflow", null);
 __decorate([
-    (0, common_1.Put)(':id/version'),
+    (0, common_1.Post)(':id/versions'),
     __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Body)()),
+    __param(1, (0, common_1.Query)('shopId')),
+    __param(2, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:paramtypes", [String, String, Object]),
+    __metadata("design:returntype", Promise)
+], WorkflowsController.prototype, "createWorkflowVersion", null);
+__decorate([
+    (0, common_1.Put)([':id/version', ':id/versions']),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Query)('shopId')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, Object]),
     __metadata("design:returntype", Promise)
 ], WorkflowsController.prototype, "updateWorkflowGraph", null);
 __decorate([

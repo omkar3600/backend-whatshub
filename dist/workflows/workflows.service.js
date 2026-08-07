@@ -45,6 +45,19 @@ let WorkflowsService = class WorkflowsService {
             throw new common_1.NotFoundException('Workflow not found');
         return workflow;
     }
+    async getWorkflowVersions(shopId, id) {
+        const workflow = await this.prisma.workflow.findFirst({
+            where: { id, shopId },
+            include: {
+                versions: {
+                    orderBy: { versionNumber: 'desc' },
+                }
+            }
+        });
+        if (!workflow)
+            throw new common_1.NotFoundException('Workflow not found');
+        return workflow.versions;
+    }
     async createWorkflow(shopId, name) {
         return this.prisma.workflow.create({
             data: {

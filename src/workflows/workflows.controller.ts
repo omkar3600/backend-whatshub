@@ -27,13 +27,19 @@ export class WorkflowsController {
 
   @Get()
   async listWorkflows(@Query('shopId') shopId: string) {
-    if (!shopId) throw new Error('shopId is required');
+    if (!shopId) throw new BadRequestException('shopId is required');
     return this.workflowsService.listWorkflows(shopId);
   }
 
+  @Get(':id/versions')
+  async getWorkflowVersions(@Param('id') id: string, @Query('shopId') shopId: string) {
+    if (!shopId) throw new BadRequestException('shopId is required');
+    return this.workflowsService.getWorkflowVersions(shopId, id);
+  }
+
   @Get(':id')
-  async getWorkflow(@Query('shopId') shopId: string, @Param('id') id: string) {
-    if (!shopId) throw new Error('shopId is required');
+  async getWorkflow(@Param('id') id: string, @Query('shopId') shopId: string) {
+    if (!shopId) throw new BadRequestException('shopId is required');
     return this.workflowsService.getWorkflow(shopId, id);
   }
 
@@ -50,13 +56,26 @@ export class WorkflowsController {
     }
   }
 
-  @Put(':id/version')
+  @Post(':id/versions')
+  async createWorkflowVersion(
+    @Param('id') id: string,
+    @Query('shopId') queryShopId: string,
+    @Body() body: { shopId?: string; graph: any }
+  ) {
+    const shopId = body?.shopId || queryShopId;
+    if (!shopId || !body?.graph) throw new BadRequestException('shopId and graph are required');
+    return this.workflowsService.updateWorkflowGraph(shopId, id, body.graph);
+  }
+
+  @Put([':id/version', ':id/versions'])
   async updateWorkflowGraph(
     @Param('id') id: string,
-    @Body() body: { shopId: string; graph: any }
+    @Query('shopId') queryShopId: string,
+    @Body() body: { shopId?: string; graph: any }
   ) {
-    if (!body.shopId || !body.graph) throw new Error('shopId and graph are required');
-    return this.workflowsService.updateWorkflowGraph(body.shopId, id, body.graph);
+    const shopId = body?.shopId || queryShopId;
+    if (!shopId || !body?.graph) throw new BadRequestException('shopId and graph are required');
+    return this.workflowsService.updateWorkflowGraph(shopId, id, body.graph);
   }
 
   @Post(':id/publish')
