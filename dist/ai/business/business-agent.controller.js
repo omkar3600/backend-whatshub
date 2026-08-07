@@ -36,7 +36,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], BusinessAgentController.prototype, "query", null);
 exports.BusinessAgentController = BusinessAgentController = __decorate([
-    (0, common_1.Controller)('ai/business'),
+    (0, common_1.Controller)(['ai/business', 'ai/business-agent']),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [business_agent_service_1.BusinessAgentService])
 ], BusinessAgentController);

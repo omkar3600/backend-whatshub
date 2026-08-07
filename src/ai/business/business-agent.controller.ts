@@ -2,7 +2,7 @@ import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { BusinessAgentService } from './business-agent.service';
 
-@Controller('ai/business')
+@Controller(['ai/business', 'ai/business-agent'])
 @UseGuards(JwtAuthGuard)
 export class BusinessAgentController {
   constructor(private readonly businessAgent: BusinessAgentService) {}
