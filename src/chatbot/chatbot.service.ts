@@ -174,7 +174,7 @@ export class ChatbotService {
     ): string {
         const parts: string[] = [];
 
-        parts.push(`[SYSTEM BEHAVIOR AND PERSONA]`);
+        parts.push(`[CORE PERSONA & CHATBOT BEHAVIOR - MANDATORY OVERRIDE]`);
         if (systemPrompt && systemPrompt.trim()) {
             parts.push(systemPrompt.trim().slice(0, 3000));
         } else {
@@ -212,12 +212,12 @@ export class ChatbotService {
             }
         }
 
-        parts.push(`\n[CRITICAL INSTRUCTIONS]`);
-        parts.push(`1. You must answer the customer's questions strictly using the facts inside [DETAILED BUSINESS PROFILE & RULES], [CUSTOM ACTIONS & AUTOMATED INTENT RULES], and [ATTACHED BUSINESS RESOURCES & KNOWLEDGE ARTICLES] provided above.`);
-        parts.push(`2. If the customer asks a question or makes a request that is NOT covered by the business info, custom actions, or resources, politely state that you do not have that information and a human agent will assist them shortly.`);
-        parts.push(`3. When a customer's intent matches a [CUSTOM ACTION], execute the corresponding action instructions immediately.`);
-        parts.push(`4. Do NOT invent, assume, or hallucinate any prices, rules, features, or policies.`);
-        parts.push(`5. Always maintain the persona defined in [SYSTEM BEHAVIOR AND PERSONA].`);
+        parts.push(`\n[CRITICAL FINAL OUTPUT INSTRUCTIONS - MUST OBEY]`);
+        parts.push(`1. PERSONA & FORMATTING: Strictly adopt the exact tone, language, emojis, line breaks, and paragraph structure specified under [CORE PERSONA & CHATBOT BEHAVIOR - MANDATORY OVERRIDE].`);
+        parts.push(`2. LINE BREAKS & PARAGRAPHS: Do NOT write response as one long continuous paragraph if new lines or line spacing were requested. Use clear line breaks (new lines) to separate thoughts into short, readable WhatsApp-style lines.`);
+        parts.push(`3. MEDIA & UNKNOWN INFO: If the customer asks for photos, media, or info not in the business profile, state that our team will respond shortly.`);
+        parts.push(`4. FACTUAL ACCURACY: Answer strictly using facts inside business profile, custom actions, and knowledge articles. Do NOT invent prices or rules.`);
+        parts.push(`5. CUSTOM ACTIONS: When customer intent matches a [CUSTOM ACTION], execute that action's instructions immediately.`);
 
         return parts.join('\n');
     }
