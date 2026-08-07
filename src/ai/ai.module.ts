@@ -3,7 +3,6 @@ import { BullModule } from '@nestjs/bullmq';
 
 // Providers
 import { LlmProviderFactory } from './providers/llm-provider.factory';
-import { GroqProvider } from './providers/groq.provider';
 
 // Tools
 import { ToolRegistry } from './tools/registry/tool.registry';
@@ -33,7 +32,6 @@ import { WhatsappModule } from '../whatsapp/whatsapp.module';
   ],
   providers: [
     LlmProviderFactory,
-    GroqProvider,
     ToolRegistry,
     BusinessAgentService,
     KnowledgeService,

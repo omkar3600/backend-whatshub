@@ -1,8 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import Groq from 'groq-sdk';
 import { LlmMessage, LlmProvider, LlmResponse, LlmToolDefinition } from './llm-provider.interface';
 
-@Injectable()
 export class GroqProvider implements LlmProvider {
   private readonly logger = new Logger(GroqProvider.name);
 
