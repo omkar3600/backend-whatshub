@@ -33,12 +33,14 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { CommonModule } from '../common/common.module';
 import { AdminModule } from '../admin/admin.module';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
+import { CampaignsModule } from '../campaigns/campaigns.module';
 
 @Module({
   imports: [
     PrismaModule,
     CommonModule,
     AdminModule,
+    CampaignsModule,
     BullModule.registerQueue({ name: 'ai-agent-queue' }),
     forwardRef(() => WhatsappModule),
   ],
