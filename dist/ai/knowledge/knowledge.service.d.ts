@@ -9,8 +9,8 @@ export declare class KnowledgeService {
         shopId: string;
         content: string;
         isActive: boolean;
-        category: string;
         title: string;
+        category: string;
     }[]>;
     create(shopId: string, data: {
         title: string;
@@ -23,8 +23,8 @@ export declare class KnowledgeService {
         shopId: string;
         content: string;
         isActive: boolean;
-        category: string;
         title: string;
+        category: string;
     }>;
     update(id: string, shopId: string, data: {
         title?: string;
@@ -38,8 +38,8 @@ export declare class KnowledgeService {
         shopId: string;
         content: string;
         isActive: boolean;
-        category: string;
         title: string;
+        category: string;
     }>;
     delete(id: string, shopId: string): Promise<{
         success: boolean;

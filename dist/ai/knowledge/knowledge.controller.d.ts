@@ -9,8 +9,8 @@ export declare class KnowledgeController {
         shopId: string;
         content: string;
         isActive: boolean;
-        category: string;
         title: string;
+        category: string;
     }[]>;
     create(body: {
         title: string;
@@ -23,8 +23,8 @@ export declare class KnowledgeController {
         shopId: string;
         content: string;
         isActive: boolean;
-        category: string;
         title: string;
+        category: string;
     }>;
     update(id: string, body: any, req: any): Promise<{
         id: string;
@@ -33,8 +33,8 @@ export declare class KnowledgeController {
         shopId: string;
         content: string;
         isActive: boolean;
-        category: string;
         title: string;
+        category: string;
     }>;
     delete(id: string, req: any): Promise<{
         success: boolean;

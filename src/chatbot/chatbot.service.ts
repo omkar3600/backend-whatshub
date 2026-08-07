@@ -50,7 +50,11 @@ export class ChatbotService {
         try {
             const groq = new Groq({ apiKey: config.apiKey });
             
-            const systemContext = this.buildSystemPrompt(config.systemPrompt, config.businessInfo, contactName);
+            const knowledgeSources = await this.prisma.aiKnowledgeSource.findMany({
+                where: { shopId, isActive: true },
+            });
+
+            const systemContext = this.buildSystemPrompt(config.systemPrompt, config.businessInfo, contactName, knowledgeSources);
 
             const messages: any[] = [
                 { role: 'system', content: systemContext }
@@ -94,7 +98,12 @@ export class ChatbotService {
         }
     }
 
-    private buildSystemPrompt(systemPrompt: string | null, businessInfo: string | null, contactName: string): string {
+    private buildSystemPrompt(
+        systemPrompt: string | null,
+        businessInfo: string | null,
+        contactName: string,
+        knowledgeSources: any[] = []
+    ): string {
         const parts: string[] = [];
 
         parts.push(`[SYSTEM BEHAVIOR AND PERSONA]`);
@@ -111,14 +120,23 @@ export class ChatbotService {
             const truncatedInfo = businessInfo.trim().length > 10000 
                 ? businessInfo.trim().slice(0, 10000) + '... (truncated)' 
                 : businessInfo.trim();
-            parts.push(`\n[BUSINESS KNOWLEDGE BASE]`);
+            parts.push(`\n[BUSINESS INFORMATION & RULES]`);
             parts.push(truncatedInfo);
-            parts.push(`\n[CRITICAL INSTRUCTIONS]`);
-            parts.push(`1. You must answer the customer's questions strictly using the facts inside the [BUSINESS KNOWLEDGE BASE] provided above.`);
-            parts.push(`2. If the customer asks a question or makes a request that is NOT covered by the [BUSINESS KNOWLEDGE BASE], you must politely state that you do not have that information and a human agent will assist them shortly.`);
-            parts.push(`3. Do NOT invent, assume, or hallucinate any prices, rules, features, or policies.`);
-            parts.push(`4. Always maintain the personality defined in the [SYSTEM BEHAVIOR AND PERSONA] section.`);
         }
+
+        if (knowledgeSources && knowledgeSources.length > 0) {
+            parts.push(`\n[ATTACHED BUSINESS RESOURCES & KNOWLEDGE ARTICLES]`);
+            for (const ks of knowledgeSources) {
+                parts.push(`--- ${ks.title} (${ks.category || 'General'}) ---`);
+                parts.push(ks.content);
+            }
+        }
+
+        parts.push(`\n[CRITICAL INSTRUCTIONS]`);
+        parts.push(`1. You must answer the customer's questions strictly using the facts inside the [BUSINESS INFORMATION & RULES] and [ATTACHED BUSINESS RESOURCES & KNOWLEDGE ARTICLES] provided above.`);
+        parts.push(`2. If the customer asks a question or makes a request that is NOT covered by the business info or resources, politely state that you do not have that information and a human agent will assist them shortly.`);
+        parts.push(`3. Do NOT invent, assume, or hallucinate any prices, rules, features, or policies.`);
+        parts.push(`4. Always maintain the persona defined in [SYSTEM BEHAVIOR AND PERSONA].`);
 
         return parts.join('\n');
     }
