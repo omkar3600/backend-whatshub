@@ -11,6 +11,18 @@ const common_1 = require("@nestjs/common");
 const bullmq_1 = require("@nestjs/bullmq");
 const llm_provider_factory_1 = require("./providers/llm-provider.factory");
 const tool_registry_1 = require("./tools/registry/tool.registry");
+const knowledge_tools_1 = require("./tools/impl/knowledge-tools");
+const contact_tools_1 = require("./tools/impl/contact-tools");
+const conversation_tools_1 = require("./tools/impl/conversation-tools");
+const whatsapp_tools_1 = require("./tools/impl/whatsapp-tools");
+const campaign_tools_1 = require("./tools/impl/campaign-tools");
+const lead_tools_1 = require("./tools/impl/lead-tools");
+const analytics_tools_1 = require("./tools/impl/analytics-tools");
+const handoff_tool_1 = require("./tools/impl/handoff-tool");
+const product_tools_1 = require("./tools/impl/product-tools");
+const sales_tools_1 = require("./tools/impl/sales-tools");
+const workflow_tools_1 = require("./tools/impl/workflow-tools");
+const owner_tools_1 = require("./tools/impl/owner-tools");
 const business_agent_service_1 = require("./business/business-agent.service");
 const business_agent_controller_1 = require("./business/business-agent.controller");
 const knowledge_service_1 = require("./knowledge/knowledge.service");
@@ -35,6 +47,18 @@ exports.AiModule = AiModule = __decorate([
         providers: [
             llm_provider_factory_1.LlmProviderFactory,
             tool_registry_1.ToolRegistry,
+            knowledge_tools_1.KnowledgeTools,
+            contact_tools_1.ContactTools,
+            conversation_tools_1.ConversationTools,
+            whatsapp_tools_1.WhatsAppTools,
+            campaign_tools_1.CampaignTools,
+            lead_tools_1.LeadTools,
+            analytics_tools_1.AnalyticsTools,
+            handoff_tool_1.HandoffTool,
+            product_tools_1.ProductTools,
+            sales_tools_1.SalesTools,
+            workflow_tools_1.WorkflowTools,
+            owner_tools_1.OwnerTools,
             business_agent_service_1.BusinessAgentService,
             knowledge_service_1.KnowledgeService,
             followup_service_1.FollowUpService,
