@@ -46,6 +46,11 @@ export class ContactsController {
         return this.contactsService.normalizeContacts(user.shopId);
     }
 
+    @Get('tags')
+    async getContactTags(@GetUser() user: any) {
+        return this.contactsService.getContactTagsWithCount(user.shopId);
+    }
+
     @Get(':id')
     async getContact(@GetUser() user: any, @Param('id') id: string) {
         return this.contactsService.getContact(user.shopId, id);

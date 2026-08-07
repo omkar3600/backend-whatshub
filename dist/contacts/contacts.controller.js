@@ -46,6 +46,9 @@ let ContactsController = class ContactsController {
     async normalizeContacts(user) {
         return this.contactsService.normalizeContacts(user.shopId);
     }
+    async getContactTags(user) {
+        return this.contactsService.getContactTagsWithCount(user.shopId);
+    }
     async getContact(user, id) {
         return this.contactsService.getContact(user.shopId, id);
     }
@@ -103,6 +106,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], ContactsController.prototype, "normalizeContacts", null);
+__decorate([
+    (0, common_1.Get)('tags'),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], ContactsController.prototype, "getContactTags", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, get_user_decorator_1.GetUser)()),

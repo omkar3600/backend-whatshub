@@ -108,4 +108,8 @@ export declare class ContactsService {
         errors: number;
         total: number;
     }>;
+    getContactTagsWithCount(shopId: string): Promise<{
+        tag: string;
+        count: number;
+    }[]>;
 }

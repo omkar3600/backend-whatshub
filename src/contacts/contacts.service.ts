@@ -345,4 +345,28 @@ export class ContactsService {
 
         return { updated: updatedCount, invalid: invalidCount, errors: errorCount, total: contacts.length };
     }
+
+    async getContactTagsWithCount(shopId: string): Promise<{ tag: string; count: number }[]> {
+        if (!shopId) return [];
+        const contacts = await this.prisma.contact.findMany({
+            where: { shopId },
+            select: { tags: true },
+        });
+
+        const tagMap: Record<string, number> = {};
+        for (const c of contacts) {
+            if (Array.isArray(c.tags)) {
+                for (const t of c.tags) {
+                    if (typeof t === 'string' && t.trim()) {
+                        const tagStr = t.trim();
+                        tagMap[tagStr] = (tagMap[tagStr] || 0) + 1;
+                    }
+                }
+            }
+        }
+
+        return Object.entries(tagMap)
+            .map(([tag, count]) => ({ tag, count }))
+            .sort((a, b) => b.count - a.count);
+    }
 }

@@ -67,6 +67,10 @@ export declare class ContactsController {
         errors: number;
         total: number;
     }>;
+    getContactTags(user: any): Promise<{
+        tag: string;
+        count: number;
+    }[]>;
     getContact(user: any, id: string): Promise<{
         name: string;
         phone: string;
