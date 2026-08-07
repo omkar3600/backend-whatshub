@@ -1,9 +1,9 @@
 import { INodeExecutor, INodeSchema, ExecutionContext, ExecutionResult } from '../interfaces/node-executor.interface';
-import { AgentGoalManager } from '../../../ai/orchestrator/agent-goal.manager';
+import { BusinessAgentService } from '../../../ai/business/business-agent.service';
 export declare class AiGoalAgentExecutor implements INodeExecutor {
-    private readonly goalManager;
+    private readonly businessAgent;
     type: string;
     schema: INodeSchema;
-    constructor(goalManager: AgentGoalManager);
+    constructor(businessAgent: BusinessAgentService);
     execute(context: ExecutionContext, nodeData: any): Promise<ExecutionResult>;
 }

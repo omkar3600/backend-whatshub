@@ -15,7 +15,7 @@ var AiAgentExecutor_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AiAgentExecutor = void 0;
 const common_1 = require("@nestjs/common");
-const agent_orchestrator_service_1 = require("../../../ai/orchestrator/agent-orchestrator.service");
+const business_agent_service_1 = require("../../../ai/business/business-agent.service");
 const whatsapp_service_1 = require("../../../whatsapp/whatsapp.service");
 const prisma_service_1 = require("../../../prisma/prisma.service");
 class AiAgentSchema {
@@ -33,14 +33,14 @@ class AiAgentSchema {
 }
 let AiAgentExecutor = AiAgentExecutor_1 = class AiAgentExecutor {
     prisma;
-    orchestrator;
+    businessAgent;
     whatsappService;
     type = "aiAgent";
     schema = new AiAgentSchema();
     logger = new common_1.Logger(AiAgentExecutor_1.name);
-    constructor(prisma, orchestrator, whatsappService) {
+    constructor(prisma, businessAgent, whatsappService) {
         this.prisma = prisma;
-        this.orchestrator = orchestrator;
+        this.businessAgent = businessAgent;
         this.whatsappService = whatsappService;
     }
     async execute(context, nodeData) {
@@ -51,22 +51,14 @@ let AiAgentExecutor = AiAgentExecutor_1 = class AiAgentExecutor {
             });
             if (!contact)
                 throw new Error("Contact not found for workflow execution");
-            const conversation = await this.prisma.conversation.findFirst({
-                where: { shopId: context.shopId, contactId: context.contactId },
-            });
             const messageText = nodeData.userMessage || context.variables.lastMessageText || "Hello";
-            const result = await this.orchestrator.run({
-                shopId: context.shopId,
-                contactId: context.contactId,
-                conversationId: conversation?.id || "",
-                message: messageText,
-            });
+            const result = await this.businessAgent.query(context.shopId, messageText);
             const varName = nodeData.outputVariable || "aiResponse";
-            context.variables[varName] = result.text || "";
+            context.variables[varName] = result.answer || "";
             const autoSend = nodeData.autoSendReply !== false;
-            if (autoSend && result.text) {
+            if (autoSend && result.answer) {
                 this.logger.log(`[Workflow Node] Auto-sending AI response to ${contact.phone}`);
-                await this.whatsappService.sendOutboundMessage(context.shopId, contact.phone, "text", result.text);
+                await this.whatsappService.sendOutboundMessage(context.shopId, contact.phone, "text", result.answer);
             }
             return { status: "continue" };
         }
@@ -79,10 +71,10 @@ let AiAgentExecutor = AiAgentExecutor_1 = class AiAgentExecutor {
 exports.AiAgentExecutor = AiAgentExecutor;
 exports.AiAgentExecutor = AiAgentExecutor = AiAgentExecutor_1 = __decorate([
     (0, common_1.Injectable)(),
-    __param(1, (0, common_1.Inject)((0, common_1.forwardRef)(() => agent_orchestrator_service_1.AgentOrchestratorService))),
+    __param(1, (0, common_1.Inject)((0, common_1.forwardRef)(() => business_agent_service_1.BusinessAgentService))),
     __param(2, (0, common_1.Inject)((0, common_1.forwardRef)(() => whatsapp_service_1.WhatsappService))),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        agent_orchestrator_service_1.AgentOrchestratorService,
+        business_agent_service_1.BusinessAgentService,
         whatsapp_service_1.WhatsappService])
 ], AiAgentExecutor);
 //# sourceMappingURL=ai-agent.node.js.map

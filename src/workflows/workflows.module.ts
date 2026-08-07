@@ -11,13 +11,6 @@ import { NodeExecutorRegistry } from './engine/registries/node-executor.registry
 import { TriggerRegistry } from './engine/registries/trigger.registry';
 import { WorkflowQueueProcessor } from './engine/processors/workflow-queue.processor';
 
-import { AiWorkflowGeneratorService } from './ai/ai-workflow-generator.service';
-import { AiWorkflowDebuggerService } from './ai/ai-workflow-debugger.service';
-import { AiWorkflowSimulatorService } from './ai/ai-workflow-simulator.service';
-import { AiWorkflowOptimizerService } from './ai/ai-workflow-optimizer.service';
-import { AiCopilotService } from './ai/ai-copilot.service';
-import { AiRedTeamService } from './ai/ai-red-team.service';
-
 import { SendMessageExecutor } from './engine/nodes/send-message.node';
 import { DelayExecutor } from './engine/nodes/delay.node';
 import { ConditionExecutor } from './engine/nodes/condition.node';
@@ -34,7 +27,7 @@ import { BusinessHoursExecutor } from './engine/nodes/business-hours.node';
 import { TeamHandoffExecutor } from './engine/nodes/team-handoff.node';
 import { ApprovalExecutor } from './engine/nodes/approval-node.node';
 
-// Workflow 2.0 & OS 3.0 Nodes
+// Workflow Nodes
 import { AiExtractionExecutor } from './engine/nodes/ai-extraction.node';
 import { AiSentimentExecutor } from './engine/nodes/ai-sentiment.node';
 import { SubWorkflowExecutor } from './engine/nodes/sub-workflow.node';
@@ -71,12 +64,6 @@ import { AiModule } from '../ai/ai.module';
     NodeExecutorRegistry,
     TriggerRegistry,
     WorkflowQueueProcessor,
-    AiWorkflowGeneratorService,
-    AiWorkflowDebuggerService,
-    AiWorkflowSimulatorService,
-    AiWorkflowOptimizerService,
-    AiCopilotService,
-    AiRedTeamService,
     SendMessageExecutor,
     DelayExecutor,
     ConditionExecutor,
@@ -107,12 +94,6 @@ import { AiModule } from '../ai/ai.module';
     WorkflowEngineService,
     WorkflowLinterService,
     TriggerRegistry,
-    AiWorkflowGeneratorService,
-    AiWorkflowDebuggerService,
-    AiWorkflowSimulatorService,
-    AiWorkflowOptimizerService,
-    AiCopilotService,
-    AiRedTeamService,
   ],
 })
 export class WorkflowsModule implements OnModuleInit {

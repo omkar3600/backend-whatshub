@@ -18,34 +18,16 @@ const workflows_service_1 = require("./workflows.service");
 const workflow_engine_service_1 = require("./engine/workflow-engine.service");
 const workflow_linter_service_1 = require("./engine/workflow-linter.service");
 const prisma_service_1 = require("../prisma/prisma.service");
-const ai_workflow_generator_service_1 = require("./ai/ai-workflow-generator.service");
-const ai_workflow_debugger_service_1 = require("./ai/ai-workflow-debugger.service");
-const ai_workflow_simulator_service_1 = require("./ai/ai-workflow-simulator.service");
-const ai_workflow_optimizer_service_1 = require("./ai/ai-workflow-optimizer.service");
-const ai_copilot_service_1 = require("./ai/ai-copilot.service");
-const ai_red_team_service_1 = require("./ai/ai-red-team.service");
 let WorkflowsController = class WorkflowsController {
     engineService;
     prisma;
     workflowsService;
     linterService;
-    generatorService;
-    debuggerService;
-    simulatorService;
-    optimizerService;
-    copilotService;
-    redTeamService;
-    constructor(engineService, prisma, workflowsService, linterService, generatorService, debuggerService, simulatorService, optimizerService, copilotService, redTeamService) {
+    constructor(engineService, prisma, workflowsService, linterService) {
         this.engineService = engineService;
         this.prisma = prisma;
         this.workflowsService = workflowsService;
         this.linterService = linterService;
-        this.generatorService = generatorService;
-        this.debuggerService = debuggerService;
-        this.simulatorService = simulatorService;
-        this.optimizerService = optimizerService;
-        this.copilotService = copilotService;
-        this.redTeamService = redTeamService;
     }
     async listWorkflows(shopId) {
         if (!shopId)
@@ -88,50 +70,18 @@ let WorkflowsController = class WorkflowsController {
     }
     async publishWorkflow(id, body) {
         if (!body.shopId)
-            throw new Error('shopId is required');
+            throw new common_1.BadRequestException('shopId is required');
         return this.workflowsService.publishWorkflow(body.shopId, id);
     }
     async deleteWorkflow(id, shopId) {
         if (!shopId)
-            throw new Error('shopId is required');
+            throw new common_1.BadRequestException('shopId is required');
         return this.workflowsService.deleteWorkflow(shopId, id);
     }
     async lintWorkflow(body) {
         if (!body.graph)
             throw new common_1.BadRequestException('graph is required');
         return { issues: this.linterService.lintGraph(body.graph) };
-    }
-    async copilotEditGraph(body) {
-        if (!body.shopId || !body.graph || !body.instruction) {
-            throw new common_1.BadRequestException('shopId, graph, and instruction are required');
-        }
-        return this.copilotService.editGraphWithInstruction(body.shopId, body.graph, body.instruction);
-    }
-    async explainGraph(body) {
-        if (!body.shopId || !body.graph)
-            throw new common_1.BadRequestException('shopId and graph are required');
-        return this.copilotService.explainWorkflowGraph(body.shopId, body.graph);
-    }
-    async redTeamAudit(body) {
-        if (!body.shopId || !body.graph)
-            throw new common_1.BadRequestException('shopId and graph are required');
-        return this.redTeamService.runRedTeamAudit(body.shopId, body.graph);
-    }
-    async generateWorkflow(body) {
-        if (!body.shopId || !body.prompt)
-            throw new common_1.BadRequestException('shopId and prompt are required');
-        return this.generatorService.generateGraphFromPrompt(body.shopId, body.prompt);
-    }
-    async debugWorkflow(instanceId) {
-        return this.debuggerService.debugExecution(instanceId);
-    }
-    async simulateWorkflow(body) {
-        if (!body.shopId || !body.workflowId)
-            throw new common_1.BadRequestException('shopId and workflowId are required');
-        return this.simulatorService.simulateWorkflow(body.shopId, body.workflowId, body.testMessage || 'Test');
-    }
-    async optimizeWorkflow(id) {
-        return this.optimizerService.analyzeAndOptimize(id);
     }
     async triggerTestWorkflow(id, body) {
         const instance = await this.engineService.startWorkflow(body.shopId, id, body.contactId, { source: 'manual-api-test' });
@@ -211,55 +161,6 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], WorkflowsController.prototype, "lintWorkflow", null);
 __decorate([
-    (0, common_1.Post)('ai/copilot-edit'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], WorkflowsController.prototype, "copilotEditGraph", null);
-__decorate([
-    (0, common_1.Post)('ai/explain'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], WorkflowsController.prototype, "explainGraph", null);
-__decorate([
-    (0, common_1.Post)('ai/red-team'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], WorkflowsController.prototype, "redTeamAudit", null);
-__decorate([
-    (0, common_1.Post)('ai/generate'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], WorkflowsController.prototype, "generateWorkflow", null);
-__decorate([
-    (0, common_1.Get)('ai/debug/:instanceId'),
-    __param(0, (0, common_1.Param)('instanceId')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", Promise)
-], WorkflowsController.prototype, "debugWorkflow", null);
-__decorate([
-    (0, common_1.Post)('ai/simulate'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], WorkflowsController.prototype, "simulateWorkflow", null);
-__decorate([
-    (0, common_1.Get)('ai/optimize/:id'),
-    __param(0, (0, common_1.Param)('id')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", Promise)
-], WorkflowsController.prototype, "optimizeWorkflow", null);
-__decorate([
     (0, common_1.Post)(':id/test-trigger'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
@@ -272,12 +173,6 @@ exports.WorkflowsController = WorkflowsController = __decorate([
     __metadata("design:paramtypes", [workflow_engine_service_1.WorkflowEngineService,
         prisma_service_1.PrismaService,
         workflows_service_1.WorkflowsService,
-        workflow_linter_service_1.WorkflowLinterService,
-        ai_workflow_generator_service_1.AiWorkflowGeneratorService,
-        ai_workflow_debugger_service_1.AiWorkflowDebuggerService,
-        ai_workflow_simulator_service_1.AiWorkflowSimulatorService,
-        ai_workflow_optimizer_service_1.AiWorkflowOptimizerService,
-        ai_copilot_service_1.AiCopilotService,
-        ai_red_team_service_1.AiRedTeamService])
+        workflow_linter_service_1.WorkflowLinterService])
 ], WorkflowsController);
 //# sourceMappingURL=workflows.controller.js.map

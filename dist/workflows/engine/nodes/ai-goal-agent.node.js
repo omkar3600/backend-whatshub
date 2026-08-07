@@ -11,29 +11,22 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AiGoalAgentExecutor = void 0;
 const common_1 = require("@nestjs/common");
-const agent_goal_manager_1 = require("../../../ai/orchestrator/agent-goal.manager");
+const business_agent_service_1 = require("../../../ai/business/business-agent.service");
 let AiGoalAgentExecutor = class AiGoalAgentExecutor {
-    goalManager;
+    businessAgent;
     type = 'aiGoalAgent';
     schema = {
         validate: () => { },
         getSchema: () => ({ type: 'object' }),
     };
-    constructor(goalManager) {
-        this.goalManager = goalManager;
+    constructor(businessAgent) {
+        this.businessAgent = businessAgent;
     }
     async execute(context, nodeData) {
         const goalDescription = nodeData.goal || 'Qualify lead and recommend relevant products.';
-        const goal = this.goalManager.createGoal({
-            shopId: context.shopId,
-            contactId: context.contactId,
-            goalName: goalDescription,
-            agentRole: nodeData.agentRole || 'SalesAgent',
-            maxSteps: nodeData.maxSteps || 8,
-            maxToolCalls: nodeData.maxToolCalls || 10,
-        });
-        context.variables.goalId = goal.id;
-        context.variables.goalStatus = goal.status;
+        const result = await this.businessAgent.query(context.shopId, `Goal: ${goalDescription}`);
+        context.variables.goalStatus = 'COMPLETED';
+        context.variables.aiGoalReply = result.answer;
         return {
             status: 'continue',
             branch: 'success',
@@ -43,6 +36,6 @@ let AiGoalAgentExecutor = class AiGoalAgentExecutor {
 exports.AiGoalAgentExecutor = AiGoalAgentExecutor;
 exports.AiGoalAgentExecutor = AiGoalAgentExecutor = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [agent_goal_manager_1.AgentGoalManager])
+    __metadata("design:paramtypes", [business_agent_service_1.BusinessAgentService])
 ], AiGoalAgentExecutor);
 //# sourceMappingURL=ai-goal-agent.node.js.map

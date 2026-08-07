@@ -1,6 +1,6 @@
-﻿import { Injectable, Logger, Inject, forwardRef } from "@nestjs/common";
+import { Injectable, Logger, Inject, forwardRef } from "@nestjs/common";
 import { ExecutionContext, ExecutionResult, INodeExecutor, INodeSchema } from "../interfaces/node-executor.interface";
-import { AgentOrchestratorService } from "../../../ai/orchestrator/agent-orchestrator.service";
+import { BusinessAgentService } from "../../../ai/business/business-agent.service";
 import { WhatsappService } from "../../../whatsapp/whatsapp.service";
 import { PrismaService } from "../../../prisma/prisma.service";
 
@@ -26,8 +26,8 @@ export class AiAgentExecutor implements INodeExecutor {
 
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(forwardRef(() => AgentOrchestratorService))
-    private readonly orchestrator: AgentOrchestratorService,
+    @Inject(forwardRef(() => BusinessAgentService))
+    private readonly businessAgent: BusinessAgentService,
     @Inject(forwardRef(() => WhatsappService))
     private readonly whatsappService: WhatsappService,
   ) {}
@@ -41,29 +41,17 @@ export class AiAgentExecutor implements INodeExecutor {
       });
       if (!contact) throw new Error("Contact not found for workflow execution");
 
-      const conversation = await this.prisma.conversation.findFirst({
-        where: { shopId: context.shopId, contactId: context.contactId },
-      });
-
       const messageText = nodeData.userMessage || context.variables.lastMessageText || "Hello";
 
-      // Execute AI ReAct Orchestrator Loop
-      const result = await this.orchestrator.run({
-        shopId: context.shopId,
-        contactId: context.contactId,
-        conversationId: conversation?.id || "",
-        message: messageText,
-      });
+      const result = await this.businessAgent.query(context.shopId, messageText);
 
-      // Save output variable to workflow context
       const varName = nodeData.outputVariable || "aiResponse";
-      context.variables[varName] = result.text || "";
+      context.variables[varName] = result.answer || "";
 
-      // Auto-send WhatsApp reply if enabled (default: true)
       const autoSend = nodeData.autoSendReply !== false;
-      if (autoSend && result.text) {
+      if (autoSend && result.answer) {
         this.logger.log(`[Workflow Node] Auto-sending AI response to ${contact.phone}`);
-        await this.whatsappService.sendOutboundMessage(context.shopId, contact.phone, "text", result.text);
+        await this.whatsappService.sendOutboundMessage(context.shopId, contact.phone, "text", result.answer);
       }
 
       return { status: "continue" };
@@ -73,4 +61,3 @@ export class AiAgentExecutor implements INodeExecutor {
     }
   }
 }
-

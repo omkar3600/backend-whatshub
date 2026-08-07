@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { INodeExecutor, INodeSchema, ExecutionContext, ExecutionResult } from '../interfaces/node-executor.interface';
-import { AgentGoalManager } from '../../../ai/orchestrator/agent-goal.manager';
+import { BusinessAgentService } from '../../../ai/business/business-agent.service';
 
 @Injectable()
 export class AiGoalAgentExecutor implements INodeExecutor {
@@ -10,22 +10,18 @@ export class AiGoalAgentExecutor implements INodeExecutor {
     getSchema: () => ({ type: 'object' }),
   };
 
-  constructor(private readonly goalManager: AgentGoalManager) {}
+  constructor(private readonly businessAgent: BusinessAgentService) {}
 
   async execute(context: ExecutionContext, nodeData: any): Promise<ExecutionResult> {
     const goalDescription = nodeData.goal || 'Qualify lead and recommend relevant products.';
 
-    const goal = this.goalManager.createGoal({
-      shopId: context.shopId,
-      contactId: context.contactId,
-      goalName: goalDescription,
-      agentRole: nodeData.agentRole || 'SalesAgent',
-      maxSteps: nodeData.maxSteps || 8,
-      maxToolCalls: nodeData.maxToolCalls || 10,
-    });
+    const result = await this.businessAgent.query(
+      context.shopId,
+      `Goal: ${goalDescription}`
+    );
 
-    context.variables.goalId = goal.id;
-    context.variables.goalStatus = goal.status;
+    context.variables.goalStatus = 'COMPLETED';
+    context.variables.aiGoalReply = result.answer;
 
     return {
       status: 'continue',
