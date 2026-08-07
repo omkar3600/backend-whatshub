@@ -731,27 +731,57 @@ export class WhatsappService {
             }
         }
 
-        // --- AI Agent ---
+        // --- AI Agent Auto-Reply ---
         if (!automationFired && !workflowFired && messageData.type === 'text') {
             const conv = await this.prisma.conversation.findUnique({
                 where: { id: conversation.id },
                 select: { aiPaused: true },
             });
             if (!conv?.aiPaused) {
-                // Enqueue async AI Agent processing job (returns 200 OK webhook immediately)
-                await this.aiQueue.add('process-agent-message', {
-                    shopId,
-                    contactId: contact.id,
-                    conversationId: conversation.id,
-                    messageText: messageData.text.body,
-                    contactPhone: contactData.wa_id,
-                });
+                // Execute AI response asynchronously so Webhook returns 200 OK immediately
+                (async () => {
+                    try {
+                        const res = await this.chatbotService.generateResponse(
+                            shopId,
+                            contact.name || 'Customer',
+                            messageData.text.body,
+                            conversation.id
+                        );
 
-                // Enqueue async background intelligence tasks
-                await this.aiQueue.add('score-lead', { shopId, contactId: contact.id, conversationId: conversation.id }, { delay: 2000 });
-                await this.aiQueue.add('update-memory', { shopId, contactId: contact.id, conversationId: conversation.id }, { delay: 5000 });
+                        if (res.text && res.text.trim()) {
+                            this.logger.log(`[AI Agent] Generated reply for ${contactData.wa_id}: "${res.text.slice(0, 60)}..."`);
+                            const metaRes = await this.sendOutboundMessage(shopId, contactData.wa_id, 'text', res.text);
+                            const wamid = metaRes?.messages?.[0]?.id;
 
-                this.logger.log(`[AI Agent] Enqueued agent processing job for contact ${contact.phone}`);
+                            const savedAiMsg = await this.prisma.message.create({
+                                data: {
+                                    id: wamid || undefined,
+                                    shopId,
+                                    conversationId: conversation.id,
+                                    phoneNumberId: phoneNumberId || undefined,
+                                    direction: 'outbound',
+                                    type: 'text',
+                                    content: res.text,
+                                    status: 'sent',
+                                },
+                            });
+
+                            this.chatGateway.notifyNewMessage(shopId, {
+                                ...savedAiMsg,
+                                contact: { name: contact.name, phone: contact.phone },
+                            });
+
+                            await this.prisma.conversation.update({
+                                where: { id: conversation.id },
+                                data: { lastMessageAt: new Date() },
+                            });
+                        } else if (res.error) {
+                            this.logger.warn(`[AI Agent] Could not generate reply for ${contactData.wa_id}: ${res.error}`);
+                        }
+                    } catch (aiErr: any) {
+                        this.logger.error(`[AI Agent] Error in AI reply processing: ${aiErr.message}`);
+                    }
+                })();
             } else {
                 this.logger.log(`[AI Agent] AI paused for conversation ${conversation.id} — skipping.`);
             }

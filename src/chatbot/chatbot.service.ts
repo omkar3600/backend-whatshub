@@ -85,8 +85,11 @@ export class ChatbotService {
                         });
                     }
                 }
-            } else {
-                // Fallback if no conversation ID is provided
+            }
+
+            // Ensure the latest user message is included as the final user turn
+            const lastMsg = messages[messages.length - 1];
+            if (!lastMsg || lastMsg.role !== 'user' || lastMsg.content !== userMessage) {
                 messages.push({ role: 'user', content: userMessage });
             }
             // ------------------------------

@@ -65,7 +65,8 @@ let ChatbotService = ChatbotService_1 = class ChatbotService {
                     }
                 }
             }
-            else {
+            const lastMsg = messages[messages.length - 1];
+            if (!lastMsg || lastMsg.role !== 'user' || lastMsg.content !== userMessage) {
                 messages.push({ role: 'user', content: userMessage });
             }
             const completion = await groq.chat.completions.create({
