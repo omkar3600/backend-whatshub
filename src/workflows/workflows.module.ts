@@ -43,6 +43,7 @@ import { WhatsAppCatalogExecutor } from './engine/nodes/whatsapp-catalog.node';
 import { EcomOrderExecutor } from './engine/nodes/ecom-order.node';
 import { AiGoalAgentExecutor } from './engine/nodes/ai-goal-agent.node';
 import { AiDecisionExecutor } from './engine/nodes/ai-decision.node';
+import { ForwardToOwnerExecutor } from './engine/nodes/forward-to-owner.node';
 
 import { IncomingMessageTrigger } from './engine/triggers/incoming-message.trigger';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
@@ -99,6 +100,7 @@ import { AiModule } from '../ai/ai.module';
     EcomOrderExecutor,
     AiGoalAgentExecutor,
     AiDecisionExecutor,
+    ForwardToOwnerExecutor,
     IncomingMessageTrigger,
   ],
   exports: [
@@ -139,6 +141,7 @@ export class WorkflowsModule implements OnModuleInit {
     private readonly ecomOrderExecutor: EcomOrderExecutor,
     private readonly aiGoalAgentExecutor: AiGoalAgentExecutor,
     private readonly aiDecisionExecutor: AiDecisionExecutor,
+    private readonly forwardToOwnerExecutor: ForwardToOwnerExecutor,
     private readonly incomingMessageTrigger: IncomingMessageTrigger,
     private readonly triggerRegistry: TriggerRegistry,
   ) {}
@@ -167,6 +170,7 @@ export class WorkflowsModule implements OnModuleInit {
     this.nodeRegistry.register(this.ecomOrderExecutor);
     this.nodeRegistry.register(this.aiGoalAgentExecutor);
     this.nodeRegistry.register(this.aiDecisionExecutor);
+    this.nodeRegistry.register(this.forwardToOwnerExecutor);
 
     this.triggerRegistry.register(this.incomingMessageTrigger);
   }

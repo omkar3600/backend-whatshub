@@ -51,6 +51,7 @@ const whatsapp_catalog_node_1 = require("./engine/nodes/whatsapp-catalog.node");
 const ecom_order_node_1 = require("./engine/nodes/ecom-order.node");
 const ai_goal_agent_node_1 = require("./engine/nodes/ai-goal-agent.node");
 const ai_decision_node_1 = require("./engine/nodes/ai-decision.node");
+const forward_to_owner_node_1 = require("./engine/nodes/forward-to-owner.node");
 const incoming_message_trigger_1 = require("./engine/triggers/incoming-message.trigger");
 const whatsapp_module_1 = require("../whatsapp/whatsapp.module");
 const ai_module_1 = require("../ai/ai.module");
@@ -79,9 +80,10 @@ let WorkflowsModule = class WorkflowsModule {
     ecomOrderExecutor;
     aiGoalAgentExecutor;
     aiDecisionExecutor;
+    forwardToOwnerExecutor;
     incomingMessageTrigger;
     triggerRegistry;
-    constructor(nodeRegistry, sendMessageExecutor, delayExecutor, conditionExecutor, waitReplyExecutor, aiAgentExecutor, askQuestionExecutor, httpRequestExecutor, crmActionExecutor, aiIntentRouterExecutor, abTestSplitterExecutor, dataTransformExecutor, forEachExecutor, businessHoursExecutor, teamHandoffExecutor, approvalExecutor, aiExtractionExecutor, aiSentimentExecutor, subWorkflowExecutor, askInputExecutor, whatsAppCatalogExecutor, ecomOrderExecutor, aiGoalAgentExecutor, aiDecisionExecutor, incomingMessageTrigger, triggerRegistry) {
+    constructor(nodeRegistry, sendMessageExecutor, delayExecutor, conditionExecutor, waitReplyExecutor, aiAgentExecutor, askQuestionExecutor, httpRequestExecutor, crmActionExecutor, aiIntentRouterExecutor, abTestSplitterExecutor, dataTransformExecutor, forEachExecutor, businessHoursExecutor, teamHandoffExecutor, approvalExecutor, aiExtractionExecutor, aiSentimentExecutor, subWorkflowExecutor, askInputExecutor, whatsAppCatalogExecutor, ecomOrderExecutor, aiGoalAgentExecutor, aiDecisionExecutor, forwardToOwnerExecutor, incomingMessageTrigger, triggerRegistry) {
         this.nodeRegistry = nodeRegistry;
         this.sendMessageExecutor = sendMessageExecutor;
         this.delayExecutor = delayExecutor;
@@ -106,6 +108,7 @@ let WorkflowsModule = class WorkflowsModule {
         this.ecomOrderExecutor = ecomOrderExecutor;
         this.aiGoalAgentExecutor = aiGoalAgentExecutor;
         this.aiDecisionExecutor = aiDecisionExecutor;
+        this.forwardToOwnerExecutor = forwardToOwnerExecutor;
         this.incomingMessageTrigger = incomingMessageTrigger;
         this.triggerRegistry = triggerRegistry;
     }
@@ -133,6 +136,7 @@ let WorkflowsModule = class WorkflowsModule {
         this.nodeRegistry.register(this.ecomOrderExecutor);
         this.nodeRegistry.register(this.aiGoalAgentExecutor);
         this.nodeRegistry.register(this.aiDecisionExecutor);
+        this.nodeRegistry.register(this.forwardToOwnerExecutor);
         this.triggerRegistry.register(this.incomingMessageTrigger);
     }
 };
@@ -189,6 +193,7 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
             ecom_order_node_1.EcomOrderExecutor,
             ai_goal_agent_node_1.AiGoalAgentExecutor,
             ai_decision_node_1.AiDecisionExecutor,
+            forward_to_owner_node_1.ForwardToOwnerExecutor,
             incoming_message_trigger_1.IncomingMessageTrigger,
         ],
         exports: [
@@ -227,6 +232,7 @@ exports.WorkflowsModule = WorkflowsModule = __decorate([
         ecom_order_node_1.EcomOrderExecutor,
         ai_goal_agent_node_1.AiGoalAgentExecutor,
         ai_decision_node_1.AiDecisionExecutor,
+        forward_to_owner_node_1.ForwardToOwnerExecutor,
         incoming_message_trigger_1.IncomingMessageTrigger,
         trigger_registry_1.TriggerRegistry])
 ], WorkflowsModule);
