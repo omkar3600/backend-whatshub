@@ -48,6 +48,9 @@ let CampaignsController = class CampaignsController {
     async deleteCampaign(user, id) {
         return this.campaignsService.deleteCampaign(user.shopId, id);
     }
+    async restoreCampaign(user, id) {
+        return this.campaignsService.restoreCampaign(user.shopId, id);
+    }
 };
 exports.CampaignsController = CampaignsController;
 __decorate([
@@ -116,6 +119,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], CampaignsController.prototype, "deleteCampaign", null);
+__decorate([
+    (0, common_1.Post)(':id/restore'),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], CampaignsController.prototype, "restoreCampaign", null);
 exports.CampaignsController = CampaignsController = __decorate([
     (0, common_1.Controller)('campaigns'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),

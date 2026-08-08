@@ -18,6 +18,7 @@ export declare class CampaignsController {
         headerMediaUrl: string | null;
         scheduledAt: Date;
         failureHistory: import("@prisma/client/runtime/library").JsonValue | null;
+        deletedAt: Date | null;
     }>;
     getCampaigns(user: any): Promise<{
         contacts: undefined;
@@ -25,6 +26,7 @@ export declare class CampaignsController {
             sendDelay: any;
             excludeUnsubscribed: any;
             total: number;
+            dispatched: number;
             sent: number;
             delivered: number;
             read: number;
@@ -58,6 +60,7 @@ export declare class CampaignsController {
         headerMediaUrl: string | null;
         scheduledAt: Date;
         failureHistory: import("@prisma/client/runtime/library").JsonValue | null;
+        deletedAt: Date | null;
     }[]>;
     getCampaignAnalytics(user: any, id: string): Promise<{
         campaign: {
@@ -100,10 +103,12 @@ export declare class CampaignsController {
             headerMediaUrl: string | null;
             scheduledAt: Date;
             failureHistory: import("@prisma/client/runtime/library").JsonValue | null;
+            deletedAt: Date | null;
         };
         stats: {
             total: number;
             pending: number;
+            dispatched: number;
             sent: number;
             delivered: number;
             read: number;
@@ -115,6 +120,7 @@ export declare class CampaignsController {
         contacts: {
             all: any[];
             pending: any[];
+            dispatched: any[];
             sent: any[];
             delivered: any[];
             read: any[];
@@ -144,6 +150,7 @@ export declare class CampaignsController {
         headerMediaUrl: string | null;
         scheduledAt: Date;
         failureHistory: import("@prisma/client/runtime/library").JsonValue | null;
+        deletedAt: Date | null;
     } | {
         message: string;
     }>;
@@ -163,6 +170,7 @@ export declare class CampaignsController {
         headerMediaUrl: string | null;
         scheduledAt: Date;
         failureHistory: import("@prisma/client/runtime/library").JsonValue | null;
+        deletedAt: Date | null;
     }>;
     launchRetarget(user: any, id: string, body: any): Promise<{
         name: string;
@@ -180,6 +188,7 @@ export declare class CampaignsController {
         headerMediaUrl: string | null;
         scheduledAt: Date;
         failureHistory: import("@prisma/client/runtime/library").JsonValue | null;
+        deletedAt: Date | null;
     }>;
     deleteCampaign(user: any, id: string): Promise<{
         name: string;
@@ -197,5 +206,24 @@ export declare class CampaignsController {
         headerMediaUrl: string | null;
         scheduledAt: Date;
         failureHistory: import("@prisma/client/runtime/library").JsonValue | null;
+        deletedAt: Date | null;
+    }>;
+    restoreCampaign(user: any, id: string): Promise<{
+        name: string;
+        id: string;
+        status: string;
+        createdAt: Date;
+        updatedAt: Date;
+        shopId: string;
+        stats: import("@prisma/client/runtime/library").JsonValue | null;
+        templateId: string;
+        targetTags: import("@prisma/client/runtime/library").JsonValue | null;
+        targetPhones: import("@prisma/client/runtime/library").JsonValue | null;
+        targetFilters: import("@prisma/client/runtime/library").JsonValue | null;
+        templateParams: import("@prisma/client/runtime/library").JsonValue | null;
+        headerMediaUrl: string | null;
+        scheduledAt: Date;
+        failureHistory: import("@prisma/client/runtime/library").JsonValue | null;
+        deletedAt: Date | null;
     }>;
 }

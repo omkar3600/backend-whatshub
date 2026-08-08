@@ -50,4 +50,9 @@ export class CampaignsController {
     async deleteCampaign(@GetUser() user: any, @Param('id') id: string) {
         return this.campaignsService.deleteCampaign(user.shopId, id);
     }
+
+    @Post(':id/restore')
+    async restoreCampaign(@GetUser() user: any, @Param('id') id: string) {
+        return this.campaignsService.restoreCampaign(user.shopId, id);
+    }
 }

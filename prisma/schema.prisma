@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -264,6 +265,7 @@ model Campaign {
   failureHistory Json?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
+  deletedAt      DateTime?
   shop           Shop              @relation(fields: [shopId], references: [id])
   template       Template          @relation(fields: [templateId], references: [id], onDelete: Cascade)
   contacts       CampaignContact[]

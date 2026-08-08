@@ -32,6 +32,7 @@ const prisma_module_1 = require("../prisma/prisma.module");
 const common_module_1 = require("../common/common.module");
 const admin_module_1 = require("../admin/admin.module");
 const whatsapp_module_1 = require("../whatsapp/whatsapp.module");
+const campaigns_module_1 = require("../campaigns/campaigns.module");
 let AiModule = class AiModule {
 };
 exports.AiModule = AiModule;
@@ -41,6 +42,7 @@ exports.AiModule = AiModule = __decorate([
             prisma_module_1.PrismaModule,
             common_module_1.CommonModule,
             admin_module_1.AdminModule,
+            campaigns_module_1.CampaignsModule,
             bullmq_1.BullModule.registerQueue({ name: 'ai-agent-queue' }),
             (0, common_1.forwardRef)(() => whatsapp_module_1.WhatsappModule),
         ],

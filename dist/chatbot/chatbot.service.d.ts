@@ -1,8 +1,10 @@
 import { PrismaService } from '../prisma/prisma.service';
+import { CryptoService } from '../common/services/crypto.service';
 export declare class ChatbotService {
     private prisma;
+    private crypto;
     private readonly logger;
-    constructor(prisma: PrismaService);
+    constructor(prisma: PrismaService, crypto: CryptoService);
     getConfig(shopId: string): Promise<{
         apiKey: string | null;
         id: string;

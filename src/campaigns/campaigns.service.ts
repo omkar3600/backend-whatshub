@@ -78,6 +78,7 @@ export class CampaignsService {
         return campaigns.map(c => {
             const configMeta = (c.stats as any) || {};
 
+            let dispatchedCount = 0;
             let sentCount = 0;
             let deliveredCount = 0;
             let readCount = 0;
@@ -88,7 +89,8 @@ export class CampaignsService {
 
             for (const contact of c.contacts) {
                 const s = contact.status;
-                if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(s)) sentCount++;
+                if (['sent', 'delivered', 'read', 'replied', 'clicked'].includes(s)) dispatchedCount++;
+                if (s === 'sent') sentCount++;
                 if (['delivered', 'read', 'replied', 'clicked'].includes(s)) deliveredCount++;
                 if (['read', 'replied', 'clicked'].includes(s)) readCount++;
                 if (s === 'replied') repliedCount++;
@@ -104,6 +106,7 @@ export class CampaignsService {
                     sendDelay: configMeta.sendDelay,
                     excludeUnsubscribed: configMeta.excludeUnsubscribed,
                     total: c.contacts.length,
+                    dispatched: dispatchedCount,
                     sent: sentCount,
                     delivered: deliveredCount,
                     read: readCount,
@@ -139,8 +142,23 @@ export class CampaignsService {
             // Ignore queue retrieval error if Redis is unavailable
         }
 
-        return this.prisma.campaign.delete({
-            where: { id: campaignId }
+        // Soft delete: mark deletedAt as now
+        return this.prisma.campaign.update({
+            where: { id: campaignId },
+            data: { deletedAt: new Date() }
+        });
+    }
+
+    async restoreCampaign(shopId: string, campaignId: string) {
+        const campaign = await this.prisma.campaign.findFirst({
+            where: { id: campaignId, shopId }
+        });
+
+        if (!campaign) throw new NotFoundException('Campaign not found');
+
+        return this.prisma.campaign.update({
+            where: { id: campaignId },
+            data: { deletedAt: null }
         });
     }
 
@@ -240,7 +258,8 @@ export class CampaignsService {
         const byStatus = {
             all: allContactsList,
             pending: allContactsList.filter(c => c.status === 'pending'),
-            sent: allContactsList.filter(c => ['sent', 'delivered', 'read', 'replied', 'clicked'].includes(c.status)),
+            dispatched: allContactsList.filter(c => ['sent', 'delivered', 'read', 'replied', 'clicked'].includes(c.status)),
+            sent: allContactsList.filter(c => c.status === 'sent'),
             delivered: allContactsList.filter(c => ['delivered', 'read', 'replied', 'clicked'].includes(c.status)),
             read: allContactsList.filter(c => ['read', 'replied', 'clicked'].includes(c.status)),
             replied: allContactsList.filter(c => c.status === 'replied'),
@@ -252,6 +271,7 @@ export class CampaignsService {
         const stats = {
             total: allContactsList.length,
             pending: byStatus.pending.length,
+            dispatched: byStatus.dispatched.length,
             sent: byStatus.sent.length,
             delivered: byStatus.delivered.length,
             read: byStatus.read.length,
